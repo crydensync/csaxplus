@@ -16,7 +16,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 
 - [x] 0.1 Init: pnpm workspace, Next.js 15 + TS strict, ESLint, Prettier, Vitest, Playwright,
       commitlint + `commit-msg` hook, `.claude/settings.json`, LICENSE (MIT), `.env.example`
-- [ ] 0.2 Design system: port `styles.css` tokens; Card, Pill, Toggle, Button, DataTable, Modal,
+- [x] 0.2 Design system: port `styles.css` tokens; Card, Pill, Toggle, Button, DataTable, Modal,
       Toast, Sidebar, Topbar, EmptyState, ErrorState, Skeleton
 - [ ] 0.3 Config loader (env, `*_FILE`, disk file, defaults) + boot-time fail-fast + `describeConfig()`
 - [ ] 0.4 Console store + migrations (Postgres/SQLite, same schema, two drivers), auto-migrate
@@ -86,6 +86,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - No em dashes or en dashes anywhere. `tests/unit/no-forbidden-characters.test.ts` enforces this
   across every file we author, and the `commit-msg` hook rejects them in commit messages.
 - No `Co-authored-by:` and no tool attribution in commits.
+- Playwright's Chromium is installed at `~/.cache/ms-playwright` (one-time, ~120 MB). The e2e gate
+  needs it; `pnpm exec playwright install chromium` restores it on a fresh machine. CI must run the
+  same command, since `playwright.config.ts` uses the bundled browser and no system Chrome channel.
+- `/design` is a dev-only preview of the component set. It 404s in a production build (D7).
 
 ## Tier summaries
 

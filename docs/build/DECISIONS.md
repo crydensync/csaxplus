@@ -5,13 +5,13 @@ suggested stack to be written here before it is made, rather than switched silen
 
 ---
 
-## D1. Styling: CSS custom properties plus CSS Modules, not Tailwind utilities
+## D1. Styling: one global token stylesheet plus React components, not Tailwind and not CSS Modules
 
 **Date:** 2026-10-04
-**Status:** accepted
+**Status:** accepted (supersedes the CSS Modules wording of the first draft)
 
 BUILD_NOTE.md section 1 allows "Tailwind v4 (or CSS Modules)" and requires the token names to be
-kept. We take the CSS Modules option.
+kept. We take neither, and this entry records why.
 
 Reasons:
 
@@ -19,8 +19,16 @@ Reasons:
    rewrite every screen's markup and risk drifting from the visuals the brief says to keep.
 2. The token names (`--violet`, `--surface`, `--border-soft` and the rest) are already a complete
    design system. They move into `globals.css` unchanged and every component reads them.
-3. CSS Modules give component-scoped class names without a build-time utility layer, which keeps
-   the output small and the CSP simple (no inline style attributes, no runtime CSS-in-JS).
+3. The console is one application with one visual language. Scoping each rule into a CSS Module
+   would split a single system across a dozen files and make it harder to see that the tokens are
+   applied consistently.
+4. Keeping the prototype's class names makes porting the remaining screens mechanical: the markup
+   in `index.html` maps to React with the same class names, so a reviewer can diff the two.
+
+The rules live in `src/app/globals.css`, grouped by the same section comments the prototype uses.
+`src/components/` holds typed React wrappers (`Card`, `Pill`, `Button`, and so on) so that screens
+compose components rather than pasting class strings. A component that needs a new rule adds it to
+the matching section of `globals.css` instead of inventing an inline style.
 
 Tailwind is not installed. Keeping a dependency that no component uses would be dead weight, so
 this choice is all-or-nothing rather than a hedge. A future screen that wants utilities should
@@ -80,3 +88,56 @@ The landing page and the prototype both show a citation like `audit_events · 3 
 answer. The brief requires it to come from the real query rather than the model. The plan is for
 the read-only query template to return both rows and a count, and for the route handler to render
 the chip from that result. Recorded here so Tier 4 does not quietly let the model author it.
+
+---
+
+## D6. Four deliberate departures from the prototype's markup
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+The brief keeps the prototype's look but replaces its behaviour. Porting the design system turned
+up four places where copying the markup exactly would have carried a defect across.
+
+1. **The toggle is now operable.** `.toggle-track` was a `<span>` with `cursor: pointer`, and the
+   `<input>` was `width: 0; height: 0`. Neither could be clicked, so every switch in the prototype
+   was decoration. The input now spans the control (`position: absolute; inset: 0`), the track
+   remains the visible artwork, and focus lands on the input with the ring drawn on the track.
+   `tests/e2e/design-system.spec.ts` asserts the switch is clickable and reports its state.
+
+2. **The sidebar footer is pinned.** `.sidebar` scrolled as one column with `margin-top: auto` on
+   the operator chip. With 21 nav items that only works while the content is short; on a 620px
+   viewport the chip was pushed below the fold with no way to reach it. The column is now
+   `overflow: hidden`, the nav sits in a `.nav-scroll` region that scrolls, and the chip stays put.
+
+3. **Wide tables scroll horizontally.** The prototype let columns squeeze. `.table-scroll` gives
+   them `overflow-x: auto` with a floor width, and a fade on the right edge below 880px so a cut
+   off column reads as "swipe for more" rather than as a broken layout.
+
+4. **Empty, error and loading states exist.** The prototype had shipped sample data in every
+   table, so it never needed them. `EmptyState`, `ErrorState`, `Skeleton` and `SkeletonRows` are
+   new, and `DataTable` renders them in a fixed precedence: a failure beats loading, loading beats
+   empty. A count of zero renders the empty state; it never renders a zeroed-out dashboard.
+
+Related: the logo moved to `public/cryden-icon.png` and the banner to `public/og-image.png` as
+BUILD_NOTE.md section 1 asks. The two prototype HTML files had their `og:image` reference updated
+so nothing dangles.
+
+---
+
+## D7. The design system has a dev-only preview route at `/design`
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+Step 0.2 produces components that no screen renders yet, so there was nothing to look at and
+nothing honest to point a test at. `/design` renders every component in every state inside the real
+shell, and `tests/e2e/design-system.spec.ts` drives it.
+
+The route calls `notFound()` when `NODE_ENV` is `production`, so a production build answers 404
+for it. Confirmed against a real build: the prerendered output is the error page with
+`meta name="robots" content="noindex"`.
+
+It is not linked from the console navigation and is not part of the operator's surface. Tier 0.7
+adds the real landing page at `/`; the console dashboard lives at `/dashboard`, since the two
+route groups cannot both own the root path.
