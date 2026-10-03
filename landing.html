@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>csax+ the CrydenSync console</title>
+<meta name="description" content="csax+ is the console for CrydenSync, the embeddable authentication engine you run yourself. Your users, sessions and audit logs stay in your own database." />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="csax+ — the CrydenSync console" />
+<meta property="og:description" content="Scaling Trust for digital age. Self-hosted authentication you drive from a UI instead of the CLI." />
+<meta property="og:image" content="og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="cryden%20icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="lp">
+
+<!-- ============ nav ============ -->
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-inner">
+    <a class="lp-brand" href="landing.html">
+      <span class="brand-mark"><img src="cryden%20icon.png" alt="CrydenSync" /></span>
+      <span class="brand-text"><b>csax+</b><span>CRYDENSYNC CONSOLE</span></span>
+    </a>
+    <nav class="lp-nav-links">
+      <a href="#own">Why</a>
+      <a href="#auth">Auth</a>
+      <a href="#security">Security</a>
+      <a href="#ai">AI admin</a>
+      <a href="#backends">Backends</a>
+      <a href="#console">Console</a>
+    </nav>
+    <a class="btn primary lp-nav-cta" href="index.html">Open console</a>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ hero ============ -->
+<section class="lp-hero">
+  <div class="lp-wrap lp-hero-inner">
+    <div class="lp-hero-copy">
+      <span class="lp-badge"><i></i>self-hosted · MIT · Go 1.22+</span>
+      <h1 class="lp-h1">Scaling Trust<br />for digital age.</h1>
+      <p class="lp-lede">
+        <strong>csax+</strong> is the console for <strong>CrydenSync</strong> — an embeddable,
+        framework-agnostic authentication engine for Go. Import it, configure it, own your users.
+        Drive the whole deployment from a UI instead of the CLI.
+      </p>
+      <div class="lp-cta-row">
+        <a class="btn primary lp-btn-lg" href="index.html">
+          Open console
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn lp-btn-lg" href="#console">See what's inside</a>
+      </div>
+      <div class="lp-trust">
+        <span><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 3 7.8 7 9 4-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Secure</span>
+        <span><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="7" rx="2" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="13" width="18" height="7" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 7.5h.01M7 16.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Self-Hosted</span>
+        <span><svg viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4M15 8l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Open Source</span>
+        <span><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="m6 6 12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>No Vendor Lock-in</span>
+      </div>
+    </div>
+
+    <div class="lp-hero-art" aria-hidden="true">
+      <div class="lp-window">
+        <div class="lp-window-bar">
+          <span class="lp-dot"></span><span class="lp-dot"></span><span class="lp-dot"></span>
+          <span class="lp-window-title">csax+ · crydensync console</span>
+        </div>
+        <div class="lp-window-body">
+          <div class="lp-mock-digest">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <p><strong>14</strong> new signups, <strong>3</strong> lockouts (all self-resolved), <strong>1</strong> anomaly reviewed. Nothing needs your attention.</p>
+          </div>
+          <div class="lp-mock-stats">
+            <div><span>Users</span><b>2,481</b></div>
+            <div><span>Sessions</span><b>312</b></div>
+            <div><span>MFA</span><b>41%</b></div>
+            <div><span>Flagged</span><b class="lp-amber">1</b></div>
+          </div>
+          <div class="lp-mock-rows">
+            <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:02</span><span class="audit-event">session_revoked</span></div>
+            <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">11:47</span><span class="audit-event">login_failed × 3</span></div>
+            <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">09:15</span><span class="audit-event">oauth_linked</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="lp-hero-glow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ why ============ -->
+<section class="lp-section" id="own">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">Why</span>
+      <h2 class="lp-h2">Auth you run, not auth you rent.</h2>
+      <p class="lp-sub">
+        Every project ends up rewriting auth from scratch, or handing user data to a third-party
+        provider. CrydenSync is a library, not a service.
+      </p>
+    </div>
+    <div class="lp-grid cols-3">
+      <div class="card lp-card">
+        <div class="lp-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.6"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <h3>Own your users</h3>
+        <p>No hosted service, no data leaving your infrastructure. Users, sessions and audit logs stay in your own database, under your own control.</p>
+      </div>
+      <div class="card lp-card">
+        <div class="lp-icon"><svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="7.5" ry="3" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3" stroke="currentColor" stroke-width="1.6"/></svg></div>
+        <h3>No vendor lock-in</h3>
+        <p>Plain Postgres tables, or one SQLite file. No proprietary format, no export migration, nobody's egress bill.</p>
+      </div>
+      <div class="card lp-card">
+        <div class="lp-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5c-4.7 0-8.5 3.8-8.5 8.5s3.8 8.5 8.5 8.5c1.4 0 2.3-.9 2.3-2 0-.6-.2-1-.6-1.4-.4-.4-.6-.9-.6-1.4 0-1.1.9-2 2-2h2.4c2 0 3.5-1.6 3.5-3.6C20.5 6.5 16.6 3.5 12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></svg></div>
+        <h3>Zero telemetry</h3>
+        <p>The engine never phones home. Logs and audit events go wherever <em>you</em> wire them — never to us.</p>
+      </div>
+    </div>
+    <p class="lp-note">
+      Nothing in this repo runs on its own initiative: breach checking, IP geolocation, log shipping
+      and webhook delivery all ship as <strong>interfaces with zero implementations</strong>. Bring your own,
+      or leave them off and nothing else changes.
+    </p>
+  </div>
+</section>
+
+<!-- ============ auth ============ -->
+<section class="lp-section lp-alt" id="auth">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">Auth</span>
+      <h2 class="lp-h2">The whole auth surface, not a login form.</h2>
+      <p class="lp-sub">
+        Every capability below is a first-class part of the engine — not a plugin, not an
+        add-on module, not a per-seat upgrade.
+      </p>
+    </div>
+    <div class="lp-grid cols-3">
+      <div class="card lp-card">
+        <h3>Passwords &amp; sessions</h3>
+        <p>Signup, login, and logout on a single device or all of them. JWT access tokens with rotating opaque refresh tokens and theft/reuse detection.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Six OAuth providers</h3>
+        <p>Google, GitHub, Microsoft, Discord, GitLab and Apple. An email collision returns a conflict rather than silently linking — auto-linking on email match alone is an account-takeover vector.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Two-factor, unified</h3>
+        <p>TOTP and passkeys (WebAuthn) under one pause state. An account can have either, both, or neither, and <span class="mono">Login</span> reports whichever are enrolled.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Magic links</h3>
+        <p>Passwordless login for existing accounts. The link proves email ownership — the primary factor — so it routes through the same second-factor gate a password does.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Recovery codes</h3>
+        <p>A fallback for an account that already has a real second factor. If that factor is removed while codes remain, they stop being offered rather than becoming a standing backdoor.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Email verification &amp; change</h3>
+        <p>Token issue and confirm as engine primitives. Delivery is pluggable — the engine hands you a raw token and never assumes your domain or routes.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Password policy</h3>
+        <p>Secure-by-default NIST 800-63B rules. A violation returns <em>every</em> broken rule at once, as stable codes, so a client can show them together.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Extensible JWT claims</h3>
+        <p>Attach roles, tenant IDs, plan — whatever your authorization layer needs — to every access token. The seven registered claim names are refused all-or-nothing.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>API keys</h3>
+        <p><span class="mono">ck_</span>-prefixed machine credentials for CI and cron, deliberately outside the second-factor system. Only the hash is stored, and every read failure looks identical.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ security ============ -->
+<section class="lp-section" id="security">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">Security</span>
+      <h2 class="lp-h2">Signals, not surprise lockouts.</h2>
+      <p class="lp-sub">
+        Detection here records what looks wrong and lets a human decide. No login is ever blocked,
+        delayed or challenged by an anomaly — and none of it returns an error a client could branch on.
+      </p>
+    </div>
+    <div class="lp-grid cols-2">
+      <div class="card lp-card">
+        <h3>Anomaly detection</h3>
+        <p>Six signal codes over login attempts: new IP, new device, per-user and per-IP failure velocity, refresh-token reuse, and an unusual count of concurrent sessions. Report-only, always.</p>
+        <div class="lp-chips">
+          <span class="mono">new_ip</span><span class="mono">new_device</span><span class="mono">token_reuse</span><span class="mono">concurrent_sessions</span>
+        </div>
+      </div>
+      <div class="card lp-card">
+        <h3>Credential-stuffing detection</h3>
+        <p>One IP spraying one leaked password across many accounts — the attack per-account lockout structurally cannot see, because each account only ever witnesses a single failure.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Lockout that survives a restart</h3>
+        <p>Persistent and database-backed, so it holds through restarts and stays correct across multiple running instances. Five attempts, fifteen minutes, both configurable.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Rate limiting, two layers</h3>
+        <p>Per-user windows on login, signup and magic-link, plus a coarser per-IP edge guard. In-memory for a single instance; point it at Redis and every replica counts against one shared window.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>bcrypt or Argon2id</h3>
+        <p>Two real implementations of one interface. Every hash names its own algorithm, so a table can hold both mid-migration — and out-of-date hashes upgrade themselves on the next successful login.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Named sessions</h3>
+        <p><span class="mono">Chrome on macOS</span> instead of a UUID, computed on read from the IP and User-Agent every session already stores. No migration, no new column.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ai ============ -->
+<section class="lp-section lp-alt" id="ai">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">AI admin</span>
+      <h2 class="lp-h2">Four assistants. None of them can act.</h2>
+      <p class="lp-sub">
+        All four read the engine's own audit history and current settings. There is no code path in
+        any of them that locks an account, changes a config value, or takes any action at all.
+      </p>
+    </div>
+    <div class="lp-grid cols-4">
+      <div class="card lp-card">
+        <h3>Weekly digest</h3>
+        <p>A plain-English summary of the week. A quiet week renders as two lines.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Support assistant</h3>
+        <p>"Why can't user X log in" — answered from lock state, recent failures and session state, never guessed at.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Config advisor</h3>
+        <p>Reads 30 days of history against the settings actually in force and suggests changes. A suggestion pre-fills a field; a human still saves it.</p>
+      </div>
+      <div class="card lp-card">
+        <h3>Ask-AI widget</h3>
+        <p>The one piece your own end users can embed, answering questions about their own account.</p>
+      </div>
+    </div>
+
+    <div class="lp-callout">
+      <div class="lp-callout-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 3 7.8 7 9 4-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12.3 11 14.3 15.3 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <b>A prompt injection can change what query the model tries. It cannot change what the code lets that query read.</b>
+        <p>
+          The widget discards whatever identity filter the model produced and substitutes the id
+          verified from the caller's own token — unconditionally, rather than validating and
+          rejecting. Every phrasing of a question, honest or adversarial, produces the exact same
+          scoped query, so there is no error oracle to learn from either.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ backends ============ -->
+<section class="lp-section" id="backends">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">Backends</span>
+      <h2 class="lp-h2">Postgres, or a single file.</h2>
+      <p class="lp-sub">
+        Two real backends behind one set of interfaces — not a production path and a toy. Exactly one
+        environment variable chooses between them, and setting both is a startup error rather than a
+        silent preference.
+      </p>
+    </div>
+
+    <div class="lp-backends">
+      <div class="card lp-backend">
+        <div class="lp-backend-head">
+          <h3>Postgres</h3>
+          <span class="pill green">everything</span>
+        </div>
+        <p class="lp-backend-note">Postgres 13+ — local, Docker, or hosted (Supabase, Neon, RDS).</p>
+        <ul class="lp-list">
+          <li>The complete auth surface</li>
+          <li>The full admin console — users, metadata, webhooks, logs, digest</li>
+          <li>Support diagnosis, config tuning, anomaly review</li>
+          <li>AI provider settings, encrypted at rest</li>
+        </ul>
+      </div>
+      <div class="card lp-backend">
+        <div class="lp-backend-head">
+          <h3>SQLite</h3>
+          <span class="pill neutral">core auth only</span>
+        </div>
+        <p class="lp-backend-note">One writable path and a volume. No database server to run at all.</p>
+        <ul class="lp-list">
+          <li>Signup, login, refresh, sessions, password change</li>
+          <li>Email change, OAuth, TOTP, passkeys, recovery codes</li>
+          <li>Magic links and API keys</li>
+          <li>Everything under <span class="mono">/v1/admin</span> answers <span class="mono">501</span> — the console's tables are Postgres-only</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="lp-note">
+      Migrations are compiled into the binary and applied on boot, so a <span class="mono">git pull</span>
+      or a new container image brings its own schema change with it. Teams who would rather review
+      schema changes set <span class="mono">SKIP_AUTO_MIGRATE</span> and run <span class="mono">api migrate</span> in the pipeline instead.
+    </p>
+  </div>
+</section>
+
+<!-- ============ console ============ -->
+<section class="lp-section lp-alt" id="console">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow">The console</span>
+      <h2 class="lp-h2">Twenty-one screens over the CLI.</h2>
+      <p class="lp-sub">
+        Everything you would otherwise type is a screen here — with the destructive actions behind a
+        passkey prompt and the read-only ones labelled as such.
+      </p>
+    </div>
+
+    <div class="lp-console-grid">
+      <div class="lp-console-group">
+        <span class="lp-console-label">Identity</span>
+        <ul class="lp-list lp-list-tight">
+          <li>Dashboard</li><li>Users</li><li>OAuth Providers</li><li>MFA &amp; Passkeys</li>
+          <li>Email &amp; Magic Link</li><li>Password Policy</li><li>Sessions</li>
+        </ul>
+      </div>
+      <div class="lp-console-group">
+        <span class="lp-console-label">Machine access</span>
+        <ul class="lp-list lp-list-tight">
+          <li>API Keys</li><li>JWT Claims</li><li>Webhooks</li>
+        </ul>
+        <span class="lp-console-label lp-console-label-sp">Audit</span>
+        <ul class="lp-list lp-list-tight">
+          <li>Anomalies</li><li>Audit Log</li><li>Cloud Logging</li>
+        </ul>
+      </div>
+      <div class="lp-console-group">
+        <span class="lp-console-label">AI admin <em class="tier-tag">read-only</em></span>
+        <ul class="lp-list lp-list-tight">
+          <li>AI Assistant</li><li>Weekly Digest</li><li>Support Assistant</li>
+          <li>Config Advisor</li><li>Ask-AI Widget</li><li>LLM Provider</li><li>Database Provider</li>
+        </ul>
+      </div>
+      <div class="lp-console-group">
+        <span class="lp-console-label">Deployment</span>
+        <ul class="lp-list lp-list-tight">
+          <li>Settings &amp; Secrets</li>
+        </ul>
+        <div class="lp-cli">
+          <span class="lp-console-label lp-console-label-sp">What it replaces</span>
+          <code>go run ./cmd/grant-operator -db "$DATABASE_URL" -email you@example.com</code>
+          <code>api migrate --baseline</code>
+          <code>csax ai ask "which accounts locked out this week?"</code>
+        </div>
+      </div>
+    </div>
+
+    <p class="lp-note">
+      Writes on the admin surface are few and deliberate: operator metadata (which becomes JWT claims),
+      a review note on a flagged event, and a settings save. Nothing else. No AI feature can reach any
+      of them — no tool holds a reference, and the engine's interfaces carry no method that could call one.
+    </p>
+  </div>
+</section>
+
+<!-- ============ cta ============ -->
+<section class="lp-cta-band">
+  <div class="lp-wrap lp-cta-inner">
+    <span class="brand-mark lp-cta-mark"><img src="cryden%20icon.png" alt="" /></span>
+    <h2 class="lp-h2">Your deployment is already running.</h2>
+    <p class="lp-sub">Open the console and take a look around.</p>
+    <div class="lp-cta-row lp-cta-row-center">
+      <a class="btn primary lp-btn-lg" href="index.html">
+        Open console
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn lp-btn-lg" href="https://github.com/crydensync/cryden">Read the docs</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="lp-footer">
+  <div class="lp-wrap lp-footer-inner">
+    <div class="lp-footer-brand">
+      <span class="brand-mark"><img src="cryden%20icon.png" alt="" /></span>
+      <span class="brand-text"><b>csax+</b><span>CRYDENSYNC CONSOLE</span></span>
+    </div>
+    <nav class="lp-footer-links">
+      <a href="https://github.com/crydensync/cryden">Engine</a>
+      <a href="https://github.com/crydensync/api">HTTP API</a>
+      <a href="https://pkg.go.dev/github.com/crydensync/cryden/v2">Go reference</a>
+    </nav>
+    <p class="lp-footer-note">
+      MIT licensed. Built with <span class="lp-heart">❤</span> in Africa · Own your users, not vendor lock-in.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

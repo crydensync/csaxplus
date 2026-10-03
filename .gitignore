@@ -1,0 +1,69 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# environment and secrets (keep the examples)
+.env
+.env.*
+!.env.example
+csax.config.json
+!csax.config.example.json
+secrets/
+*.pem
+*.key
+*.p12
+*.crt
+
+# local databases (console store)
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# reference repos cloned for reading
+_reference/
+
+# tests and reports
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# tooling caches
+.eslintcache
+.cache/
+.turbo/
+.vercel/
+
+# docker
+docker-compose.override.yml
+
+# editor and OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# claude code local state (keep shared settings.json)
+.claude/settings.local.json
+.claude/projects/

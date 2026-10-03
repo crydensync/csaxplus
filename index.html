@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>csax+ CrydenSync Console (Prototype)</title>
+<meta property="og:image" content="og-image.png" />
+<link rel="icon" href="cryden%20icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="landing.html" title="Back to the landing page">
+      <div class="brand-mark">
+        <img src="cryden%20icon.png" alt="" />
+      </div>
+      <div class="brand-text"><b>csax+</b><span>CRYDENSYNC CONSOLE</span></div>
+    </a>
+
+    <div class="nav-group-label">Overview</div>
+    <nav class="primary">
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="5" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="12" width="8" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="15" width="8" height="6" rx="2" stroke="currentColor" stroke-width="1.6"/></svg>
+        Dashboard
+      </button>
+    </nav>
+
+    <div class="nav-group-label">Identity</div>
+    <nav class="primary">
+      <button class="nav-item" data-view="users">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.6"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Users
+      </button>
+      <button class="nav-item" data-view="oauth">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 15 15 9M8.5 8.5 6 6a3.5 3.5 0 1 0 0 5l1-1M15.5 15.5 18 18a3.5 3.5 0 1 0 0-5l-1 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        OAuth Providers
+      </button>
+      <button class="nav-item" data-view="mfa">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 3 7.8 7 9 4-1.2 7-4.5 7-9V6l-7-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12.3 11 14.3 15.3 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        MFA &amp; Passkeys
+      </button>
+      <button class="nav-item" data-view="email">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5.5" width="18" height="13" rx="2.2" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Email &amp; Magic Link
+      </button>
+      <button class="nav-item" data-view="password-policy">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="15" r="1.3" fill="currentColor"/></svg>
+        Password Policy
+      </button>
+    </nav>
+
+    <div class="nav-group-label">Security</div>
+    <nav class="primary">
+      <button class="nav-item" data-view="sessions">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4.5" y="10" width="15" height="10" rx="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10" stroke="currentColor" stroke-width="1.6"/></svg>
+        Sessions
+        <span class="badge" id="sessionsBadge">1</span>
+      </button>
+      <button class="nav-item" data-view="anomalies">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 3 20h18L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>
+        Anomalies
+        <span class="badge" style="background:var(--amber-dim);color:var(--amber);">1</span>
+      </button>
+      <button class="nav-item" data-view="audit">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 10h7M8.5 13.5h7M8.5 17h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Audit Log
+      </button>
+      <button class="nav-item" data-view="ai">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M18.5 15.5 19.3 17.7 21.5 18.5 19.3 19.3 18.5 21.5 17.7 19.3 15.5 18.5 17.7 17.7 18.5 15.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        AI Assistant
+      </button>
+    </nav>
+
+    <div class="nav-group-label">Developer</div>
+    <nav class="primary">
+      <button class="nav-item" data-view="apikeys">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="15" r="3.3" stroke="currentColor" stroke-width="1.6"/><path d="M10.3 12.7 19 4M19 4h-3.2M19 4v3.2M15.5 7.5l2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        API Keys
+      </button>
+      <button class="nav-item" data-view="webhooks">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="6" cy="7" r="2.3" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="7" r="2.3" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="18" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M8 8.2 10.3 16M16 8.2 13.7 16M8.3 7h7.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Webhooks
+      </button>
+      <button class="nav-item" data-view="jwtclaims">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10h8M8 13.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        JWT Claims
+      </button>
+      <button class="nav-item" data-view="logging">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 18c-1.7 0-3-1.3-3-2.9 0-1.5 1.1-2.7 2.6-2.9a4.5 4.5 0 0 1 8.7-1.7 3.7 3.7 0 0 1 4.7 3.6c0 2.1-1.7 3.9-3.9 3.9H5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Cloud Logging
+      </button>
+    </nav>
+
+    <div class="nav-group-label">AI Admin <span class="tier-tag">Tier 4</span></div>
+    <nav class="primary">
+      <button class="nav-item" data-view="digest">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3.5" width="16" height="17" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 11.5h8M8 15h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Weekly Digest
+      </button>
+      <button class="nav-item" data-view="supportassist">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0v4.5a2.5 2.5 0 0 1-2.5 2.5H16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 12v3a2 2 0 0 0 2 2h.5a1.5 1.5 0 0 0 1.5-1.5v-3A1.5 1.5 0 0 0 6.5 11H4Zm16 0v3a2 2 0 0 1-2 2h-.5a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5H20Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 19a1.5 1.5 0 0 1-1.5 1.5h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Support Assistant
+      </button>
+      <button class="nav-item" data-view="configadvisor">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="6" r="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="12" r="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="18" r="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/></svg>
+        Config Advisor
+      </button>
+      <button class="nav-item" data-view="aiwidget">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8M12 17v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Ask-AI Widget
+      </button>
+    </nav>
+
+    <div class="nav-group-label">Configuration</div>
+    <nav class="primary">
+      <button class="nav-item" data-view="llmprovider">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 3.5v3.2M14.5 3.5v3.2M9.5 17.3v3.2M14.5 17.3v3.2M3.5 9.5h3.2M3.5 14.5h3.2M17.3 9.5h3.2M17.3 14.5h3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        LLM Provider
+      </button>
+      <button class="nav-item" data-view="dbprovider">
+        <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="7.5" ry="3" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6" stroke="currentColor" stroke-width="1.6"/></svg>
+        Database Provider
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.9-1.3-2-3.4-2.2.7a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.2-.7-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3l-1.9 1.3 2 3.4 2.2-.7a7.6 7.6 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 0 0 2.6-1.5l2.2.7 2-3.4-1.9-1.3Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        Settings &amp; Secrets
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="operator-chip">
+        <div class="avatar">RA</div>
+        <div class="operator-meta">
+          <b>raymond@crydensync.dev</b>
+          <span>Owner · this device verified</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <div class="sub" id="pageSub">Your CrydenSync deployment, at a glance</div>
+        </div>
+      </div>
+      <span class="env-tag">connected · production db</span>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="digest">
+        <div class="digest-head">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <b>This week's digest</b>
+        </div>
+        <p><strong>14</strong> new signups, <strong>3</strong> lockouts (all self-resolved within the hour), and <strong>1</strong> anomaly flagged — a login from a new country on Priya's account, reviewed and confirmed as a real trip. Nothing needs your attention right now.</p>
+      </div>
+
+      <div class="section-title">Overview</div>
+      <div class="grid cols-4">
+        <div class="card">
+          <h3>Total users</h3>
+          <p class="hint">across all providers</p>
+          <div class="stat-value">2,481</div>
+          <div class="stat-delta up">↑ 14 this week</div>
+        </div>
+        <div class="card">
+          <h3>Active sessions</h3>
+          <p class="hint">right now</p>
+          <div class="stat-value">312</div>
+          <div class="stat-delta">↑ 6% vs last week</div>
+        </div>
+        <div class="card">
+          <h3>MFA adoption</h3>
+          <p class="hint">of eligible users</p>
+          <div class="stat-value">41%</div>
+          <div class="stat-delta up">↑ 3pts this week</div>
+        </div>
+        <div class="card">
+          <h3>Flagged events</h3>
+          <p class="hint">last 24 hours</p>
+          <div class="stat-value" style="color:var(--amber)">1</div>
+          <div class="stat-delta warn">reviewed, no action needed</div>
+        </div>
+      </div>
+
+      <div class="section-title">Recent activity</div>
+      <div class="card" style="padding:6px 16px;">
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:02</span><span class="audit-event">session_revoked</span><span class="audit-detail">priya@ex&#8203;ample.com — device Firefox on macOS</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">11:47</span><span class="audit-event">login_failed × 3</span><span class="audit-detail">daniel@ex&#8203;ample.com — auto-locked, self-resolved</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">09:15</span><span class="audit-event">oauth_linked</span><span class="audit-detail">amaka@ex&#8203;ample.com — GitHub</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">08:30</span><span class="audit-event">mfa_enrolled</span><span class="audit-detail">jonah@ex&#8203;ample.com — TOTP confirmed</span></div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="view" id="view-users">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+        <input placeholder="Search by email…" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;width:280px;max-width:100%;font-size:13px;">
+        <button class="btn primary">+ Create user</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>User</th><th>Provider</th><th>MFA</th><th>Status</th><th>Last seen</th><th></th></tr></thead>
+          <tbody id="usersTbody">
+            <tr class="clickable" onclick="toast('Would open priya@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">PN</div><div><b>priya@example.com</b><div class="sub">joined Jun 3</div></div></div></td>
+              <td><span class="pill neutral">password</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">2m ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open daniel@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">DA</div><div><b>daniel@example.com</b><div class="sub">joined Jun 1</div></div></div></td>
+              <td><span class="pill neutral">Google</span></td>
+              <td><span class="pill neutral">disabled</span></td>
+              <td><span class="pill red">locked</span></td>
+              <td class="dim mono">1h ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open amaka@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">AM</div><div><b>amaka@example.com</b><div class="sub">joined May 22</div></div></div></td>
+              <td><span class="pill neutral">GitHub</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">9m ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open jonah@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">JO</div><div><b>jonah@example.com</b><div class="sub">joined May 19</div></div></div></td>
+              <td><span class="pill neutral">password</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">3h ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open sam@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">SA</div><div><b>sam@example.com</b><div class="sub">joined May 14</div></div></div></td>
+              <td><span class="pill neutral">password</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">31m ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open lin@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">LI</div><div><b>lin@example.com</b><div class="sub">joined May 10</div></div></div></td>
+              <td><span class="pill neutral">password</span></td>
+              <td><span class="pill neutral">disabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">2h ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open teammate@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">TA</div><div><b>tariq@example.com</b><div class="sub">joined May 8</div></div></div></td>
+              <td><span class="pill neutral">Google</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill green">active</span></td>
+              <td class="dim mono">18m ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open efe@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">EF</div><div><b>efe@example.com</b><div class="sub">joined May 2</div></div></div></td>
+              <td><span class="pill neutral">GitHub</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill amber">invited</span></td>
+              <td class="dim mono">4d ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+            <tr class="clickable" onclick="toast('Would open nadia@example.com — prototype only')">
+              <td><div class="user-cell"><div class="avatar-sm">NA</div><div><b>nadia@example.com</b><div class="sub">joined Apr 28</div></div></div></td>
+              <td><span class="pill neutral">password</span></td>
+              <td><span class="pill green">enabled</span></td>
+              <td><span class="pill red">suspended</span></td>
+              <td class="dim mono">6d ago</td>
+              <td><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- OAUTH -->
+    <section class="view" id="view-oauth">
+      <div class="grid cols-3">
+        <div class="card oauth-card">
+          <div class="oauth-head">
+            <div class="oauth-icon"><svg viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.9 1.5l2.7-2.6C17 2.9 14.7 2 12 2 6.8 2 2.6 6.2 2.6 11.9S6.8 21.9 12 21.9c6.9 0 9.3-4.9 9.3-7.4 0-.5 0-.9-.1-1.2H12Z"/></svg></div>
+            <div><div class="oauth-name">Google</div><div class="oauth-meta"><span>842 linked</span></div></div>
+          </div>
+          <div class="oauth-foot">
+            <span class="pill green">reachable</span>
+            <button class="btn small">Configure</button>
+          </div>
+        </div>
+        <div class="card oauth-card">
+          <div class="oauth-head">
+            <div class="oauth-icon"><svg viewBox="0 0 24 24" fill="#e6e6ea"><path d="M12 2a10 10 0 0 0-3.16 19.5c.5.1.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.15-1.11-1.46-1.11-1.46-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.93 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.83-2.35 4.68-4.58 4.92.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg></div>
+            <div><div class="oauth-name">GitHub</div><div class="oauth-meta"><span>391 linked</span></div></div>
+          </div>
+          <div class="oauth-foot">
+            <span class="pill green">reachable</span>
+            <button class="btn small">Configure</button>
+          </div>
+        </div>
+        <div class="card oauth-card">
+          <div class="oauth-head">
+            <div class="oauth-icon"><svg viewBox="0 0 24 24"><path fill="#5865F2" d="M20.3 5.4A17.6 17.6 0 0 0 16 4c-.2.4-.4.9-.6 1.3a16.3 16.3 0 0 0-4.8 0A9 9 0 0 0 10 4a17.6 17.6 0 0 0-4.3 1.4C3 9.6 2.3 13.7 2.6 17.7a17.7 17.7 0 0 0 5.4 2.8c.4-.6.8-1.3 1.1-2a11.4 11.4 0 0 1-1.8-.9l.4-.3a12.7 12.7 0 0 0 10.6 0l.4.3c-.6.3-1.2.6-1.8.9.3.7.7 1.4 1.1 2a17.6 17.6 0 0 0 5.4-2.8c.4-4.6-.8-8.7-3.1-12.3ZM9.7 15.3c-1 0-1.9-1-1.9-2.2 0-1.2.8-2.2 1.9-2.2s2 1 1.9 2.2c0 1.2-.9 2.2-1.9 2.2Zm6.6 0c-1 0-1.9-1-1.9-2.2 0-1.2.8-2.2 1.9-2.2s2 1 1.9 2.2c0 1.2-.8 2.2-1.9 2.2Z"/></svg></div>
+            <div><div class="oauth-name">Discord</div><div class="oauth-meta"><span>128 linked</span></div></div>
+          </div>
+          <div class="oauth-foot">
+            <span class="pill green">reachable</span>
+            <button class="btn small">Configure</button>
+          </div>
+        </div>
+        <div class="card oauth-card">
+          <div class="oauth-head">
+            <div class="oauth-icon"><svg viewBox="0 0 24 24"><path fill="#00A4EF" d="M2 2h9.3v9.3H2V2Z"/><path fill="#7FBA00" d="M12.7 2H22v9.3h-9.3V2Z"/><path fill="#F25022" d="M2 12.7h9.3V22H2v-9.3Z"/><path fill="#FFB900" d="M12.7 12.7H22V22h-9.3v-9.3Z"/></svg></div>
+            <div><div class="oauth-name">Microsoft</div><div class="oauth-meta"><span>64 linked</span></div></div>
+          </div>
+          <div class="oauth-foot">
+            <span class="pill amber">degraded</span>
+            <button class="btn small">Configure</button>
+          </div>
+        </div>
+        <div class="card oauth-card">
+          <div class="oauth-head">
+            <div class="oauth-icon"><svg viewBox="0 0 24 24" fill="#e6e6ea"><path d="M16.4 1.7c.1 1.2-.3 2.4-1.1 3.3-.8.9-2 1.6-3.2 1.5-.1-1.2.4-2.5 1.1-3.3.8-.9 2.1-1.5 3.2-1.5ZM19.9 17c-.5 1.2-.8 1.7-1.5 2.7-1 1.4-2.3 3.1-4 3.2-1.5.1-1.9-1-3.9-1s-2.5 1-4 1c-1.7-.1-3-1.6-4-3-2.7-3.9-3-8.5-1.3-11 .1-.1.1-.3.2-.4 1-1.6 2.7-2.6 4.5-2.7 1.5-.1 2.9 1 3.9 1 .9 0 2.7-1.2 4.5-1 .8 0 3 .3 4.4 2.4-.1.1-2.6 1.5-2.6 4.5.1 3.5 3 4.7 3.1 4.7-.1.2-.5 1.7-1.3 3.6Z"/></svg></div>
+            <div><div class="oauth-name">Apple</div><div class="oauth-meta"><span>57 linked</span></div></div>
+          </div>
+          <div class="oauth-foot">
+            <span class="pill green">reachable</span>
+            <button class="btn small">Configure</button>
+          </div>
+        </div>
+        <div class="card oauth-card" style="border-style:dashed;">
+          <div class="oauth-head">
+            <div class="oauth-icon" style="background:var(--surface-2)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--text-dim)" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div><div class="oauth-name" style="color:var(--text-muted)">Add provider</div><div class="oauth-meta"><span>Slack, X, LinkedIn…</span></div></div>
+          </div>
+          <div class="oauth-foot" style="border:none;padding-top:0;">
+            <button class="btn small" style="width:100%;justify-content:center;" onclick="toast('Prototype — provider wizard not wired up')">+ Configure new</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:26px;">Endpoint health</div>
+      <div class="card">
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="mono" style="width:110px;">Google</span><span class="audit-detail">Last tested 2h ago — discovery + token endpoint both reachable</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="mono" style="width:110px;">GitHub</span><span class="audit-detail">Last tested 2h ago — authorize + token endpoint both reachable</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="mono" style="width:110px;">Discord</span><span class="audit-detail">Last tested 3h ago — authorize + token endpoint both reachable</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="mono" style="width:110px;">Microsoft</span><span class="audit-detail">Last tested 22m ago — token endpoint timed out twice, retrying</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="mono" style="width:110px;">Apple</span><span class="audit-detail">Last tested 3h ago — discovery + token endpoint both reachable</span></div>
+      </div>
+    </section>
+
+    <!-- MFA -->
+    <section class="view" id="view-mfa">
+      <div class="grid cols-3">
+        <div class="card"><h3>TOTP enrolled</h3><div class="stat-value">1,017</div><p class="hint">41% of users</p></div>
+        <div class="card"><h3>Passkeys registered</h3><div class="stat-value">203</div><p class="hint">8% of users</p></div>
+        <div class="card"><h3>Recovery codes used</h3><div class="stat-value">12</div><p class="hint">last 30 days</p></div>
+      </div>
+      <div class="section-title">Recent MFA activity</div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>User</th><th>Method</th><th>Event</th><th>When</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><div class="user-cell"><div class="avatar-sm">JO</div><b>jonah@example.com</b></div></td><td><span class="pill neutral">TOTP</span></td><td>Enrolled</td><td class="dim mono">08:30</td><td></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">SA</div><b>sam@example.com</b></div></td><td><span class="pill neutral">Passkey</span></td><td>Registered — MacBook Touch ID</td><td class="dim mono">yesterday</td><td></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">LI</div><b>lin@example.com</b></div></td><td><span class="pill neutral">TOTP</span></td><td>Lost device — <button class="btn small danger-ghost" onclick="toast('Would force-disable MFA after identity re-check')">force-disable</button></td><td class="dim mono">2 days ago</td><td></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">TA</div><b>tariq@example.com</b></div></td><td><span class="pill neutral">Passkey</span></td><td>Registered — Pixel fingerprint</td><td class="dim mono">2 days ago</td><td></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">AM</div><b>amaka@example.com</b></div></td><td><span class="pill neutral">TOTP</span></td><td>Recovery code used</td><td class="dim mono">4 days ago</td><td></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- EMAIL -->
+    <section class="view" id="view-email">
+      <div class="grid cols-3">
+        <div class="card"><h3>Delivery health</h3><div class="stat-value" style="color:var(--green)">Healthy</div><p class="hint">via Resend · last send 4m ago</p></div>
+        <div class="card"><h3>Magic links sent</h3><div class="stat-value">86</div><p class="hint">last 7 days</p></div>
+        <div class="card"><h3>Click-through</h3><div class="stat-value">92%</div><p class="hint">sent → clicked</p></div>
+      </div>
+
+      <div class="section-title">Email templates</div>
+      <div class="card">
+        <div class="template-tabs">
+          <button class="template-tab active" data-tpl="verify">Verify email</button>
+          <button class="template-tab" data-tpl="magic">Magic link</button>
+          <button class="template-tab" data-tpl="reset">Password reset</button>
+          <button class="template-tab" data-tpl="change">Email change</button>
+        </div>
+        <div class="editor-split">
+          <div>
+            <div class="field-group">
+              <label class="field-label">Subject</label>
+              <input class="text-input" id="tplSubject" value="Confirm your email for {{app_name}}">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Body (HTML)</label>
+              <div style="margin-bottom:8px;">
+                <span class="var-chip" onclick="insertVar('{{user_email}}')">{{user_email}}</span>
+                <span class="var-chip" onclick="insertVar('{{action_url}}')">{{action_url}}</span>
+                <span class="var-chip" onclick="insertVar('{{app_name}}')">{{app_name}}</span>
+                <span class="var-chip" onclick="insertVar('{{expires_in}}')">{{expires_in}}</span>
+              </div>
+              <textarea class="text-input" id="tplBody">&lt;p&gt;Hi there,&lt;/p&gt;
+&lt;p&gt;Click below to confirm your email for &lt;strong&gt;{{app_name}}&lt;/strong&gt;. This link expires in {{expires_in}}.&lt;/p&gt;
+&lt;a href="{{action_url}}" class="button"&gt;Confirm email&lt;/a&gt;
+&lt;p&gt;If you didn't request this, you can ignore this email.&lt;/p&gt;</textarea>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn primary" onclick="toast('Template saved — prototype only, nothing persisted')">Save template</button>
+              <button class="btn" onclick="toast('Test email sent to raymond@crydensync.dev')">Send test</button>
+              <button class="btn" onclick="toast('Reverted to default CrydenSync template')">Reset to default</button>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Live preview</label>
+            <div class="preview-frame" id="tplPreview">
+              <p style="margin:0 0 10px;">Hi there,</p>
+              <p style="margin:0 0 10px;">Click below to confirm your email for <strong>typebook</strong>. This link expires in 15 minutes.</p>
+              <a class="btn-fake" href="#">Confirm email</a>
+              <p style="margin:14px 0 0;color:#666;font-size:12px;">If you didn't request this, you can ignore this email.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Recent sends</div>
+      <div class="card" style="padding:6px 16px;">
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:20</span><span class="audit-event">magic_link_sent</span><span class="audit-detail">priya@ex&#8203;ample.com — clicked 41s later</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">13:05</span><span class="audit-event">email_verify_sent</span><span class="audit-detail">new signup — clicked 2m later</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">10:58</span><span class="audit-event">email_change_sent</span><span class="audit-detail">daniel@ex&#8203;ample.com — not yet clicked</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">10:12</span><span class="audit-event">magic_link_sent</span><span class="audit-detail">tariq@ex&#8203;ample.com — clicked 1m later</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">09:40</span><span class="audit-event">password_reset_sent</span><span class="audit-detail">nadia@ex&#8203;ample.com — clicked 3m later</span></div>
+      </div>
+    </section>
+
+    <!-- PASSWORD POLICY -->
+    <section class="view" id="view-password-policy">
+      <div class="grid cols-3">
+        <div class="card"><h3>Breached-password checks</h3><div class="stat-value" style="color:var(--green)">On</div><p class="hint">blocked 7 signups this week</p></div>
+        <div class="card"><h3>Minimum length</h3><div class="stat-value">12</div><p class="hint">characters</p></div>
+        <div class="card"><h3>Hasher</h3><div class="stat-value" style="font-size:20px;">Argon2id</div><p class="hint">bcrypt still supported for existing hashes</p></div>
+      </div>
+      <div class="section-title">Policy rules</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Check new passwords against known breach databases</span>
+          <input type="checkbox" checked onclick="toast('Prototype — not wired up')">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Require at least one number and one symbol</span>
+          <input type="checkbox" checked onclick="toast('Prototype — not wired up')">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Reject passwords found in this user's previous 5 password history</span>
+          <input type="checkbox" onclick="toast('Prototype — not wired up')">
+        </label>
+      </div>
+
+      <div class="section-title">Argon2id migration</div>
+      <div class="card">
+        <p class="hint" style="margin-bottom:2px;">New hashes use Argon2id. Existing bcrypt hashes upgrade automatically the next time each user logs in successfully — nothing is force-migrated in bulk, so no passwords are ever re-required.</p>
+        <div class="migration-bar">
+          <div class="seg-argon" style="width:63%"></div>
+          <div class="seg-bcrypt" style="width:37%"></div>
+        </div>
+        <div class="migration-legend">
+          <span><span class="legend-dot" style="background:var(--violet)"></span>Argon2id — 1,563 users (63%)</span>
+          <span><span class="legend-dot" style="background:var(--surface-3);border:1px solid var(--border)"></span>bcrypt — 918 users (37%)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft);">
+          <div>
+            <b style="font-size:13px;display:block;">Rehash on next login</b>
+            <span class="hint">Already the default behavior above — this instead prompts remaining bcrypt users for a fresh password on their very next login, completing the migration faster.</span>
+          </div>
+          <label class="toggle"><input type="checkbox" onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section class="view" id="view-sessions">
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>User</th><th>Device</th><th>Location</th><th>Started</th><th>Flag</th><th></th></tr></thead>
+          <tbody id="sessionsTbody">
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">PN</div><b>priya@example.com</b></div></td>
+              <td class="mono">Chrome · macOS</td><td>Lagos, NG</td><td class="dim mono">2h ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">PN</div><b>priya@example.com</b></div></td>
+              <td class="mono">Safari · iOS</td><td style="color:var(--amber)">Lisbon, PT <span class="pill amber" style="margin-left:4px;">new country</span></td><td class="dim mono">5h ago</td>
+              <td><span class="pill amber">reviewed</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">AM</div><b>amaka@example.com</b></div></td>
+              <td class="mono">Firefox · Windows</td><td>Abuja, NG</td><td class="dim mono">9m ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">JO</div><b>jonah@example.com</b></div></td>
+              <td class="mono">Chrome · Android</td><td>Ibadan, NG</td><td class="dim mono">22m ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">SA</div><b>sam@example.com</b></div></td>
+              <td class="mono">Edge · Windows</td><td>Lagos, NG</td><td class="dim mono">31m ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">TA</div><b>tariq@example.com</b></div></td>
+              <td class="mono">Safari · macOS</td><td>Accra, GH</td><td class="dim mono">44m ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">LI</div><b>lin@example.com</b></div></td>
+              <td class="mono">Chrome · Linux</td><td>Nairobi, KE</td><td class="dim mono">1h ago</td>
+              <td><span class="pill green">normal</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">EF</div><b>efe@example.com</b></div></td>
+              <td class="mono">Chrome · iOS</td><td style="color:var(--amber)">Warsaw, PL <span class="pill amber" style="margin-left:4px;">new country</span></td><td class="dim mono">1h ago</td>
+              <td><span class="pill amber">flagged</span></td>
+              <td><button class="btn small danger-ghost" onclick="revokeSession(this)">Revoke</button></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ANOMALIES -->
+    <section class="view" id="view-anomalies">
+      <div class="grid cols-3">
+        <div class="card"><h3>Flagged this week</h3><div class="stat-value" style="color:var(--amber)">2</div><p class="hint">1 reviewed, 1 needs a look</p></div>
+        <div class="card"><h3>Credential-stuffing scans</h3><div class="stat-value" style="color:var(--green)">Clear</div><p class="hint">last 24 hours</p></div>
+        <div class="card"><h3>Rate limiter</h3><div class="stat-value" style="font-size:20px;">Redis · 3 nodes</div><p class="hint">shared across all instances</p></div>
+      </div>
+      <div class="section-title">Recent signals</div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>User</th><th>Signal</th><th>Detail</th><th>When</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">EF</div><b>efe@example.com</b></div></td>
+              <td><span class="pill amber">new country</span></td>
+              <td class="dim">Login from Warsaw, PL — no prior activity from this country</td>
+              <td class="dim mono">1h ago</td>
+              <td><button class="btn small" onclick="toast('Marked as reviewed')">Mark reviewed</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">PN</div><b>priya@example.com</b></div></td>
+              <td><span class="pill amber">new country</span></td>
+              <td class="dim">Login from Lisbon, PT — no prior activity from this country</td>
+              <td class="dim mono">5h ago</td>
+              <td><button class="btn small" onclick="toast('Marked as reviewed')">Mark reviewed</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">DA</div><b>daniel@example.com</b></div></td>
+              <td><span class="pill red">lockout</span></td>
+              <td class="dim">3 failed attempts, single IP — auto-locked, self-resolved</td>
+              <td class="dim mono">1h ago</td>
+              <td><button class="btn small" onclick="toast('Marked as reviewed')">Mark reviewed</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="avatar-sm">NA</div><b>nadia@example.com</b></div></td>
+              <td><span class="pill neutral">device change</span></td>
+              <td class="dim">New device fingerprint, same location — passed MFA challenge</td>
+              <td class="dim mono">6h ago</td>
+              <td><button class="btn small" onclick="toast('Marked as reviewed')">Mark reviewed</button></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- API KEYS -->
+    <section class="view" id="view-apikeys">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+        <p class="muted" style="margin:0;font-size:13px;">Long-lived credentials for server-to-server calls — separate from user sessions, never expire on their own.</p>
+        <button class="btn primary" onclick="toast('Would open key-creation wizard')">+ Create API key</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Name</th><th>Key</th><th>Scope</th><th>Last used</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>billing-service</b></td>
+              <td class="mono dim">csk_live_••••••••7f2a</td>
+              <td><span class="pill neutral">users:read</span></td>
+              <td class="dim mono">3m ago</td>
+              <td><button class="btn small danger-ghost" onclick="toast('Key revoked')">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><b>internal-cron</b></td>
+              <td class="mono dim">csk_live_••••••••1c9d</td>
+              <td><span class="pill neutral">sessions:write</span></td>
+              <td class="dim mono">1h ago</td>
+              <td><button class="btn small danger-ghost" onclick="toast('Key revoked')">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><b>analytics-export</b></td>
+              <td class="mono dim">csk_live_••••••••4e21</td>
+              <td><span class="pill neutral">users:read, sessions:read</span></td>
+              <td class="dim mono">6h ago</td>
+              <td><button class="btn small danger-ghost" onclick="toast('Key revoked')">Revoke</button></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- WEBHOOKS -->
+    <section class="view" id="view-webhooks">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+        <p class="muted" style="margin:0;font-size:13px;">Notify your own backend when things happen here — no more polling the audit log for changes.</p>
+        <button class="btn primary" onclick="toast('Would open webhook setup')">+ Add endpoint</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Endpoint</th><th>Events</th><th>Status</th><th>Last delivery</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">https://api.typebook.app/hooks/cryden</td>
+              <td class="dim">user.created, session.revoked</td>
+              <td><span class="pill green">healthy</span></td>
+              <td class="dim mono">2m ago · 200</td>
+              <td><button class="btn small" onclick="toast('Test delivery sent')">Test</button></td>
+            </tr>
+            <tr>
+              <td class="mono">https://hooks.internal.crydensync.dev/audit</td>
+              <td class="dim">*.* (all events)</td>
+              <td><span class="pill green">healthy</span></td>
+              <td class="dim mono">4m ago · 200</td>
+              <td><button class="btn small" onclick="toast('Test delivery sent')">Test</button></td>
+            </tr>
+            <tr>
+              <td class="mono">https://api.legacy-billing.io/webhook</td>
+              <td class="dim">user.suspended</td>
+              <td><span class="pill red">failing</span></td>
+              <td class="dim mono">2h ago · 503</td>
+              <td><button class="btn small" onclick="toast('Test delivery sent')">Test</button></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- JWT CLAIMS -->
+    <section class="view" id="view-jwtclaims">
+      <div class="card" style="margin-bottom:20px;">
+        <p class="hint" style="margin:0;">Extra fields attached to every access token your app issues, on top of the standard ones (sub, exp, iat). Useful for things a client needs without an extra API call — a plan tier, a role, a workspace ID. Keep this small; it's on every token, not fetched on demand.</p>
+      </div>
+      <div class="section-title">
+        Custom claims
+        <button class="btn small" onclick="addClaimRow()">+ Add claim</button>
+      </div>
+      <div class="table-wrap">
+        <div class="kv-row" style="background:var(--surface-2);border-bottom:1px solid var(--border);">
+          <span class="field-label" style="margin:0;">Claim key</span>
+          <span class="field-label" style="margin:0;">Source</span>
+          <span></span>
+        </div>
+        <div class="kv-row" id="claimsBody">
+          <input value="plan" class="mono">
+          <input value="user.metadata.plan_tier" class="mono">
+          <button class="icon-btn" onclick="this.closest('.kv-row').remove()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="kv-row">
+          <input value="role" class="mono">
+          <input value="user.metadata.role" class="mono">
+          <button class="icon-btn" onclick="this.closest('.kv-row').remove()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="kv-row">
+          <input value="workspace_id" class="mono">
+          <input value="user.metadata.workspace_id" class="mono">
+          <button class="icon-btn" onclick="this.closest('.kv-row').remove()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn primary" onclick="toast('Claims saved — new tokens will include these on next issue')">Save claims</button>
+        <button class="btn" onclick="toast('{ \'sub\': \'usr_9f2a\', \'plan\': \'pro\', \'role\': \'admin\', \'workspace_id\': \'ws_1c9d\', \'exp\': 1735689600 }')">Preview sample token</button>
+      </div>
+    </section>
+
+    <!-- CLOUD LOGGING -->
+    <section class="view" id="view-logging">
+      <div class="card" style="margin-bottom:20px;">
+        <p class="hint" style="margin:0;">CrydenSync always logs structured JSON to stdout — any log shipper can already tail that. Connecting a provider here sends the same events directly as well, for teams that want it without wiring up their own shipper.</p>
+      </div>
+      <div class="table-wrap">
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#632CA6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="10"/></svg></div>
+            <div><b>Datadog</b><span>Connected · sending logs since Aug 12</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill green">healthy</span>
+            <label class="toggle"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#000;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M12 2 2 12l10 10 10-10L12 2Z"/></svg></div>
+            <div><b>Better Stack</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <label class="toggle"><input type="checkbox" onclick="toast('Prototype — would open API key field')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z" stroke="var(--text-muted)" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+            <div><b>Custom syslog / HTTP endpoint</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <label class="toggle"><input type="checkbox" onclick="toast('Prototype — would open endpoint field')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="section-title">Recent shipped events</div>
+      <div class="card" style="padding:6px 16px;">
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:20</span><span class="audit-event">→ Datadog</span><span class="audit-detail">login_success — batch of 12, 200 OK</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:15</span><span class="audit-event">→ Datadog</span><span class="audit-detail">anomaly_detected — batch of 1, 200 OK</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:10</span><span class="audit-event">→ Datadog</span><span class="audit-detail">login_failed — batch of 3, 200 OK</span></div>
+      </div>
+    </section>
+
+    <!-- WEEKLY DIGEST -->
+    <section class="view" id="view-digest">
+      <div class="card" style="margin-bottom:20px;border-color:#8b6cfc30;">
+        <p class="hint" style="margin:0;">A plain-English roundup of the week, generated automatically from the same audit data as everything else here — no dashboards to read, just what changed and what (if anything) needs you.</p>
+      </div>
+
+      <div class="section-title">Latest digest · Mon Sep 1 – Sun Sep 7</div>
+      <div class="digest" style="margin-bottom:22px;">
+        <div class="digest-head">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <b>Generated 6:00 AM today · sent to 3 recipients</b>
+        </div>
+        <p><strong>62</strong> new signups this week, up 9% on last week. MFA adoption climbed <strong>4 points</strong> to 41%, mostly passkeys. The <strong>Microsoft OAuth</strong> endpoint degraded twice — nothing lost, but worth a look if it keeps happening. Your lockout threshold is still catching real users on typo'd passwords; the Config Advisor has a suggestion queued for that. Nothing else needs your attention.</p>
+      </div>
+
+      <div class="section-title">Schedule</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Send weekly digest</span>
+          <label class="toggle"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Day &amp; time</span>
+          <span class="mono dim">Monday · 6:00 AM (deployment timezone)</span>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Recipients</span>
+          <span class="mono dim">raymond@crydensync.dev, teammate@crydensync.dev +1</span>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Also post to Slack</span>
+          <label class="toggle"><input type="checkbox" onclick="toast('Prototype — would open Slack channel picker')"><span class="toggle-track"></span></label>
+        </label>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn primary" onclick="toast('Test digest sent to raymond@crydensync.dev')">Send test digest now</button>
+        <button class="btn" onclick="toast('Would open recipient editor')">Edit recipients</button>
+      </div>
+
+      <div class="section-title" style="margin-top:26px;">Past digests</div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Week of</th><th>Highlights</th><th>Recipients</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Sep 1</td><td class="dim">62 signups, MFA +4pts, Microsoft degraded</td><td class="dim">3</td><td><span class="pill green">delivered</span></td></tr>
+            <tr><td class="mono">Aug 25</td><td class="dim">48 signups, 1 anomaly reviewed, no incidents</td><td class="dim">3</td><td><span class="pill green">delivered</span></td></tr>
+            <tr><td class="mono">Aug 18</td><td class="dim">55 signups, lockout spike (typo cluster)</td><td class="dim">3</td><td><span class="pill green">delivered</span></td></tr>
+            <tr><td class="mono">Aug 11</td><td class="dim">39 signups, webhook endpoint added</td><td class="dim">2</td><td><span class="pill green">delivered</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- SUPPORT ASSISTANT -->
+    <section class="view" id="view-supportassist">
+      <div class="ai-shell" style="margin-bottom:22px;">
+        <div class="ai-head">
+          <div class="ai-head-left">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <b style="font-family:var(--font-display);font-size:13.5px;">Ask about a specific user</b>
+          </div>
+          <span class="ai-badge"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.5"/></svg> read-only · can't take action</span>
+        </div>
+        <div class="ai-body" id="supportAiBody">
+          <div class="ai-msg user">why can't daniel@example.com log in?</div>
+          <div class="ai-msg assistant">His account auto-locked at 11:47 today after 3 failed password attempts, all from the same IP. The lockout window is 30 minutes from the last attempt — it's since expired, so he should be able to try again. If he's still stuck, his password may just be wrong; there's no MFA or provider issue on this account.<span class="cite">audit_events · 3 rows</span></div>
+          <div class="ai-msg user">is priya@example.com's account suspended?</div>
+          <div class="ai-msg assistant">No — her account is active and in good standing. She does have one flagged login (Lisbon, PT, 5h ago) but it was already reviewed and confirmed as a real trip, not a security action.<span class="cite">users · 1 row, anomaly_signals · 1 row</span></div>
+          <div class="ai-msg user">why did nadia@example.com's ticket say "invalid session"?</div>
+          <div class="ai-msg assistant">Her account was suspended this morning by raymond@crydensync.dev for a policy violation, which revokes all active sessions immediately — that's the "invalid session" error the client is showing. This needs a human decision (support can't lift a suspension), so I'd escalate this one.<span class="cite">audit_events · 1 row</span></div>
+        </div>
+        <div class="ai-input-row">
+          <input id="supportAiInput" placeholder="Paste a ticket or ask why a user can't log in…" onkeydown="if(event.key==='Enter')sendSupportAi()">
+          <button class="btn primary" onclick="sendSupportAi()">Ask</button>
+        </div>
+      </div>
+
+      <div class="section-title">Ticketing integration</div>
+      <div class="table-wrap" style="margin-bottom:22px;">
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#03363D;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9"/></svg></div>
+            <div><b>Zendesk</b><span>Connected · answering inline on tickets since Aug 3</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill green">connected</span>
+            <label class="toggle"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#1F8DED;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9"/></svg></div>
+            <div><b>Intercom</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <label class="toggle"><input type="checkbox" onclick="toast('Prototype — would open API key field')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z" stroke="var(--text-muted)" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+            <div><b>Freshdesk</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <label class="toggle"><input type="checkbox" onclick="toast('Prototype — would open API key field')"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Usage</div>
+      <div class="grid cols-3">
+        <div class="card"><h3>Tickets answered</h3><div class="stat-value">86</div><p class="hint">last 7 days</p></div>
+        <div class="card"><h3>Escalated to human</h3><div class="stat-value">11</div><p class="hint">needs an action it can't take</p></div>
+        <div class="card"><h3>Avg. time saved</h3><div class="stat-value">4.1m</div><p class="hint">per ticket, vs. manual lookup</p></div>
+      </div>
+    </section>
+
+    <!-- CONFIG ADVISOR -->
+    <section class="view" id="view-configadvisor">
+      <div class="card" style="margin-bottom:20px;border-color:#8b6cfc30;">
+        <p class="hint" style="margin:0;">Watches deployment activity and suggests config changes it thinks would help. It only ever suggests — nothing here is applied automatically, and every suggestion needs an explicit click.</p>
+      </div>
+
+      <div class="section-title">Open suggestions</div>
+
+      <div class="card" style="margin-bottom:14px;border-color:#fbbf2430;background:linear-gradient(160deg,var(--surface),#1e1a10 140%);">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--amber);flex-shrink:0;margin-top:2px;"><path d="M12 3 3 20h18L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>
+          <div style="flex:1;">
+            <b style="font-size:13px;">Raise lockout threshold from 3 to 5</b>
+            <p class="dim" style="margin:4px 0 10px;font-size:12.5px;line-height:1.6;">8% of lockouts this month resolved with a correct password on the next try — mostly typos, not attacks. A higher threshold would cut accidental lockouts without materially helping a real attacker.<span class="cite">audit_events · 30d scan</span></p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn small primary" onclick="applySuggestion(this)">Apply suggestion</button>
+              <button class="btn small" onclick="dismissSuggestion(this)">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;border-color:#8b6cfc30;">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:#b39dff;flex-shrink:0;margin-top:2px;"><rect x="4.5" y="10" width="15" height="10" rx="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10" stroke="currentColor" stroke-width="1.6"/></svg>
+          <div style="flex:1;">
+            <b style="font-size:13px;">Shorten idle session timeout to 14 days</b>
+            <p class="dim" style="margin:4px 0 10px;font-size:12.5px;line-height:1.6;">Current idle timeout is 30 days. Median time between sessions for active users is 3 days — a 14-day timeout would still cover nearly everyone while shrinking the window a stolen session cookie stays valid.<span class="cite">sessions · aggregate</span></p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn small primary" onclick="applySuggestion(this)">Apply suggestion</button>
+              <button class="btn small" onclick="dismissSuggestion(this)">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;border-color:#8b6cfc30;">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:#b39dff;flex-shrink:0;margin-top:2px;"><circle cx="6" cy="7" r="2.3" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="7" r="2.3" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="18" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M8 8.2 10.3 16M16 8.2 13.7 16M8.3 7h7.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div style="flex:1;">
+            <b style="font-size:13px;">Back off retries for the failing legacy-billing webhook</b>
+            <p class="dim" style="margin:4px 0 10px;font-size:12.5px;line-height:1.6;">api.legacy-billing.io has failed its last 6 deliveries with a 503. Immediate retry is hammering an already-down endpoint — switching this endpoint to exponential backoff (starting at 5 min) would reduce load without losing events, since they're queued either way.<span class="cite">webhook_deliveries · 6 rows</span></p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn small primary" onclick="applySuggestion(this)">Apply suggestion</button>
+              <button class="btn small" onclick="dismissSuggestion(this)">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">History</div>
+      <div class="table-wrap">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Suggestion</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody id="advisorHistoryBody">
+            <tr><td class="dim">Enable breached-password checks on signup</td><td class="mono">Aug 22</td><td><span class="pill green">applied</span></td></tr>
+            <tr><td class="dim">Nudge users without MFA after 30 days</td><td class="mono">Aug 14</td><td><span class="pill neutral">dismissed</span></td></tr>
+            <tr><td class="dim">Migrate remaining bcrypt hashes to Argon2id</td><td class="mono">Aug 2</td><td><span class="pill green">applied</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- LLM PROVIDER -->
+    <section class="view" id="view-llmprovider">
+      <div class="card" style="margin-bottom:20px;border-color:#8b6cfc30;">
+        <p class="hint" style="margin:0;">The model backend behind every AI feature in this console — AI Assistant, Ask-AI Widget, Weekly Digest, Support Assistant, and Config Advisor all share this one connection. Switch it here once; everything else picks it up automatically.</p>
+      </div>
+
+      <div class="section-title">Active provider</div>
+      <div class="table-wrap" style="margin-bottom:22px;">
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:linear-gradient(155deg,#a58aff,#6b46f0);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+            <div><b>Anthropic — Claude Sonnet 5</b><span>Default provider · used by all AI features</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill green">active</span>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#10a37f;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9"/></svg></div>
+            <div><b>OpenAI — GPT-5.1</b><span>Configured as automatic fallback</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">standby</span>
+            <button class="btn small" onclick="toast('Prototype — would switch active provider')">Make active</button>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#0078D4;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></div>
+            <div><b>Azure OpenAI — GPT-4o</b><span>Not configured</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <button class="btn small" onclick="toast('Prototype — would open Azure resource config')">Configure</button>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z" stroke="var(--text-muted)" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+            <div><b>Self-hosted (Ollama / vLLM)</b><span>Not configured — point at your own inference endpoint</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <button class="btn small" onclick="toast('Prototype — would open endpoint URL field')">Configure</button>
+          </div>
+        </div>
+        <div class="provider-row add-provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--text-dim)" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div><b style="color:var(--text-muted);font-weight:600;">Add another provider</b><span>Mistral, Gemini, Cohere, Bedrock, or any OpenAI-compatible endpoint…</span></div>
+          </div>
+          <button class="btn small primary" onclick="toast('Prototype — provider wizard not wired up')">+ Configure new</button>
+        </div>
+      </div>
+
+      <div class="section-title">Model &amp; generation settings</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>Model</span>
+          <select class="select-field" onchange="toast('Prototype — not wired up')">
+            <option>claude-sonnet-5</option>
+            <option>claude-opus-5</option>
+            <option>claude-haiku-4-5</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>Max tokens per response</span>
+          <input class="select-field" style="width:110px;" value="1024" onchange="toast('Prototype — not wired up')">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>Temperature</span>
+          <input type="range" min="0" max="1" step="0.1" value="0.2" style="width:160px;" onchange="toast('Prototype — not wired up')">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Allow write-capable tool calls</span>
+          <label class="toggle"><input type="checkbox" disabled><span class="toggle-track"></span></label>
+        </label>
+        <p class="hint" style="margin:0;">Locked off — every AI feature in csax+ is read-only by design, regardless of provider or model.</p>
+      </div>
+
+      <div class="section-title">API key</div>
+      <div class="card" style="padding:4px 0;">
+        <div class="secret-row">
+          <div class="secret-key">ANTHROPIC_API_KEY<span class="tag">primary provider</span></div>
+          <div class="secret-val masked" data-real="sk-ant-api03-k7Qp2vX9zR4mN8wLt6Y3sDfH0jC5aE2b">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <p class="hint" style="margin:12px 16px 4px;">Unlock this from Settings &amp; Secrets — the same biometric gate covers every key in the deployment.</p>
+      </div>
+
+      <div class="section-title">Fallback &amp; rate limits</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Fall back to OpenAI if Anthropic errors or times out</span>
+          <label class="toggle"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>Requests per minute limit</span>
+          <input class="select-field" style="width:90px;" value="60" onchange="toast('Prototype — not wired up')">
+        </label>
+      </div>
+
+      <div class="section-title">Usage today</div>
+      <div class="grid cols-3">
+        <div class="card"><h3>Requests</h3><div class="stat-value">1,406</div><p class="hint">across all AI features</p></div>
+        <div class="card"><h3>Tokens</h3><div class="stat-value">2.1M</div><p class="hint">in + out, today</p></div>
+        <div class="card"><h3>Est. cost</h3><div class="stat-value">$4.82</div><p class="hint">today, at current rates</p></div>
+      </div>
+    </section>
+
+    <!-- DATABASE PROVIDER -->
+    <section class="view" id="view-dbprovider">
+      <div class="card" style="margin-bottom:20px;border-color:#8b6cfc30;">
+        <p class="hint" style="margin:0;">The store behind Users, Sessions, and the Audit Log — and the same database every AI feature queries through a scoped read-only role, never the primary connection.</p>
+      </div>
+
+      <div class="section-title">Provider</div>
+      <div class="table-wrap" style="margin-bottom:22px;">
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#3ECF8E;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#0a0a0f"><path d="M12 2 4 22l8-8 8 8L12 2Z"/></svg></div>
+            <div><b>Supabase (Postgres 16)</b><span>Connected · main deployment · aws-1-eu-west-3</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill green">healthy</span>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#00E599;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#0a0a0f"><circle cx="12" cy="12" r="9"/></svg></div>
+            <div><b>Neon</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <button class="btn small" onclick="toast('Prototype — would open connection wizard')">Configure</button>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:#000;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M12 2 2 12l10 10 10-10L12 2Z"/></svg></div>
+            <div><b>PlanetScale</b><span>Not connected</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <button class="btn small" onclick="toast('Prototype — would open connection wizard')">Configure</button>
+          </div>
+        </div>
+        <div class="provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="7.5" ry="3" stroke="var(--text-muted)" stroke-width="1.4"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6" stroke="var(--text-muted)" stroke-width="1.4"/></svg></div>
+            <div><b>Self-hosted Postgres / RDS</b><span>Not connected — point at your own instance</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pill neutral">off</span>
+            <button class="btn small" onclick="toast('Prototype — would open connection wizard')">Configure</button>
+          </div>
+        </div>
+        <div class="provider-row add-provider-row">
+          <div class="provider-left">
+            <div class="oauth-icon" style="width:30px;height:30px;background:var(--surface-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--text-dim)" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div><b style="color:var(--text-muted);font-weight:600;">Add another database</b><span>MySQL, MongoDB, CockroachDB, or any Postgres-compatible instance…</span></div>
+          </div>
+          <button class="btn small primary" onclick="toast('Prototype — connection wizard not wired up')">+ Configure new</button>
+        </div>
+      </div>
+
+      <div class="section-title">Connection details</div>
+      <div class="table-wrap" style="margin-bottom:22px;">
+        <div class="kv-row" style="background:var(--surface-2);border-bottom:1px solid var(--border);">
+          <span class="field-label" style="margin:0;">Setting</span>
+          <span class="field-label" style="margin:0;">Value</span>
+          <span></span>
+        </div>
+        <div class="kv-row"><span class="mono">Host</span><span class="mono dim">aws-1-eu-west-3.pooler.supabase.com</span><span></span></div>
+        <div class="kv-row"><span class="mono">Port</span><span class="mono dim">5432</span><span></span></div>
+        <div class="kv-row"><span class="mono">SSL mode</span><span class="mono dim">require</span><span></span></div>
+        <div class="kv-row"><span class="mono">Pool size</span><span class="mono dim">20 (transaction pooling)</span><span></span></div>
+      </div>
+
+      <div class="section-title">AI read-only access</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Allow AI features to query this database</span>
+          <label class="toggle"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><span class="toggle-track"></span></label>
+        </label>
+        <p class="hint" style="margin:0;">Uses a separate <span class="mono">ai_readonly</span> role with SELECT-only grants on a handful of tables — see <span class="mono">READONLY_DATABASE_URL</span> in Settings &amp; Secrets. It cannot write, and it cannot see anything outside its granted tables.</p>
+      </div>
+
+      <div class="section-title">Health</div>
+      <div class="grid cols-3">
+        <div class="card"><h3>Latency</h3><div class="stat-value">18ms</div><p class="hint">p50, last hour</p></div>
+        <div class="card"><h3>Connections</h3><div class="stat-value">34 / 100</div><p class="hint">pooled connections in use</p></div>
+        <div class="card"><h3>Replica lag</h3><div class="stat-value">0ms</div><p class="hint">no read replica configured</p></div>
+      </div>
+    </section>
+
+    <!-- ASK-AI WIDGET -->
+    <section class="view" id="view-aiwidget">
+      <div class="card" style="margin-bottom:20px;border-color:#8b6cfc30;">
+        <p class="hint" style="margin:0;">A different assistant from the internal one on the AI Assistant tab — this one gets embedded in <em>your</em> app, for <em>your</em> end users to ask about their own account. Same read-only guarantee: it can explain, it can never act.</p>
+      </div>
+
+      <div class="section-title">Scope this widget can read</div>
+      <div class="card">
+        <div class="scope-check"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><div><b>Own login history</b><span>When and where this specific user has logged in</span></div></div>
+        <div class="scope-check"><input type="checkbox" checked onclick="toast('Prototype — not wired up')"><div><b>Own active sessions</b><span>Devices currently signed in, so a user can self-serve "sign me out everywhere"</span></div></div>
+        <div class="scope-check"><input type="checkbox" onclick="toast('Prototype — not wired up')"><div><b>Own MFA status</b><span>Which second factors are enrolled, without exposing secrets or codes</span></div></div>
+        <div class="scope-check" style="opacity:.5;"><input type="checkbox" disabled><div><b>Other users' data</b><span>Never available — this widget is scoped to the authenticated user only, always</span></div></div>
+      </div>
+
+      <div class="section-title">Embed snippet</div>
+      <div class="widget-embed">&lt;<span class="tok-tag">script</span> <span class="tok-attr">src</span>=<span class="tok-str">"https://cdn.crydensync.dev/ask-widget.js"</span>
+        <span class="tok-attr">data-client</span>=<span class="tok-str">"typebook_live_9f2a"</span>
+        <span class="tok-attr">data-user-token</span>=<span class="tok-str">"{{ current_user_session_token }}"</span>&gt;&lt;/<span class="tok-tag">script</span>&gt;</div>
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn primary" onclick="toast('Copied embed snippet')">Copy snippet</button>
+        <button class="btn" onclick="toast('Would open live widget preview')">Preview widget</button>
+      </div>
+
+      <div class="section-title">Usage</div>
+      <div class="grid cols-3">
+        <div class="card"><h3>Questions answered</h3><div class="stat-value">312</div><p class="hint">last 7 days</p></div>
+        <div class="card"><h3>Escalated to support</h3><div class="stat-value">4</div><p class="hint">couldn't answer within scope</p></div>
+        <div class="card"><h3>Avg. response time</h3><div class="stat-value">1.2s</div><p class="hint">read-only queries only</p></div>
+      </div>
+    </section>
+
+    <!-- AUDIT -->
+    <section class="view" id="view-audit">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <input placeholder="Filter by event type…" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;width:260px;max-width:100%;font-size:13px;">
+        <input placeholder="Filter by user…" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;width:220px;max-width:100%;font-size:13px;">
+      </div>
+      <div class="card" style="padding:6px 16px;">
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:20</span><span class="audit-event">magic_link_sent</span><span class="audit-detail">priya@ex&#8203;ample.com</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">14:02</span><span class="audit-event">session_revoked</span><span class="audit-detail">by raymond@crydensync.dev</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">11:47</span><span class="audit-event">login_failed</span><span class="audit-detail">daniel@ex&#8203;ample.com — attempt 3/5</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">11:46</span><span class="audit-event">login_failed</span><span class="audit-detail">daniel@ex&#8203;ample.com — attempt 2/5</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">09:15</span><span class="audit-event">oauth_linked</span><span class="audit-detail">amaka@ex&#8203;ample.com — GitHub</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">08:30</span><span class="audit-event">mfa_enrolled</span><span class="audit-detail">jonah@ex&#8203;ample.com — TOTP</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">08:02</span><span class="audit-event">password_changed</span><span class="audit-detail">sam@ex&#8203;ample.com — all sessions revoked</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">07:41</span><span class="audit-event">user_created</span><span class="audit-detail">efe@ex&#8203;ample.com — invited by raymond@crydensync.dev</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">07:12</span><span class="audit-event">webhook_delivery_failed</span><span class="audit-detail">api.legacy-billing.io — 503, retry scheduled</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">06:58</span><span class="audit-event">oauth_linked</span><span class="audit-detail">tariq@ex&#8203;ample.com — Google</span></div>
+        <div class="audit-row"><span class="audit-dot bad"></span><span class="audit-time">03:20</span><span class="audit-event">user_suspended</span><span class="audit-detail">nadia@ex&#8203;ample.com — by raymond@crydensync.dev, policy violation</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">02:47</span><span class="audit-event">api_key_created</span><span class="audit-detail">analytics-export — scope users:read, sessions:read</span></div>
+        <div class="audit-row"><span class="audit-dot ok"></span><span class="audit-time">yesterday</span><span class="audit-event">passkey_registered</span><span class="audit-detail">sam@ex&#8203;ample.com — MacBook Touch ID</span></div>
+      </div>
+    </section>
+
+    <!-- AI -->
+    <section class="view" id="view-ai">
+      <div class="card" style="margin-bottom:18px;border-color:#fbbf2430;background:linear-gradient(160deg,var(--surface),#1e1a10 140%);">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--amber);flex-shrink:0;margin-top:2px;"><path d="M12 3 3 20h18L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>
+          <div style="flex:1;">
+            <b style="font-size:13px;">Config suggestion</b>
+            <p class="dim" style="margin:4px 0 10px;font-size:12.5px;line-height:1.6;">Your lockout threshold (3 attempts) is locking out roughly 8% of real users by accident — mostly typo'd passwords, not attacks. Consider raising it to 5.</p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn small primary" onclick="toast('Prototype — would update config, never applied automatically')">Apply suggestion</button>
+              <button class="btn small" onclick="toast('Dismissed')">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-shell">
+        <div class="ai-head">
+          <div class="ai-head-left">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 13.6 8.4 18.5 10 13.6 11.6 12 16.5 10.4 11.6 5.5 10 10.4 8.4 12 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <b style="font-family:var(--font-display);font-size:13.5px;">Ask about your deployment</b>
+          </div>
+          <span class="ai-badge"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.5"/></svg> read-only · can't take action</span>
+        </div>
+        <div class="ai-body" id="aiBody">
+          <div class="ai-msg user">why did daniel@example.com get locked out this morning?</div>
+          <div class="ai-msg assistant">Three failed login attempts between 11:44–11:47 today, all from the same IP. The account auto-locked after the third attempt and hasn't unlocked yet — the lockout window is 30 minutes from the last failed attempt.<span class="cite">audit_events · 3 rows</span></div>
+          <div class="ai-msg user">any credential stuffing patterns in the last 24h?</div>
+          <div class="ai-msg assistant">No — the failed attempts above are isolated to one account and one IP, not the fan-out pattern (many accounts, few IPs) that stuffing usually shows. Nothing else met the anomaly threshold in the last 24 hours.<span class="cite">audit_events · 24h scan</span></div>
+          <div class="ai-msg user">which oauth provider is least reliable right now?</div>
+          <div class="ai-msg assistant">Microsoft — the token endpoint has timed out twice in the last hour and is currently marked degraded. Google, GitHub, Discord, and Apple are all reachable with no recent failures.<span class="cite">oauth_endpoint_checks · 5 rows</span></div>
+          <div class="ai-msg user">who logged in from a new country this week?</div>
+          <div class="ai-msg assistant">Two accounts: priya@example.com from Lisbon, PT (5h ago, already reviewed and confirmed as a real trip) and efe@example.com from Warsaw, PL (1h ago, still flagged and awaiting review).<span class="cite">anomaly_signals · 2 rows</span></div>
+        </div>
+        <div class="ai-input-row">
+          <input id="aiInput" placeholder="Ask about users, sessions, or audit history…" onkeydown="if(event.key==='Enter')sendAi()">
+          <button class="btn primary" onclick="sendAi()">Ask</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS / SECRETS -->
+    <section class="view" id="view-settings">
+      <div class="section-title">Console operators</div>
+      <div class="table-wrap" style="margin-bottom:30px;">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Operator</th><th>Role</th><th>Last active</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><div class="user-cell"><div class="avatar-sm">RA</div><b>raymond@crydensync.dev</b></div></td><td><span class="pill green">Owner</span></td><td class="dim mono">now</td><td></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">TE</div><b>teammate@crydensync.dev</b></div></td><td><span class="pill neutral">Admin</span></td><td class="dim mono">3h ago</td><td><button class="btn small" onclick="toast('Would open role editor')">Manage</button></td></tr>
+            <tr><td><div class="user-cell"><div class="avatar-sm">FE</div><b>femi@crydensync.dev</b></div></td><td><span class="pill neutral">Viewer</span></td><td class="dim mono">yesterday</td><td><button class="btn small" onclick="toast('Would open role editor')">Manage</button></td></tr>
+            <tr><td colspan="4" style="padding:14px 12px;"><button class="btn small" onclick="toast('Invite sent (prototype)')">+ Invite teammate</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="section-title">Secrets</div>
+      <div class="secrets-banner">
+        <div class="secrets-banner-left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 12.5 11.3 14.3 15 10.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>These values are masked by default</b><span>Verifying with your device is required to reveal them — even for the Owner.</span></div>
+        </div>
+        <button class="btn primary" id="unlockBtn" onclick="requestBiometric(revealSecrets,'reveal deployment secrets')">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" stroke="currentColor" stroke-width="1.6"/></svg>
+          Unlock secrets
+        </button>
+      </div>
+
+      <div class="card" style="padding:4px 0;" id="secretsList">
+        <div class="secret-row">
+          <div class="secret-key">DATABASE_URL<span class="tag">main deployment</span></div>
+          <div class="secret-val masked" data-real="postgresql://postgres.a1x9k2:9f•3kLq7Vp2R@aws-1-eu-west-3.pooler.supabase.com:5432/postgres">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <div class="secret-key">JWT_SECRET<span class="tag">signing key</span></div>
+          <div class="secret-val masked" data-real="k7Qp2vX9zR4mN8wL6tY3sD1fH0jC5aE2bU9iO7pQ==">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <div class="secret-key">READONLY_DATABASE_URL<span class="tag">AI query role</span></div>
+          <div class="secret-val masked" data-real="postgresql://ai_readonly.a1x9k2:••x7Bq@aws-1-eu-west-3.pooler.supabase.com:5432/postgres">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <div class="secret-key">RESEND_API_KEY<span class="tag">email delivery</span></div>
+          <div class="secret-val masked" data-real="re_7NqP2xVzK9mR4wLtY3sDfH0jC5a">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <div class="secret-key">GOOGLE_CLIENT_SECRET<span class="tag">oauth</span></div>
+          <div class="secret-val masked" data-real="GOCSPX-k7Qp2vX9zR4mN8wLt6Y3sD">••••••••••••••••••••••••••••••••••••••••</div>
+          <div class="secret-actions">
+            <button class="icon-btn" onclick="copySecret(this)" title="Copy"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn" onclick="editSecret(this)" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a1.5 1.5 0 0 1 2 0l1 1a1.5 1.5 0 0 1 0 2L8 19l-4 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            <button class="icon-btn" onclick="deleteSecret(this)" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+        <button class="btn small" onclick="addSecret()">+ Add secret</button>
+        <div id="lockStatus" style="display:none;" class="lock-countdown">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span id="lockText">Re-masking in 20s</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- biometric modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-card" id="modalCard">
+    <div class="scan-ring-wrap pulsing" id="scanRingWrap">
+      <div class="scan-ring"></div><div class="scan-ring r2"></div><div class="scan-ring r3"></div>
+      <svg class="fp-icon" id="fpIcon" viewBox="0 0 24 24" fill="none">
+        <path d="M12 3a7 7 0 0 0-7 7v2c0 3 1 5 2 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M12 3a7 7 0 0 1 7 7v2c0 3.5-1 6-2.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M9 8.5a3 3 0 0 1 6 0v3c0 3-1 5.5-2.5 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M9 12v-.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M12 8.5v3c0 2.6-.6 4.6-1.6 6.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h4 id="modalTitle">Verify it's you</h4>
+    <p id="modalText">Use your device passkey, fingerprint, or Face ID to reveal deployment secrets.</p>
+    <button class="modal-cancel" onclick="closeBiometric()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
