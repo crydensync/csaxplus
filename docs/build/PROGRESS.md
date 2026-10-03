@@ -14,7 +14,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 
 ## Tier 0 - Foundation (tag v0.1.0)
 
-- [ ] 0.1 Init: pnpm workspace, Next.js 15 + TS strict, ESLint, Prettier, Vitest, Playwright,
+- [x] 0.1 Init: pnpm workspace, Next.js 15 + TS strict, ESLint, Prettier, Vitest, Playwright,
       commitlint + `commit-msg` hook, `.claude/settings.json`, LICENSE (MIT), `.env.example`
 - [ ] 0.2 Design system: port `styles.css` tokens; Card, Pill, Toggle, Button, DataTable, Modal,
       Toast, Sidebar, Topbar, EmptyState, ErrorState, Skeleton
