@@ -1,0 +1,32 @@
+#!/bin/sh
+# commit-msg hook for csax+.
+#
+# Rejects:
+#   1. attribution trailers (Co-authored-by, Generated with ...)
+#   2. em dashes and en dashes anywhere in the message
+# then hands off to commitlint for Conventional Commits enforcement.
+#
+# Em and en dashes are built from their UTF-8 bytes so this file itself never
+# contains the characters it forbids.
+
+set -e
+
+msg_file="$1"
+if [ -z "$msg_file" ] || [ ! -f "$msg_file" ]; then
+  echo "commit-msg: no commit message file given" >&2
+  exit 1
+fi
+
+if grep -qiE 'co-authored-by|generated with' "$msg_file"; then
+  echo "commit-msg: refusing attribution lines (Co-authored-by / Generated with)." >&2
+  exit 1
+fi
+
+dash_em=$(printf '\342\200\224')
+dash_en=$(printf '\342\200\223')
+if grep -qF -e "$dash_em" -e "$dash_en" "$msg_file"; then
+  echo "commit-msg: refusing em and en dashes; use a hyphen, comma, or parentheses." >&2
+  exit 1
+fi
+
+exec pnpm exec commitlint --edit "$msg_file"

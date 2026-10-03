@@ -1,0 +1,14 @@
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+docs/guide/screenshots/
+*.md
+
+# Prototype inputs kept as the design spec; replaced screen by screen.
+app.js
+index.html
+landing.html
+styles.css

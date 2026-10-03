@@ -2,11 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# build output
-.next/
-out/
-dist/
-build/
+# build output (root-anchored: docs/build/ holds committed build docs)
+/.next/
+/out/
+/dist/
+/build/
 *.tsbuildinfo
 next-env.d.ts
 
