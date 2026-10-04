@@ -18,7 +18,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       commitlint + `commit-msg` hook, `.claude/settings.json`, LICENSE (MIT), `.env.example`
 - [x] 0.2 Design system: port `styles.css` tokens; Card, Pill, Toggle, Button, DataTable, Modal,
       Toast, Sidebar, Topbar, EmptyState, ErrorState, Skeleton
-- [ ] 0.3 Config loader (env, `*_FILE`, disk file, defaults) + boot-time fail-fast + `describeConfig()`
+- [x] 0.3 Config loader (env, `*_FILE`, disk file, defaults) + boot-time fail-fast + `describeConfig()`
 - [ ] 0.4 Console store + migrations (Postgres/SQLite, same schema, two drivers), auto-migrate
       unless `SKIP_AUTO_MIGRATE`
 - [ ] 0.5 Operator auth: API-backed login (`/v1/login` + paused-login completions, `/v1/refresh`),
@@ -90,6 +90,12 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   needs it; `pnpm exec playwright install chromium` restores it on a fresh machine. CI must run the
   same command, since `playwright.config.ts` uses the bundled browser and no system Chrome channel.
 - `/design` is a dev-only preview of the component set. It 404s in a production build (D7).
+- Configuration resolves in one order: environment, then `<KEY>_FILE`, then `csax.config.json`,
+  then the default. Only JSON is parsed; TOML is refused rather than ignored (D8). `.env.local`
+  holds this checkout's own values and is gitignored; `.env.example` carries placeholders only.
+- The config loader reaches `fs` and `path` through `process.getBuiltinModule`, because a static
+  `node:fs` import fails the edge compile of `instrumentation.ts` even behind a runtime guard. Do
+  not reintroduce a `node:` import into anything the instrumentation graph touches.
 
 ## Tier summaries
 

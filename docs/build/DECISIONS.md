@@ -141,3 +141,59 @@ for it. Confirmed against a real build: the prerendered output is the error page
 It is not linked from the console navigation and is not part of the operator's surface. Tier 0.7
 adds the real landing page at `/`; the console dashboard lives at `/dashboard`, since the two
 route groups cannot both own the root path.
+
+---
+
+## D8. The config loader resolves provenance, never values
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+Every setting is resolved through one function, in the order the brief fixes: the environment,
+then a `*_FILE` indirection, then the disk config file, then the default. `ConfigSource` therefore
+has four values (`env`, `env-file`, `file`, `default`) rather than three, because "the value was
+mounted as a file" and "the value was written into the environment" are operationally different
+answers when an operator is asking why a setting is what it is.
+
+Choices worth recording:
+
+1. **JSON only, and TOML refused loudly.** The brief allows a TOML config file. A TOML parser is a
+   dependency carried for a fallback path only, so the loader accepts `.json` and throws a
+   `ConfigError` naming the path for anything else. It does not silently ignore a file the
+   operator wrote, which would boot the console on defaults while they believe otherwise.
+
+2. **A blank environment value means unset.** `CSAX_API_URL=` in a `.env` file falls through to the
+   next source rather than producing an empty string. An empty setting in a dotenv file is far
+   more often a leftover line than a deliberate value, and the alternative is a validation error
+   naming a variable that looks set.
+
+3. **A missing file is fine; an unparseable one is fatal.** `csax.config.json` is absent on most
+   machines and that is not an error. A file that exists and is not valid JSON stops boot, for the
+   same reason as above.
+
+4. **SQLite under the working directory when nothing is configured.** The engine requires exactly
+   one store and refuses to guess. The console is a small operator tool, so it defaults to
+   `.csaxplus/console.sqlite` and lets a checkout run with no database. Both store targets set at
+   once is still an error, matching the engine.
+
+5. **`process.getBuiltinModule` instead of `import "node:fs"`.** Next compiles `instrumentation.ts`
+   for the edge runtime as well as Node, and its bundler follows a dynamic import even behind a
+   `NEXT_RUNTIME === "nodejs"` guard: a static `node:fs` import in the config loader failed the
+   edge compile with `UnhandledSchemeError` for code the edge never runs. Fetching the builtin at
+   call time through `process.getBuiltinModule` (Node 22.3+) keeps the import graph clean. A
+   webpack `resolve.alias` in `next.config.ts` was tried first and does not apply to
+   instrumented files.
+
+6. **Boot-time validation fails fast.** `loadConfig()` throws a single `ConfigError` listing every
+   bad or missing key at once, each with a reason derived from the zod issue code rather than from
+   the issue message, so no value can leak into the output: a test asserts that a short vault key
+   does not appear in the error text. `register()` prints that message and exits `1`, in
+   development and in production alike. Verified both ways: `next dev` prints the list and stops,
+   and `next start` exits `1`.
+
+   Two guards sit in front of it. The check runs only when `NEXT_RUNTIME` is `nodejs`, since the
+   edge runtime has no configuration. It also skips `phase-production-build`: a build machine
+   collects pages but serves nobody, and is not required to hold the deployment's secrets.
+
+`describeConfig()` returns `{key, source, sensitive}` and nothing else. The Settings screen in
+Tier 5 shows where each value came from; it never has a value to show.
