@@ -13,7 +13,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 
 ---
 
-## Tier 0 - Foundation (tag v0.1.0)
+## Tier 0 - Foundation (tag v0.0.1)
 
 - [x] 0.1 Init: pnpm workspace, Next.js 15 + TS strict, ESLint, Prettier, Vitest, Playwright,
       commitlint + `commit-msg` hook, `.claude/settings.json`, LICENSE (MIT), `.env.example`
@@ -30,9 +30,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 0.8 README.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md,
       `docs/build/DECISIONS.md`, `docs/build/BACKEND_GAPS.md`; `docs/guide/` and Playwright
       screenshots
-- [ ] 0.9 Tag v0.1.0 and write the tier summary below
+- [x] 0.9 Tag v0.0.1 and write the tier summary below
 
-## Tier 1 - Identity (tag v0.2.0)
+## Tier 1 - Identity (tag v0.1.0)
 
 - [ ] 1.1 Dashboard: real counts, recent activity, digest card or empty state
 - [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit
@@ -40,24 +40,24 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
 - [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
-- [ ] 1.7 Tag v0.2.0 and write the tier summary below
+- [ ] 1.7 Tag v0.1.0 and write the tier summary below
 
-## Tier 2 - Security (tag v0.3.0)
+## Tier 2 - Security (tag v0.2.0)
 
 - [ ] 2.1 Sessions: real list, named devices, revoke one / revoke all, sidebar badge from real count
 - [ ] 2.2 Anomalies: six signal codes + credential stuffing, "Mark reviewed" persists a note
 - [ ] 2.3 Audit Log: filters (event, user, range), cursor pagination, CSV export (admin+)
-- [ ] 2.4 Tag v0.3.0 and write the tier summary below
+- [ ] 2.4 Tag v0.2.0 and write the tier summary below
 
-## Tier 3 - Developer (tag v0.4.0)
+## Tier 3 - Developer (tag v0.3.0)
 
 - [ ] 3.1 API Keys: create (shown once, hash stored), list with prefix + last used, revoke
 - [ ] 3.2 Webhooks: CRUD, signing secret shown once, test delivery, delivery log
 - [ ] 3.3 JWT Claims: editor refusing the seven registered claims, real preview token
 - [ ] 3.4 Cloud Logging: provider toggles, vault-held credentials, real shipped events
-- [ ] 3.5 Tag v0.4.0 and write the tier summary below
+- [ ] 3.5 Tag v0.3.0 and write the tier summary below
 
-## Tier 4 - AI admin, read-only (tag v0.5.0)
+## Tier 4 - AI admin, read-only (tag v0.4.0)
 
 - [ ] 4.1 `src/server/ai/`: allowlisted read-only query templates on `READONLY_DATABASE_URL` + test
 - [ ] 4.2 AI Assistant modes (query, logs, anomalies scan, audit, ask) with citation chips
@@ -67,9 +67,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [ ] 4.6 Ask-AI Widget: embeddable script, verified token, unconditional identity substitution,
       adversarial test suite
 - [ ] 4.7 LLM Provider + Database Provider: real abstraction, usage counters, connection test
-- [ ] 4.8 Tag v0.5.0 and write the tier summary below
+- [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
-## Tier 5 - Settings, Secrets, Deployment (tag v1.0.0)
+## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
 - [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
 - [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
@@ -78,7 +78,8 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [ ] 5.4 SQLite mode: honest 501 state instead of broken screens
 - [ ] 5.5 Hardening: CSP, security headers, rate limiting, lockout, /healthz, /readyz, JSON logs
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
-- [ ] 5.7 Tag v1.0.0 and write the tier summary below
+- [ ] 5.7 Tag v0.5.0 and write the tier summary below
+- [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete
 
 ---
 
@@ -216,8 +217,71 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   not a navigation route is a 307 to `/login`, not the 404 D13 promises, because the `(console)`
   layout's session check runs before the page. Defensible for a console, and the `robots.txt`
   consequence is worth its own small follow-up.
+- **Tag scheme.** Tier 0 uses the `v0.0.x` line, so tier 0 is `v0.0.1` and `package.json` says
+  `0.0.1`. Tiers 1 to 5 are `v0.1.0` to `v0.5.0`, and `v1.0.0` closes the project when the README,
+  the docs and every gate are complete. This file had it shifted up by one until step 0.9: it read
+  tier 0 as `v0.1.0` and ended tier 5 at `v1.0.0`, which is one tag too high at every tier. BUILD_NOTE
+  fixes both ends (line 85 for tiers 1 to 5, line 155 for tier 0), so check those two lines rather
+  than trusting a tier table.
 
 ## Tier summaries
 
-(one block per finished tier: what shipped, what is fixture-only, what is blocked on the backend,
-the tag created, and the exact next step)
+### Tier 0: Foundation. Tag `v0.0.1`. Committed 2026-10-04.
+
+**What shipped.** The console's frame, and the pieces every screen will sit on.
+
+- The Next.js app: App Router, TypeScript strict, pnpm, ESLint, Prettier, Vitest, Playwright, a
+  commitlint `commit-msg` hook and `.claude/settings.json`, MIT `LICENSE`, `.env.example` with
+  placeholders only.
+- The design system, ported from the prototype's `styles.css`: Card, Pill, Toggle, Button,
+  DataTable, Modal, Toast, Sidebar, Topbar, EmptyState, ErrorState, Skeleton, plus a dev-only
+  gallery at `/design` that 404s in a production build.
+- The configuration loader: environment, then `<KEY>_FILE`, then `csax.config.json`, then defaults,
+  with every problem reported at once, no value ever printed, and a boot that stops with exit 1
+  rather than failing later on whichever screen touches the setting first.
+- The console's own store, with migrations for Postgres and SQLite from one schema, applied on boot
+  unless `SKIP_AUTO_MIGRATE`.
+- Operator sign-in against the API: `POST /v1/login`, the paused-login completions, `/v1/refresh`,
+  roles, CSRF on every mutation, and an encrypted `httpOnly` cookie carrying the API's tokens where
+  a page script cannot read them.
+- The API client: one interface, a live adapter and a labelled fixtures adapter chosen by
+  `CRYDEN_MODE` alone, and a topbar tag that reads `api-client`, `degraded`, `fixtures` or `offline`
+  from a real answer.
+- The landing page at `/`, static, with its console map generated from the console's own navigation.
+- The documentation set: README, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, CHANGELOG, the guide under
+  `docs/guide/`, this file, DECISIONS and BACKEND_GAPS, and six screenshots generated by Playwright.
+
+Verified by running it, not only in tests: 119 unit tests, 21 e2e tests, a clean production build
+with `/` prerendered static, and a real `node .next/standalone/server.js` probed over HTTP for
+`/` (200, prerendered), `/design` (404 in production), `/dashboard` (307 to `/login`) and
+`/api/nonsense` (JSON 404). A boot with a missing key was confirmed to exit 1 with a readable list.
+
+**What is fixture-only.** One thing, and it is labelled on screen: the `fixtures` connection state.
+The fixtures adapter implements `health()` and nothing else, so `CRYDEN_MODE=fixtures` boots the
+console, renders the landing page and the design system, and shows the `fixtures` tag. It cannot
+sign anyone in, and it is never a fallback for a live call that failed. The six guide screenshots of
+the console use a session minted locally in the console's own cookie format, with
+`operator@example.test` and placeholder API tokens, which is why the tag in them reads `fixtures`.
+
+**What is blocked on the backend.** Five things found while building sign-in, all in
+`docs/build/BACKEND_GAPS.md` section 4:
+
+- 4.1 `POST /v1/login` does not return the session id it just created, so the console guesses by
+  taking the newest from `GET /v1/sessions`. Signing out degrades rather than lies when the guess
+  cannot be made: it reports `revoked: false`.
+- 4.2 Nothing says which operators may manage other operators, so the console's `owner` role is
+  unreachable until `GET /v1/admin/operators` exists (D10).
+- 4.3 The second-factor endpoints are absent from the API's OpenAPI document, so their shapes were
+  read from the handlers and are checked with zod on the way in.
+- 4.4 WebAuthn is never a primary login: a passkey can only finish a login a password already
+  started, so the sign-in screen asks for the password first.
+- 4.5 `GET /v1/health` reports a status and nothing else, so the tag says `api-client` and cannot
+  repeat the prototype's "connected, production db".
+- 4.6 The health handler's documented nil-database behaviour is not implemented; it panics.
+
+Everything else the later tiers need is in section 1's table, grouped by the tier that first wants
+it. None of it blocks tier 1 from starting, and each screen whose endpoint is missing renders a
+specific state rather than an empty table.
+
+**Next step.** 1.1: the Dashboard, with real counts from `GET /v1/admin/users`, recent activity, and
+a digest card or an honest empty state. It replaces the session card that stands there now.

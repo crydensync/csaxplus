@@ -12,7 +12,8 @@ one would need a toolchain this repository does not have yet.
 
 ## [Unreleased]
 
-To be tagged `v0.1.0` at the end of tier 0.
+To be tagged `v0.0.1` at the end of tier 0. Tier 0 uses the `v0.0.x` line; the numbered tiers
+start at `v0.1.0` (BUILD_NOTE section 6).
 
 ### Added
 
