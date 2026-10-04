@@ -26,7 +26,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       roles owner/admin/viewer, CSRF, encrypted session cookie
 - [x] 0.6 Cryden client interface + fixtures adapter + live adapter + health check;
       topbar tag reflects real state (`api-client` / `degraded` / `fixtures` / `offline`)
-- [ ] 0.7 Landing page ported from `landing.html` to a real route; accessibility fixed
+- [x] 0.7 Landing page ported from `landing.html` to a real route; accessibility fixed
 - [ ] 0.8 README.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md,
       `docs/build/DECISIONS.md`, `docs/build/BACKEND_GAPS.md`
 - [ ] 0.9 Tag v0.1.0 and write the tier summary below
@@ -166,6 +166,31 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   redirecting again. All four tags were seen on a running server: `fixtures` from config with no
   call, `offline` with nothing on 8080, `degraded` against a stub answering 503 `db_unreachable`,
   and `api-client` against `{"status":"ok"}`.
+- **The landing page (step 0.7).** `/` is `src/app/page.tsx`: static, reads no cookie, calls no
+  API, and the only static route in the app. "Open console" points at `/dashboard`, which is where
+  the console decides between the dashboard and the sign-in screen. See D14 for the four decisions
+  behind it.
+- The landing page's console map renders `NAV_GROUPS`, so the marketing list cannot drift from the
+  sidebar, and the heading's count comes from the same array. `NavItem.readOnly` (new, optional) is
+  set on the four AI screens, which is what draws the `read-only` tag next to them and what the e2e
+  spec checks item by item. The sidebar does not use it yet; when the AI screens are built it is
+  the flag that keeps the invariant visible in the console too.
+- The prototype's landing copy was reconciled with the Go source before it was ported, not after:
+  six OAuth providers, "NIST 800-63B", webhook delivery as an unimplemented interface, `Go 1.22+`
+  and a `csax ai ask` command that exists nowhere were all wrong. Each correction has an entry in
+  BACKEND_GAPS section 2 (2.2, 2.4, 2.11, 2.12) and a note in D14. The claims that survived were
+  checked first: lockout at five attempts and fifteen minutes, the seven registered claim names,
+  and the 21 screens.
+- `docs/guide/screenshots/` is empty until step 0.8, which generates the README's screenshots from
+  Playwright.
+- Fonts: the prototype's two Google Fonts tags (`preconnect` and the `css2?family=Sora...`
+  stylesheet) were **not** ported, because `src/app/layout.tsx` already self-hosts all three
+  families through `next/font`. `tests/e2e/landing.spec.ts` fails if any request leaves the origin,
+  so a CDN font cannot come back unnoticed.
+- Contrast was measured rather than assumed, which is why the landing block uses `--text-muted`
+  where the prototype used `--text-dim`: dim is 2.95:1 on `--bg` and fails AA for text, muted is
+  5.88:1. Every text colour on the page passes; the console's own screens still use dim in places
+  and have not been re-measured.
 
 ## Tier summaries
 

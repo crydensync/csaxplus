@@ -37,7 +37,9 @@ export function Sidebar({ open, onNavigate, badges, operator }: SidebarProps) {
 
   return (
     <aside className={open ? "sidebar open" : "sidebar"} id="sidebar">
-      <Link className="brand" href="/" onClick={onNavigate}>
+      {/* The prototype's console linked its own brand back to the landing
+          page, and `/` is that page: this leaves the console on purpose. */}
+      <Link className="brand" href="/" title="Back to the landing page" onClick={onNavigate}>
         <span className="brand-mark">
           <Image src="/cryden-icon.png" alt="" width={32} height={32} priority />
         </span>

@@ -389,3 +389,51 @@ something that asked for JSON. `api/[...slug]` answers a 404 envelope for every
 method, so the API surface is closed and a wrong URL is legible to a caller.
 
 
+---
+
+## D14. The landing page is static, and its claims come from the console itself
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+`/` is the landing page, ported from `landing.html`. It reads no cookie and calls no API, so a
+signed-out visitor and a signed-in operator get the same bytes, and the page is the only static
+route in the app. Its one action, "Open console", points at `/dashboard`, which is where the
+console already decides between the dashboard and the sign-in screen; personalising the button by
+reading the session would have cost the static render for a word.
+
+**The console map is generated from the navigation.** The prototype listed its screens by hand,
+which is how its own list and the sidebar drifted into different groups. The section now renders
+`NAV_GROUPS`, so the marketing page cannot promise a screen the console does not have, and the
+heading's count is computed from the same array rather than typed. `NavItem` gained one optional
+field, `readOnly`, set on the four AI screens: BUILD_NOTE's read-only invariant is the strongest
+claim the product makes, and a claim like that belongs on the item it describes rather than in a
+paragraph that can drift away from the screens. The e2e spec walks the two lists against each
+other, item by item, tag by tag.
+
+**The copy was reconciled with the Go source rather than copied.** Five of the prototype's claims
+did not survive being checked, and each was rewritten instead of carried: the fixed list of six
+OAuth providers (the engine treats a provider as an opaque string, BACKEND_GAPS 2.2); "NIST 800-63B
+rules" for a policy whose real defaults are 8 to 72 characters with every composition rule off
+(2.4); "webhook delivery ships as an interface with zero implementations", which is true of the
+engine and false of the product, because the API implements a sender (2.11); `Go 1.22+`, where both
+repositories declare `go 1.25.0`; and `csax ai ask "..."` in the list of commands the console
+replaces, a command that exists nowhere (2.12). The numbers that were left alone were checked
+against the source first: five attempts and fifteen minutes is `Config.LockoutThreshold` and
+`LockoutDuration`, the seven registered claim names are `token/claims.go`'s reserved set, and the
+21 screens are the real navigation.
+
+**No `og:image`, on purpose.** A relative image is resolved against `metadataBase`, which needs an
+absolute origin. The only origin the deployment knows is `WEBAUTHN_ORIGIN`, which is validated at
+boot and unavailable to a build that has no runtime secrets, so the image URL would have been
+`localhost` in a production container. Announcing the wrong host is worse than announcing none, so
+the prototype's `og-image.png` waits for the tier 5 deployment work that gives the console a public
+origin (step 5.5). The asset stays in `public/`.
+
+**Accessibility is measured, not asserted.** The page is a landmark per region (`header`, `main`,
+two labelled `nav`s, `footer`), it opens with a skip link whose target is focusable, and every icon
+is hidden from assistive technology because each one sits beside its own label. The prototype's
+decorative headings were also drawn in `--text-dim`, which measures 2.95:1 against the page
+background, under AA for text; every text colour on the page is now a token that passes, and the
+one illustration that keeps dim is `aria-hidden` and labelled "example data" in its own title bar,
+so nothing on the page can be mistaken for a reading from a real deployment.

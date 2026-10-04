@@ -31,6 +31,13 @@ export type NavItem = {
   icon: ComponentType<IconProps>;
   /** Which real count feeds the trailing badge, once that screen exists. */
   badge?: "sessions" | "anomalies";
+  /**
+   * The assistant on this screen answers questions and cannot act: no AI code
+   * path holds a reference to anything that writes. The flag is about the
+   * assistant, not every control on the screen, so a screen where a person
+   * saves a value the assistant suggested still carries it.
+   */
+  readOnly?: true;
 };
 
 export type NavGroup = {
@@ -65,7 +72,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/sessions", label: "Sessions", icon: IconLock, badge: "sessions" },
       { href: "/anomalies", label: "Anomalies", icon: IconAlertTriangle, badge: "anomalies" },
       { href: "/audit", label: "Audit Log", icon: IconFileText },
-      { href: "/ai", label: "AI Assistant", icon: IconSparkle },
+      { href: "/ai", label: "AI Assistant", icon: IconSparkle, readOnly: true },
     ],
   },
   {
@@ -81,9 +88,9 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     label: "AI Admin",
     items: [
       { href: "/digest", label: "Weekly Digest", icon: IconTemplate },
-      { href: "/support", label: "Support Assistant", icon: IconSupport },
-      { href: "/config-advisor", label: "Config Advisor", icon: IconSliders },
-      { href: "/ai-widget", label: "Ask-AI Widget", icon: IconMonitor },
+      { href: "/support", label: "Support Assistant", icon: IconSupport, readOnly: true },
+      { href: "/config-advisor", label: "Config Advisor", icon: IconSliders, readOnly: true },
+      { href: "/ai-widget", label: "Ask-AI Widget", icon: IconMonitor, readOnly: true },
     ],
   },
   {

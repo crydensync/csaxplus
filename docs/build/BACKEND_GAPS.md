@@ -77,6 +77,10 @@ examples only. Neither "six" nor "five" is enforced by code.
 Action: list what the deployment actually configures, via `GET /v1/admin/oauth/health`. Make the
 landing page and the console agree by showing the configured set, not a hardcoded six.
 
+Done on the landing page (step 0.7): the card reads "OAuth, any provider" and says the engine
+treats a provider as an opaque string. The console's OAuth screen still owes the configured list
+from `/v1/admin/oauth/health` (tier 1, step 1.3).
+
 ### 2.3 "Rehash on next login" toggle
 
 Real behaviour: hashes upgrade automatically on the next successful login, but only when the
@@ -100,6 +104,10 @@ Action: the prototype's "previous 5 password history" rule has no engine support
 it unsupported. Breach checking is an interface with no implementation, so the console can only
 report whether the host wired one.
 
+Done on the landing page (step 0.7): the card states the real defaults (eight to seventy-two
+characters, composition rules off) and no longer claims NIST 800-63B. The Password Policy screen
+(tier 1, step 1.6) reads and writes the real policy and shows the real violation codes.
+
 ### 2.5 Anomaly signal codes
 
 The six codes (`cryden/security/anomaly.go:16-42`): `new_ip`, `new_device`, `user_failure_velocity`,
@@ -110,6 +118,10 @@ The prototype's pills read "new country" and "lockout", which are not signal cod
 
 Action: render the real codes. "New country" would need an IP geolocator, which is an interface
 with zero implementations.
+
+Done on the landing page (step 0.7): the anomaly card names the six real codes in chips, and the
+credential-stuffing card names `account_spray` and `unknown_account_spray`. The Anomalies screen
+(tier 2, step 2.2) renders the same codes from the API's own data.
 
 ### 2.6 Sessions are not Redis-backed
 
@@ -160,6 +172,33 @@ Action: the metadata editor maps to the existing `/v1/admin/users/{id}/metadata`
 state that it feeds JWT claims, and must be unavailable on SQLite.
 
 ---
+
+### 2.11 Webhook delivery is the API's, not an unshipped interface
+
+The engine's `Config.Webhooks` is `notify.WebhookSender` and the engine ships no implementation
+(`cryden/config.go:109-119`): it makes no outbound HTTP call, so the endpoint, signing and retries
+belong to the host. The host does implement one: `api/webhook/sender.go` is `notify.WebhookSender`
+for this API, with a delivery log behind `GET /v1/admin/webhooks/deliveries`.
+
+The prototype's landing page listed webhook delivery alongside breach checking and IP geolocation
+as "interfaces with zero implementations". That is true of the engine library and false of the
+product a reader is looking at.
+
+Action: claim it correctly, and keep the distinction visible: the engine lets a host ship events
+somewhere, and this API ships them to the endpoints the deployment configured. Done on the landing
+page (step 0.7). The Webhooks screen (tier 3, step 3.2) shows real deliveries.
+
+### 2.12 There is no `csax` CLI
+
+The prototype's landing page listed `csax ai ask "which accounts locked out this week?"` as a
+command the console replaces. No such binary exists in either repository, and this console has no
+CLI entry point. `cryden/ai/types.go` is explicit that the engine holds only the pure logic and
+that "csax owns the actual CLI commands", which is a statement about intent, not about a command
+that runs.
+
+Action: removed from the landing page (step 0.7), which now lists only `go run
+./cmd/grant-operator` and `api migrate --baseline`, both read from the API repository. If a CLI is
+ever wanted, it is new work with its own step, not something to advertise first.
 
 ## 3. SQLite behaviour
 
