@@ -12,8 +12,14 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/states";
 import { SidebarProvider } from "@/components/shell-context";
 import { useToast } from "@/components/Toast";
 import { Toggle } from "@/components/Toggle";
-import { Topbar, apiStatusClass, type ApiStatus } from "@/components/Topbar";
+import { Topbar } from "@/components/Topbar";
 import { IconInbox } from "@/components/icons";
+import {
+  API_STATUS_DETAILS,
+  API_STATUS_LABELS,
+  apiStatusClass,
+  type ApiStatus,
+} from "@/lib/api-status";
 
 type PreviewRow = {
   id: string;
@@ -42,11 +48,11 @@ const COLUMNS: ReadonlyArray<Column<PreviewRow>> = [
   },
 ];
 
-const STATUSES: ReadonlyArray<{ status: ApiStatus; label: string }> = [
-  { status: "api-client", label: "API connected" },
-  { status: "degraded", label: "Partial outage" },
-  { status: "fixtures", label: "Fixture data" },
-  { status: "offline", label: "Unreachable" },
+const STATUSES: ReadonlyArray<ApiStatus> = [
+  "api-client",
+  "degraded",
+  "fixtures",
+  "offline",
 ];
 
 function GalleryBody() {
@@ -230,9 +236,9 @@ function StatusStrips() {
     <section className="gallery-block">
       <h2>Topbar status</h2>
       <div className="gallery-row">
-        {STATUSES.map((entry) => (
-          <span key={entry.status} className={apiStatusClass(entry.status)}>
-            {entry.label}
+        {STATUSES.map((status) => (
+          <span key={status} className={apiStatusClass(status)} title={API_STATUS_DETAILS[status]}>
+            {API_STATUS_LABELS[status]}
           </span>
         ))}
       </div>
@@ -256,7 +262,8 @@ export function DesignGallery() {
           title="Design system"
           subtitle="Every component, every state. Development only."
           status="fixtures"
-          statusLabel="Fixture data"
+          statusLabel={API_STATUS_LABELS.fixtures}
+          statusDetail={API_STATUS_DETAILS.fixtures}
         />
         <div className="view anim">
           <StatusStrips />

@@ -336,3 +336,56 @@ change. And the console's session id (`sid`) is separate from the API's
 entries the console writes, the second is the handle the API recognises, and
 conflating them would make a console-side id look like a credential it is not.
 
+---
+
+## D12. The fixtures adapter is chosen by configuration and can never look connected
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+`CRYDEN_MODE` picks the adapter, and nothing else does. Fixtures are not a
+fallback for a live call that failed, not a request-level choice, and not
+something a screen can ask for: `crydenClient()` reads the mode from config and
+returns one of two objects. A live call that fails stays failed and the screen
+says so, which is the rule BUILD_NOTE section 1 exists to protect.
+
+The enforcement is partly in the types. `FixtureHealth` is `{state: "fixtures"}`
+and cannot be `api-client`, so the fixtures adapter is unable to claim a real
+connection even by mistake, and `LiveHealth` has no `fixtures` member so a live
+console cannot claim sample data. Two tests assert the runtime behaviour on top
+of that, because the sentence an operator reads before trusting a screen is worth
+asserting twice.
+
+The interface is deliberately thin: `health()` today, one method per endpoint as
+a tier needs it. A client that listed every `/v1/admin/*` route now would be a
+guess at request and response shapes for screens that do not exist, and the guess
+would be wrong in the same way the prototype's canned data was wrong.
+
+The topbar asks on every render rather than caching. A cached tag describes a
+connection that may already be gone, and the four states are the console's only
+claim about the backend, so it is worth one round trip with a three second
+timeout (shorter than the transport's ten) on each screen.
+
+---
+
+## D13. Two routes that must not answer with the wrong thing
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+**A sidebar link is a promise the route exists.** The navigation lists every
+screen in the brief, because hiding unbuilt screens would hide the work left to
+do. Following one used to land on a 404 that looks like a broken console, so
+`(console)/[...slug]` renders a named "not built yet" state for the routes the
+navigation actually contains. A path that is not one of them still answers 404:
+without that check the catch-all would tell an operator that a mistyped URL is
+"coming in a later tier", which is a different and worse kind of untrue. Each
+tier needs no change here, since a page that adds its own route takes precedence.
+
+**An unmatched path under `/api` answers JSON.** The console's own endpoints live
+there, and without a catch-all an unknown one fell through to the page route
+above and answered a 307 into the sign-in screen: HTML and a redirect, to
+something that asked for JSON. `api/[...slug]` answers a 404 envelope for every
+method, so the API surface is closed and a wrong URL is legible to a caller.
+
+

@@ -225,3 +225,31 @@ passwordless account cannot sign in at all through this API. The sign-in screen 
 for the password first and offers a passkey only as one of the pause's methods, which is what
 the API can actually do.
 
+### 4.5 `GET /v1/health` says almost nothing
+
+`HealthHandler.Health` (`api/httpapi/health_handler.go`) pings its own database and answers
+either `{"data": {"status": "ok"}}` or a 503 with `db_unreachable`. That is the whole answer:
+no version, no build, no database engine, no migration state, no uptime.
+
+Action: the prototype's topbar tag read "connected, production db". The console cannot honestly
+say the second half, so its tag says `api-client` and the sentence behind it claims only that
+the API answered and reported itself healthy. Do not add a database or environment claim to the
+console until the endpoint reports one. A `version` and a `database` field here would also give
+the System page (tier 4) something real to show.
+
+### 4.6 The health handler's documented nil behaviour is not implemented
+
+`Deps.DB`'s comment says a nil database is fine and `/v1/health` "then reports the database as
+unconfigured rather than panicking" (`api/httpapi/router.go:35-37`). `HealthHandler.Health` has
+no nil check and calls `h.DB.PingContext` directly, and that call panics on a nil `*sql.DB`.
+`net/http` recovers the panic per connection, so the caller sees the connection drop with no
+response at all rather than a status.
+
+The impact is limited to a router built without a database, which is what the comment is about
+(tests). Recorded because the console reads a dropped connection as `offline`, which is the
+wrong word for "this router has no database wired", and because the comment will otherwise be
+trusted again.
+
+Action: either guard the handler and answer `{"data": {"status": "unconfigured"}}`, or correct
+the comment. Not a blocker for the console.
+

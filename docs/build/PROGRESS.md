@@ -24,7 +24,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       unless `SKIP_AUTO_MIGRATE`
 - [x] 0.5 Operator auth: API-backed login (`/v1/login` + paused-login completions, `/v1/refresh`),
       roles owner/admin/viewer, CSRF, encrypted session cookie
-- [ ] 0.6 Cryden client interface + fixtures adapter + live adapter + health check;
+- [x] 0.6 Cryden client interface + fixtures adapter + live adapter + health check;
       topbar tag reflects real state (`api-client` / `degraded` / `fixtures` / `offline`)
 - [ ] 0.7 Landing page ported from `landing.html` to a real route; accessibility fixed
 - [ ] 0.8 README.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md,
@@ -141,6 +141,31 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   fixtures adapter does not exist until 0.6. With no API listening, the only reachable outcome is
   `api_unreachable`, which is what the spec pins down. The two-step walk itself is covered by
   `tests/unit/auth-flow.test.ts` (45 cases); the manual steps are a real API plus a real account.
+- **The client and the tag (step 0.6).** `src/server/cryden/client.ts` is the interface;
+  `fixtures.ts` and `health.ts` are the two adapters, chosen by `CRYDEN_MODE` alone. Fixtures are
+  never a fallback for a failed live call: the failure stays a failure. `FixtureHealth` cannot be
+  `api-client` and `LiveHealth` has no `fixtures` member, so neither adapter can claim the other's
+  state even by mistake. See D12.
+- The client is intentionally thin (`health()` only). Add one method per endpoint as a tier needs
+  it. A client listing every `/v1/admin/*` route now would be guessing at shapes for screens that
+  do not exist.
+- `ConsoleTopbar` (`src/app/(console)/console-topbar.tsx`) is the only way a screen renders a
+  topbar, so the tag cannot be forgotten and cannot be a constant: it is a server component that
+  asks the API on every render, with a 3 s timeout rather than the transport's 10 s. There is
+  deliberately no cache, because a cached tag describes a connection that may already be gone.
+- `/v1/health` answers `{"status": "ok"}` or 503 `db_unreachable`, and nothing else. So the tag
+  can say `api-client` and cannot repeat the prototype's "connected, production db". BACKEND_GAPS
+  4.5 and 4.6 (the handler's documented nil-DB behaviour is not implemented: it panics).
+- `(console)/[...slug]` renders a named "not built yet" state for routes the sidebar links to, and
+  a real 404 for anything else. `api/[...slug]` answers a JSON 404 for every method, so an
+  unmatched `/api` path is legible to a caller instead of falling through to a page redirect (D13).
+- **Verified by hand against real HTTP**, not only in unit tests: with `CRYDEN_MODE=live` and a
+  throwaway stub on `CSAX_API_URL` (never committed), the console called `POST /v1/login`, then
+  `GET /v1/sessions` to resolve the API session id, then `GET /v1/health`, and sign-out called
+  `POST /v1/logout` and answered `{"revoked":true}` with the cookie cleared and `/dashboard`
+  redirecting again. All four tags were seen on a running server: `fixtures` from config with no
+  call, `offline` with nothing on 8080, `degraded` against a stub answering 503 `db_unreachable`,
+  and `api-client` against `{"status":"ok"}`.
 
 ## Tier summaries
 

@@ -2,36 +2,31 @@
 
 import type { ReactNode } from "react";
 
+import { apiStatusClass, type ApiStatus } from "@/lib/api-status";
+
 import { IconMenu } from "./icons";
 import { useSidebar } from "./shell-context";
 
-/**
- * What the console knows about the backend right now. This is the one place the
- * topbar is allowed to look "healthy", and it is driven by a real health check
- * rather than a constant.
- */
-export type ApiStatus = "api-client" | "degraded" | "fixtures" | "offline";
-
-export function apiStatusClass(status: ApiStatus): string {
-  return STATUS_CLASS[status];
-}
-
-const STATUS_CLASS: Record<ApiStatus, string> = {
-  "api-client": "env-tag",
-  degraded: "env-tag degraded",
-  fixtures: "env-tag fixtures",
-  offline: "env-tag offline",
-};
 export type TopbarProps = {
   title: ReactNode;
   subtitle?: ReactNode;
+  /** The real state of the API connection. Never a constant. */
   status: ApiStatus;
-  /** Human wording for the status, so the operator is never left decoding a tag. */
+  /** The word shown in the tag. */
   statusLabel: string;
+  /** The sentence behind it. Falls back to the label when there is none. */
+  statusDetail?: string;
   actions?: ReactNode;
 };
 
-export function Topbar({ title, subtitle, status, statusLabel, actions }: TopbarProps) {
+export function Topbar({
+  title,
+  subtitle,
+  status,
+  statusLabel,
+  statusDetail,
+  actions,
+}: TopbarProps) {
   const { open, toggle } = useSidebar();
 
   return (
@@ -54,7 +49,7 @@ export function Topbar({ title, subtitle, status, statusLabel, actions }: Topbar
       </div>
       <div className="actions-row">
         {actions}
-        <span className={STATUS_CLASS[status]} title={statusLabel}>
+        <span className={apiStatusClass(status)} title={statusDetail ?? statusLabel}>
           {statusLabel}
         </span>
       </div>
