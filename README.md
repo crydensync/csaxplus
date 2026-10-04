@@ -131,7 +131,7 @@ Three statuses, and they mean exactly this:
 | Piece | Status | Notes |
 |---|---|---|
 | Configuration loader | done | env, then `<KEY>_FILE`, then `csax.config.json`, then defaults; boots fail fast with every problem listed at once |
-| Console store and migrations | done | Postgres and SQLite, same schema, two drivers. Postgres is typechecked, never yet executed here |
+| Console store and migrations | done | Postgres and SQLite, same schema, two drivers; both dialects execute in the test suite |
 | Operator sign-in | done | `POST /v1/login` plus the paused-login completions and `/v1/refresh`; roles, CSRF, encrypted cookie |
 | API client and health tag | done | `api-client`, `degraded`, `fixtures`, `offline`, each from a real answer |
 | Design system | done | the prototype's tokens and components, ported to React |
@@ -465,9 +465,10 @@ A fuller sketch of the intended shape is in [docs/guide/deployment.md](docs/guid
   `501 not_implemented_on_sqlite` without even inspecting the token. The console turns that into a
   clear state rather than a broken screen (step 5.4).
 - **The console's own store is separate** and may be either engine, independently of what the API
-  uses. The store's Postgres migrations are typechecked and compared structurally against the
-  SQLite schema, but **have never been executed in this checkout**, because there is no Postgres
-  here. Say so; do not claim otherwise.
+  uses. Its Postgres migrations and queries are executed in the test suite against a real Postgres:
+  PGlite behind `@electric-sql/pglite-socket`, a development dependency, serving the wire protocol to
+  the same `openPostgresStore` a deployment uses. The built server is booted against it as well. See
+  [docs/guide/setup.md](docs/guide/setup.md).
 
 Every gap between what a screen wants and what the API provides is written down, with the file and
 line that proves it, in **[docs/build/BACKEND_GAPS.md](docs/build/BACKEND_GAPS.md)**. That file also

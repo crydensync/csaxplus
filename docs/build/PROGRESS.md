@@ -13,7 +13,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 
 ---
 
-## Tier 0 - Foundation (tag v0.0.1)
+## Tier 0 - Foundation (tag v0.0.1, then v0.0.2 for step 0.10)
 
 - [x] 0.1 Init: pnpm workspace, Next.js 15 + TS strict, ESLint, Prettier, Vitest, Playwright,
       commitlint + `commit-msg` hook, `.claude/settings.json`, LICENSE (MIT), `.env.example`
@@ -31,6 +31,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       `docs/build/DECISIONS.md`, `docs/build/BACKEND_GAPS.md`; `docs/guide/` and Playwright
       screenshots
 - [x] 0.9 Tag v0.0.1 and write the tier summary below
+- [x] 0.10 Run the Postgres store against a real Postgres (PGlite + `pglite-socket`, a development
+      dependency), which found and fixed two defects in a path that had never executed. Tag v0.0.2
+      and write the follow-up summary below
 
 ## Tier 1 - Identity (tag v0.1.0)
 
@@ -106,10 +109,20 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - The console store defaults to `.csaxplus/console.sqlite` (gitignored). Boot on SQLite is verified
   in dev and against the built server, including the failure path: an unusable path prints a
   readable message and exits `1`.
-- **Postgres is not executed anywhere in this checkout.** No server and no Docker daemon. Its
-  migrations and queries are typechecked and compared structurally against the SQLite schema, never
-  run. Every claim about the Postgres store has to be read that way until a Postgres exists;
-  `@electric-sql/pglite` would run it in-process as a development dependency.
+- **Postgres runs (step 0.10).** `tests/unit/db-postgres.test.ts` boots PGlite (Postgres compiled to
+  WebAssembly) behind `@electric-sql/pglite-socket`, which serves the real wire protocol over TCP, and
+  then calls the **shipped** `openPostgresStore(url)`: postgres-js, the `?` to `$1` rewrite,
+  `client.begin`, the DDL, the drizzle handle. Both are development dependencies. A parallel
+  in-process driver was rejected for exactly this reason: it would have agreed with the tests and
+  could still have disagreed with a deployment, which is what happened twice over (D17). Statements
+  about the Postgres store are no longer structural-only. The socket
+  server multiplexes connections onto one PGlite backend, so its `maxConnections` has to be at least
+  the `max: 5` pool; the suite resets the `public` schema between tests rather than paying for a new
+  WebAssembly instance.
+- Postgres sends a `NOTICE` for `create table if not exists console_migrations` on every boot against
+  an already-migrated store, and postgres-js prints notices as a raw object to stdout. Noisy, and
+  left alone deliberately: choosing what an operator should see is the logging policy that arrives
+  with `LOG_LEVEL` and JSON logs in step 5.5, not something to invent here.
 - Server processes started for a manual check outlive `timeout` when launched through `pnpm start`,
   because pnpm, `next start` and `next-server` are three processes. Launch
   `./node_modules/.bin/next start` directly so `timeout` reaches the server, and check for a
@@ -217,8 +230,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   not a navigation route is a 307 to `/login`, not the 404 D13 promises, because the `(console)`
   layout's session check runs before the page. Defensible for a console, and the `robots.txt`
   consequence is worth its own small follow-up.
-- **Tag scheme.** Tier 0 uses the `v0.0.x` line, so tier 0 is `v0.0.1` and `package.json` says
-  `0.0.1`. Tiers 1 to 5 are `v0.1.0` to `v0.5.0`, and `v1.0.0` closes the project when the README,
+- **Tag scheme.** Tier 0 uses the `v0.0.x` line, so tier 0 is `v0.0.1` and `package.json` said
+  `0.0.1`; step 0.10 moved it to `0.0.2`. Tiers 1 to 5 are `v0.1.0` to `v0.5.0`, and `v1.0.0` closes
+  the project when the README,
   the docs and every gate are complete. This file had it shifted up by one until step 0.9: it read
   tier 0 as `v0.1.0` and ended tier 5 at `v1.0.0`, which is one tag too high at every tier. BUILD_NOTE
   fixes both ends (line 85 for tiers 1 to 5, line 155 for tier 0), so check those two lines rather
@@ -255,6 +269,8 @@ Verified by running it, not only in tests: 119 unit tests, 21 e2e tests, a clean
 with `/` prerendered static, and a real `node .next/standalone/server.js` probed over HTTP for
 `/` (200, prerendered), `/design` (404 in production), `/dashboard` (307 to `/login`) and
 `/api/nonsense` (JSON 404). A boot with a missing key was confirmed to exit 1 with a readable list.
+The one claim this summary could not make at the time was that the Postgres store had ever been
+executed; step 0.10 closed that, and found two defects while doing it.
 
 **What is fixture-only.** One thing, and it is labelled on screen: the `fixtures` connection state.
 The fixtures adapter implements `health()` and nothing else, so `CRYDEN_MODE=fixtures` boots the
@@ -285,3 +301,25 @@ specific state rather than an empty table.
 
 **Next step.** 1.1: the Dashboard, with real counts from `GET /v1/admin/users`, recent activity, and
 a digest card or an honest empty state. It replaces the session card that stands there now.
+
+### Tier 0 follow-up (step 0.10). Tag `v0.0.2`. Committed 2026-10-04.
+
+**What shipped.** The Postgres half of the console store now runs, and two defects it was hiding are
+fixed. Nothing on screen changed.
+
+- `tests/unit/db-postgres.test.ts`: eight tests that boot PGlite behind `@electric-sql/pglite-socket`
+  and drive the shipped `openPostgresStore` over TCP, covering the migration runner, the DDL as the
+  system catalogs report it against the typed schema, and a round trip through the drizzle handle
+  including a unique violation and a `timestamptz` read back as an instant. The suite is 127 tests.
+- Two fixes in `src/server/db/drivers.ts`, both in code that had never executed. Full account in D17.
+
+Verified by running it: the suite above, plus the **built** standalone server booted with
+`CSAX_STORE_URL` pointing at that same PGlite, which logged `csax+ store ready on postgres, applied
+0001` and then served `/` 200 and `/dashboard` 307 to `/login`. A second boot against the same
+database logged no migration line, which is what "nothing outstanding" looks like.
+
+**What is fixture-only.** Unchanged: the `fixtures` connection state, labelled on screen.
+
+**What is blocked on the backend.** Unchanged. The same five entries in `BACKEND_GAPS.md` section 4.
+
+**Next step.** Still 1.1, the Dashboard.

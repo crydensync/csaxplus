@@ -12,8 +12,31 @@ one would need a toolchain this repository does not have yet.
 
 ## [Unreleased]
 
-To be tagged `v0.0.1` at the end of tier 0. Tier 0 uses the `v0.0.x` line; the numbered tiers
-start at `v0.1.0` (BUILD_NOTE section 6).
+To be tagged `v0.0.2`. Tier 0 uses the `v0.0.x` line; the numbered tiers start at `v0.1.0`
+(BUILD_NOTE section 6). `v0.0.1` was the tier 0 foundation, below.
+
+### Fixed
+
+- **The console store could not open on Postgres.** `openPostgresStore` read the postgres.js factory
+  from `pg.default`, which is undefined: the package is `export = postgres`, so the build this code
+  reaches returns the factory itself. On Postgres this fired at boot, before a single request.
+- **A `Date` parameter crashed the Postgres driver.** Drizzle's `postgres-js` driver replaces the
+  serializers for the date and timestamp type OIDs with a pass-through, so postgres.js no longer
+  encodes a `Date` and the value reached the wire unencoded. The driver now sends the ISO 8601 string
+  Postgres expects, which is what drizzle sends for its own timestamp columns.
+
+Both were found by executing the Postgres path for the first time. See DECISIONS.md D17.
+
+### Added
+
+- **The Postgres store runs in the test suite**, against a real Postgres: PGlite behind
+  `@electric-sql/pglite-socket`, both development dependencies, serving the wire protocol over TCP to
+  the shipped `openPostgresStore`. The built server was booted against it as well.
+
+## [0.0.1] - 2026-10-04
+
+Tier 0: the foundation. The console boots, signs an operator in against a real API, and holds no
+stand-in behaviour beyond the two pieces named under Notes.
 
 ### Added
 

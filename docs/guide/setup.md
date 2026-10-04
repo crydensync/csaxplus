@@ -108,9 +108,12 @@ Migrations run automatically at boot unless `SKIP_AUTO_MIGRATE` is set. A store 
 open stops the process with a readable message rather than surfacing later on whichever screen
 touches it first.
 
-**Postgres support is typechecked but has not been executed in this repository.** There is no
-Postgres in the checkout's environment, so its migrations and queries are compared structurally
-against the SQLite schema and never run. If you are the first to run it, expect to find something.
+Both engines are supported and both are exercised by `pnpm test`. The Postgres path runs against a
+real Postgres in the suite: PGlite behind `@electric-sql/pglite-socket`, a development dependency
+that serves the wire protocol over TCP, so the driver under test is the one a deployment uses. The
+built server has been booted against it too, which is where the boot line
+`csax+ store ready on postgres, applied 0001` comes from. What that means for you is that a first
+Postgres deployment should not be the first time this code runs.
 
 ## Running the checks
 

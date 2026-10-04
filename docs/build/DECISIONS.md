@@ -213,7 +213,7 @@ hand. Both were rejected for the same reason. A generator defeats drizzle's
 column inference, which is the whole reason to use it, and hand-written queries
 have to solve `?` against `$1` themselves, which is the second reason. The
 duplication is real, so a test holds the two copies together: `shape.ts` projects
-each dialect onto one neutral description and `tests/unit/db-schema.test.ts`
+each dialect onto one neutral description and `tests/unit/db-store.test.ts`
 fails on any difference. A third representation, the DDL, is bound to the typed
 schema by introspecting a database the migrations actually created.
 
@@ -263,14 +263,14 @@ More decisions in this step:
    quirk that permits several NULL ids in the same table. Saying `not null`
    removes it, and the Postgres side is not-null either way.
 
-**What is verified, and what is not.** The SQLite path is run for real: the
-migrations, the driver, the typed handle and the boot check all execute in the
-test suite and against the built server. Postgres is not run. There is no
-Postgres server in this environment and no Docker daemon to start one, so its
-migrations and queries are typed and structurally compared, never executed.
-Adding `@electric-sql/pglite` as a development dependency would run the Postgres
-dialect in-process, and is left for a decision at the end of the tier rather
-than taken silently.
+**What is verified, and what is not.** Both dialects are now run for real. The
+SQLite path executes in `tests/unit/db-store.test.ts` and against the built
+server; the Postgres path executes in `tests/unit/db-postgres.test.ts` against
+PGlite behind `pglite-socket`, and against the built server booted on
+`CSAX_STORE_URL`. That second half arrived in step 0.10 and is D17; at the time
+this decision was written the Postgres statements were only typed and compared,
+because there was no Postgres server in this environment and no Docker daemon to
+start one.
 
 ---
 
@@ -503,3 +503,64 @@ this is not, and because one consequence is worth fixing on its own: a crawler a
 `robots.txt` is redirected into a sign-in page instead of being told to go away. A `public/robots.txt`
 disallowing everything, which is what a private console wants, is a follow-up rather than part of
 this step.
+
+---
+
+## D17. Running the Postgres store found two defects in code that had never executed
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+D9 chose the Postgres driver and said what it was worth: typed, compared structurally against the
+SQLite schema, never executed, because this environment has no Postgres server and no Docker daemon.
+The decision left the fix open on purpose, and step 0.10 took it.
+
+**PGlite behind `pglite-socket`, not PGlite on its own.** The obvious way to test a Postgres driver
+without a server is to run the queries through PGlite's own client. It was rejected: the driver's
+job is to be the thing that ships, and a second in-process implementation would have agreed with the
+tests and could still have disagreed with a deployment. `pglite-socket` serves the real wire protocol
+over TCP instead, so `openPostgresStore(url)` runs unchanged, postgres-js and all. Both packages are
+development dependencies; nothing at runtime depends on them.
+
+The socket server multiplexes several client connections onto PGlite's single backend, so its
+`maxConnections` has to be at least the `max: 5` pool, and the suite resets the `public` schema
+between tests rather than paying for a new WebAssembly instance per test.
+
+**Defect 1: the postgres.js factory was read from the wrong place.** `openPostgresStore` did
+`pg.default(url, ...)` on the stated assumption that `require` of the package hands back a namespace
+object with the factory on `default`. It does not. postgres.js is `export = postgres`, so the
+CommonJS build that `runtimeRequire` reaches returns the factory itself, and `pg.default` is
+undefined. The console threw `pg.default is not a function` at the moment it opened the store, which
+on Postgres is boot: `migrateOnBoot` opens the store before it serves anything. Fixed with
+`postgresFactory`, which accepts either shape and says why both exist.
+
+**Defect 2: drizzle takes postgres.js's date handling away, and the driver was relying on it.**
+The migration runner passes a `Date` for `console_migrations.applied_at`. postgres.js serialises a
+`Date` to an ISO 8601 string itself, so that looked fine. It is not, because `drizzle(client, ...)`
+is constructed on the same client and drizzle's `postgres-js` driver runs this on the way in:
+
+```js
+const transparentParser = (val) => val
+for (const type of ["1184", "1082", "1083", "1114", "1182", "1185", "1115", "1231"]) {
+  client.options.parsers[type] = transparentParser
+  client.options.serializers[type] = transparentParser
+}
+```
+
+Those are the date and timestamp type OIDs. Drizzle replaces their serialisers with a pass-through
+because drizzle converts its own column values before the driver sees them, and it wants the raw
+strings back when reading so it can apply each column's own mode. The side effect is that the raw
+`unsafe` path loses `Date` support entirely: the value reaches the wire unencoded and throws inside
+`Buffer.byteLength`. The fix is to send the string Postgres expects, which is what drizzle sends for
+its own timestamp columns anyway, and to say in the comment why a cast was not enough.
+
+Neither defect could have been found by reading the code more carefully, and neither is visible on
+SQLite. Both would have hit at boot on a Postgres deployment, which is the whole of the store's
+supported production configuration.
+
+**Left alone: the notice on every boot.** Postgres answers `create table if not exists
+console_migrations` on an already-migrated store with `NOTICE 42P07 relation already exists,
+skipping`, and postgres-js prints notices as a raw object on stdout. Verified by booting the built
+server twice against the same database. Not fixed here: what an operator should see is the logging
+policy that arrives with `LOG_LEVEL` and JSON logs in step 5.5, and inventing a filter for one
+message now would be a policy chosen by accident.
