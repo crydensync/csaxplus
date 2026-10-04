@@ -9,7 +9,7 @@ import { consoleSchema as sqliteSchema } from "./schema.sqlite";
  *
  * The two dialect files are written out by hand, so nothing at compile time
  * stops one of them gaining a column the other lacks. This projection is what
- * `tests/unit/db-schema.test.ts` compares: it drops everything that is a
+ * `tests/unit/db-store.test.ts` compares: it drops everything that is a
  * spelling difference between the engines and keeps what the column means.
  *
  * `uuid` is deliberately not a kind here. Postgres stores an id as `uuid` and

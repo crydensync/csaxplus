@@ -2,7 +2,7 @@
  * Schema migrations for the console store, as SQL, one statement list per
  * dialect. This file is the source of truth for the shape of the database:
  * `schema.postgres.ts` and `schema.sqlite.ts` exist so queries are typed, and
- * `tests/unit/db-schema.test.ts` proves they agree with what these statements
+ * `tests/unit/db-store.test.ts` proves they agree with what these statements
  * actually create.
  *
  * Statements are ordered and each migration runs inside one transaction, so a

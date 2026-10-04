@@ -11,9 +11,11 @@ import { consoleSchema as sqliteSchema } from "@/server/db/schema.sqlite";
 
 /**
  * These tests run against a real SQLite file, not a stub: the migration runner,
- * the driver and the DDL are the ones the console uses at boot. The Postgres
- * half of the schema is compared structurally instead, because this environment
- * has no Postgres to run it against; that is noted in docs/build/PROGRESS.md.
+ * the driver and the DDL are the ones the console uses at boot.
+ *
+ * The Postgres half of the store is in `db-postgres.test.ts`, which runs it
+ * against a real Postgres; the comparison of the two dialects as declarations is
+ * in this file, further down.
  */
 
 const opened: SqlDriver[] = [];

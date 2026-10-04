@@ -20,7 +20,7 @@ import {
  * out rather than generated from one specification, because the differences
  * (uuid/text, timestamptz/integer, boolean/integer, jsonb/text) are exactly the
  * ones a reader wants to see spelled out. `shape.ts` projects both dialects onto
- * one neutral description and `tests/unit/db-schema.test.ts` fails if they drift.
+ * one neutral description and `tests/unit/db-store.test.ts` fails if they drift.
  */
 
 export const webauthnChallenges = pgTable(

@@ -102,15 +102,44 @@ export function openSqliteStore(file: string): ConsoleStore {
 
 type PostgresClient = postgres.Sql<Record<string, never>>;
 
+/** postgres.js is published twice, and the two builds disagree about `default`. */
+type PostgresModule = typeof postgres | { default: typeof postgres };
+
+/**
+ * postgres.js exposes the same factory two ways depending on which build the
+ * runtime resolved. The CommonJS build (`export = postgres`) hands the factory
+ * back as the module itself, with the error class and the case helpers hanging
+ * off it; the ESM build, and a bundler's interop wrapper around either, puts it
+ * on `default`. `runtimeRequire` reaches the CommonJS one, so `.default` alone
+ * was undefined, and this path never ran to say so until a real Postgres was
+ * wired into the test suite and answered `pg.default is not a function`.
+ */
+function postgresFactory(module: PostgresModule): typeof postgres {
+  return typeof module === "function" ? module : module.default;
+}
+
 type PgParams = postgres.ParameterOrJSON<never>[];
 
 /**
+ * Widens the parameter types and renders a `Date` the way this client needs it.
+ *
  * postgres-js types its parameters more narrowly than a neutral driver surface
- * can express. Values still travel as bound parameters; only the wrapper type
- * is widened, at this one boundary and nowhere else.
+ * can express, and it turns a `Date` into an ISO string itself, so at first
+ * sight nothing is needed here. It is: `drizzle(client, ...)` below runs
+ * drizzle's `postgres-js` driver, and that driver replaces the parsers and
+ * serializers for the date and timestamp type OIDs with a pass-through, because
+ * drizzle converts its own column values before the driver sees them. That takes
+ * postgres-js's `Date` handling away from the raw `unsafe` path as a side
+ * effect, and an unencoded `Date` then reaches the wire and throws inside
+ * `Buffer.byteLength`. Sending the ISO 8601 string Postgres expects keeps the
+ * neutral surface working, and it is what drizzle sends for its own timestamp
+ * columns anyway.
+ *
+ * Only the wrapper type is widened, at this one boundary and nowhere else; a
+ * value that is not a `Date` travels exactly as the caller passed it.
  */
 function pgParams(params: readonly unknown[]): PgParams {
-  return params as PgParams;
+  return params.map((value) => (value instanceof Date ? value.toISOString() : value)) as PgParams;
 }
 
 /**
@@ -119,10 +148,8 @@ function pgParams(params: readonly unknown[]): PgParams {
  * only take connections away from the engine.
  */
 export function openPostgresStore(url: string): ConsoleStore {
-  // `require` of an ES module hands back its namespace object, so the factory
-  // is on `default` here rather than being the module itself.
-  const pg = loadModule<{ default: typeof postgres }>("postgres");
-  const client: PostgresClient = pg.default(url, { max: 5, idle_timeout: 20 });
+  const pg = postgresFactory(loadModule<PostgresModule>("postgres"));
+  const client: PostgresClient = pg(url, { max: 5, idle_timeout: 20 });
 
   const driver: SqlDriver = {
     dialect: "postgres",

@@ -1,6 +1,6 @@
 {
   "name": "csaxplus",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -36,6 +36,8 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-socket": "0.2.11",
     "@eslint/eslintrc": "^3.3.1",
     "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^7.6.13",
