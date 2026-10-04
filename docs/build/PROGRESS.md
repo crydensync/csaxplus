@@ -19,7 +19,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 0.2 Design system: port `styles.css` tokens; Card, Pill, Toggle, Button, DataTable, Modal,
       Toast, Sidebar, Topbar, EmptyState, ErrorState, Skeleton
 - [x] 0.3 Config loader (env, `*_FILE`, disk file, defaults) + boot-time fail-fast + `describeConfig()`
-- [ ] 0.4 Console store + migrations (Postgres/SQLite, same schema, two drivers), auto-migrate
+- [x] 0.4 Console store + migrations (Postgres/SQLite, same schema, two drivers), auto-migrate
       unless `SKIP_AUTO_MIGRATE`
 - [ ] 0.5 Operator auth: API-backed login (`/v1/login` + paused-login completions, `/v1/refresh`),
       roles owner/admin/viewer, CSRF, encrypted session cookie
@@ -96,6 +96,21 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - The config loader reaches `fs` and `path` through `process.getBuiltinModule`, because a static
   `node:fs` import fails the edge compile of `instrumentation.ts` even behind a runtime guard. Do
   not reintroduce a `node:` import into anything the instrumentation graph touches.
+- The same rule covers native packages: `better-sqlite3` and both drizzle driver entry points are
+  loaded through `runtimeRequire` at call time (D9 item 4). An ordinary import of
+  `drizzle-orm/better-sqlite3` breaks `next dev` with `Can't resolve 'fs'` while
+  `/instrumentation` compiles.
+- The console store defaults to `.csaxplus/console.sqlite` (gitignored). Boot on SQLite is verified
+  in dev and against the built server, including the failure path: an unusable path prints a
+  readable message and exits `1`.
+- **Postgres is not executed anywhere in this checkout.** No server and no Docker daemon. Its
+  migrations and queries are typechecked and compared structurally against the SQLite schema, never
+  run. Every claim about the Postgres store has to be read that way until a Postgres exists;
+  `@electric-sql/pglite` would run it in-process as a development dependency.
+- Server processes started for a manual check outlive `timeout` when launched through `pnpm start`,
+  because pnpm, `next start` and `next-server` are three processes. Launch
+  `./node_modules/.bin/next start` directly so `timeout` reaches the server, and check for a
+  leftover `next-server` afterwards.
 
 ## Tier summaries
 

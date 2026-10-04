@@ -24,11 +24,16 @@ secrets/
 
 # local databases (console store)
 *.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.sqlite3
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
+# the default store location, and anything else the console writes on boot
+/.csaxplus/
 
 # reference repos cloned for reading
 _reference/

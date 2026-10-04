@@ -197,3 +197,77 @@ Choices worth recording:
 
 `describeConfig()` returns `{key, source, sensitive}` and nothing else. The Settings screen in
 Tier 5 shows where each value came from; it never has a value to show.
+
+---
+
+## D9. Two hand-written schemas, and migration SQL as the source of truth
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+The console store runs on Postgres or SQLite, the same schema either way. Both
+drizzle cores are used for typed queries, which means writing the schema twice:
+`schema.postgres.ts` and `schema.sqlite.ts`. The alternatives were a generator
+that emits both from one description, or dropping the ORM and writing SQL by
+hand. Both were rejected for the same reason. A generator defeats drizzle's
+column inference, which is the whole reason to use it, and hand-written queries
+have to solve `?` against `$1` themselves, which is the second reason. The
+duplication is real, so a test holds the two copies together: `shape.ts` projects
+each dialect onto one neutral description and `tests/unit/db-schema.test.ts`
+fails on any difference. A third representation, the DDL, is bound to the typed
+schema by introspecting a database the migrations actually created.
+
+`uuid` is not a neutral kind. Postgres stores an id as `uuid` and SQLite as
+`text`, holding the same value; treating one as the exception would report a
+difference that does not exist. The neutral kinds are the five both engines
+share: text, integer, boolean, timestamp, json.
+
+More decisions in this step:
+
+1. **Migration SQL is the source of truth for the schema.** The typed schema
+   exists so queries are checked, not so it can generate DDL. There is no
+   drizzle-kit in the build.
+
+2. **Migrations are append-only, and each is one transaction.** Editing an
+   applied migration does nothing on a deployed console, so a correction is a
+   new one. The row recording a migration is inserted by the same transaction
+   that created its tables, so a crash cannot leave a migration marked applied
+   when it is not. A test proves a failing batch leaves no table behind.
+
+3. **`runAtomically` takes steps, not statements.** The runner needs DDL plus a
+   parameterised insert. The obvious next move, a general `transaction(fn)`
+   wrapper, was not taken: the vault and the passkey store will want one, and
+   inventing it before something needs it means guessing at its shape. On SQLite
+   the callback runs synchronously inside better-sqlite3's transaction, and on
+   Postgres it runs inside `postgres.begin`, which checks out a single
+   connection; sending `BEGIN` over the pool would put the `COMMIT` on a
+   different connection.
+
+4. **Every driver module is loaded at call time, with no specifier a bundler can
+   see.** `drizzle-orm/better-sqlite3` statically requires `better-sqlite3`,
+   which requires `fs` and a native binding. Next compiles `instrumentation.ts`
+   for the edge runtime as well as for Node, and importing that chain at all,
+   statically or with `import()`, failed the edge compile with `Can't resolve
+   'fs'` for code the edge never runs. `runtimeRequire` in `builtins.ts` hides
+   both the package and the drizzle entry point. This is the same constraint
+   that shaped `sources.ts`; that file now shares the helper.
+
+5. **`?` placeholders are rewritten to `$1` for Postgres.** A repository written
+   once runs on both engines. The rewrite is a substitution, not a parser, so a
+   literal question mark inside a string would be miscounted. No statement the
+   console writes has one, and a test records the limit rather than implying the
+   translation is smarter than it is.
+
+6. **SQLite ids are declared `primary key not null`.** SQLite's `primary key`
+   does not imply `not null` on a text column, a long-standing compatibility
+   quirk that permits several NULL ids in the same table. Saying `not null`
+   removes it, and the Postgres side is not-null either way.
+
+**What is verified, and what is not.** The SQLite path is run for real: the
+migrations, the driver, the typed handle and the boot check all execute in the
+test suite and against the built server. Postgres is not run. There is no
+Postgres server in this environment and no Docker daemon to start one, so its
+migrations and queries are typed and structurally compared, never executed.
+Adding `@electric-sql/pglite` as a development dependency would run the Postgres
+dialect in-process, and is left for a decision at the end of the tier rather
+than taken silently.

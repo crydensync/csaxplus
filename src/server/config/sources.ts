@@ -1,35 +1,5 @@
+import { pathApi, readTextFile } from "../node/builtins";
 import { ConfigError, type ConfigProblem } from "./errors";
-
-/**
- * Node builtins are fetched at call time through `process.getBuiltinModule`
- * rather than imported. Next builds `instrumentation.ts` for the edge runtime as
- * well as Node, and its bundler follows a dynamic import even behind a
- * `NEXT_RUNTIME === "nodejs"` guard, so a static `node:fs` import here breaks the
- * edge compile for code the edge never runs. Node 22.3 or newer provides this.
- */
-function builtin<T>(id: string): T {
-  const lookup = (process as { getBuiltinModule?: (name: string) => unknown }).getBuiltinModule;
-  if (typeof lookup !== "function") {
-    throw new Error("csax+ needs Node 22.3 or newer: process.getBuiltinModule is missing");
-  }
-  return lookup.call(process, id) as T;
-}
-
-type FsModule = {
-  readFileSync: (path: string, encoding: "utf8") => string;
-};
-type PathModule = {
-  resolve: (...parts: string[]) => string;
-  isAbsolute: (path: string) => boolean;
-};
-
-function readText(path: string): string {
-  return builtin<FsModule>("fs").readFileSync(path, "utf8");
-}
-
-function pathApi(): PathModule {
-  return builtin<PathModule>("path");
-}
 
 /** Where a setting's value came from. Values themselves are never returned here. */
 export type ConfigSource = "env" | "env-file" | "file" | "default";
@@ -65,7 +35,7 @@ export function readConfigFile(
 
   let text: string;
   try {
-    text = readText(path);
+    text = readTextFile(path);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
     throw new ConfigError([
@@ -113,7 +83,7 @@ export function resolveKey(
   const indirectPath = env[`${key}${ENV_FILE_SUFFIX}`];
   if (indirectPath !== undefined && indirectPath.trim() !== "") {
     try {
-      const raw = readText(indirectPath).replace(/\r?\n$/, "");
+      const raw = readTextFile(indirectPath).replace(/\r?\n$/, "");
       if (raw.trim() !== "") return { value: raw, source: "env-file" };
     } catch {
       throw new ConfigError([
