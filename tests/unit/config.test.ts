@@ -121,6 +121,24 @@ describe("loadConfig", () => {
     }
   });
 
+  it("says what is wrong with a key, not just that it is wrong", () => {
+    // The shape checks are `refine` calls, whose messages are the specific,
+    // actionable ones. A formatter that swallowed them would leave an operator
+    // reading "is not valid" with nothing to act on.
+    let caught: unknown;
+    try {
+      loadConfig(baseEnv({ CSAX_SESSION_SECRET: "too-short" }), emptyDir());
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ConfigError);
+    const message = (caught as Error).message;
+    expect(message).toContain("CSAX_SESSION_SECRET");
+    expect(message).toContain("32 bytes, base64 encoded");
+    expect(message).not.toContain("too-short");
+  });
+
   it("accepts the boolean spellings an operator is likely to write", () => {
     for (const spelling of ["1", "true", "yes", "on", "TRUE"]) {
       const { config } = loadConfig(baseEnv({ SKIP_AUTO_MIGRATE: spelling }), emptyDir());

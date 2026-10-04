@@ -38,6 +38,13 @@ function describeIssue(issue: ZodError["issues"][number]): string {
       return "is too long";
     case "invalid_union":
       return "does not match any accepted shape";
+    case "custom":
+      // A `refine` wrote this one, and it is the most specific message
+      // available: "must be 32 bytes, base64 encoded (session cookie signing)"
+      // says what to do about it in a way "is not valid" does not. Every
+      // refine in the schema is written to describe the shape and never to
+      // quote the value, so it is safe to print.
+      return issue.message;
     default:
       return "is not valid";
   }
