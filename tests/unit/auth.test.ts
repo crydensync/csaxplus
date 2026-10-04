@@ -28,6 +28,7 @@ function useEnvironment() {
 function aSession(overrides: Partial<Session> = {}): Session {
   return {
     sid: "session-1",
+    apiSessionId: "api-session-1",
     operator: { id: "operator-1", label: "An operator", role: "admin" },
     api: {
       accessToken: "access-token-value",

@@ -271,3 +271,68 @@ migrations and queries are typed and structurally compared, never executed.
 Adding `@electric-sql/pglite` as a development dependency would run the Postgres
 dialect in-process, and is left for a decision at the end of the tier rather
 than taken silently.
+
+---
+
+## D10. The console reads the API's one role bit, and leaves `owner` unreachable
+
+**Date:** 2026-10-04
+**Status:** accepted, pending an API endpoint
+
+The console has three roles, `owner`, `admin` and `viewer` (BUILD_NOTE 5). The
+API has one: a row in `operators(user_id, role)` whose only meaningful value is
+the literal `"admin"`, which is what `RequireAdmin` tests for; an ordinary user
+carries no `role` claim at all. So the console maps `role === "admin"` to
+`admin` and everything else, including a missing claim, to `viewer`.
+
+`owner` is not reachable yet, and no code path can produce it. It is meant for
+whoever may manage other operators, and the endpoint that would answer that
+question, `GET /v1/admin/operators`, does not exist in the API. The alternative
+was a console-side list of owner ids in configuration, which would be a second
+source of truth for a fact the API owns, and would disagree with the API from the
+moment a role changed there. Mapping one bit to two roles and leaving the third
+unreachable keeps the API the only authority, at the cost of a role that exists
+in the type system and in no session. Recorded in BACKEND_GAPS.md as the
+endpoint that would make it reachable.
+
+The console does not verify the access token's signature and holds no signing
+key: `JWT_SECRET` is the API's, and BUILD_NOTE 11.1 forbids the console holding
+the engine's credentials. It reads `sub`, `role` and `exp` to decide which
+screens to draw, and the API verifies the same token on every real call. So a
+forged claim could change what a screen looks like and nothing else. A test
+pins the mapping, including that a token whose payload is not JSON is a failure
+of the API's answer rather than a signed-out operator.
+
+---
+
+## D11. Signing out clears the console cookie always, and revokes the API session when it can
+
+**Date:** 2026-10-04
+**Status:** accepted
+
+Signing out does two things that can disagree: the console forgets the session,
+and the API's session stops existing. The console does both, and reports which
+happened.
+
+`POST /v1/login` returns tokens and no session id, but `POST /v1/logout` takes a
+`session_id` and refuses one the account does not own. So the console asks
+`GET /v1/sessions` immediately after signing in and records the newest as its
+own, or records `null` when that call fails. Revoking is then best effort: an API
+that cannot be reached, or a session id that was never resolved, must not leave
+the operator still signed in to the console, because the cookie is the console's
+own state and clearing it is the console's own decision. So the cookie is cleared
+either way and the answer carries `revoked`.
+
+The browser is told, rather than shown a sign-in screen as if all were well. When
+`revoked` is false the sign-out button stays on the page and says the API session
+is still live until it expires on its own, because a refresh token that outlives
+the browser session is worth knowing about. Navigating away would render that
+sentence for one frame and then lose it.
+
+Two smaller points. Signing out is guarded by origin and CSRF but not by role: a
+viewer is read-only, not trapped, and ending your own session is not a privileged
+change. And the console's session id (`sid`) is separate from the API's
+(`apiSessionId`): the first identifies the console's own cookie for the audit
+entries the console writes, the second is the handle the API recognises, and
+conflating them would make a console-side id look like a credential it is not.
+

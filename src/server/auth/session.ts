@@ -1,10 +1,10 @@
 import "server-only";
 
-import { EncryptJWT, jwtDecrypt } from "jose";
 import { z } from "zod";
 
 import { getConfig } from "../config";
 import { isRole, type Role } from "./roles";
+import { openValue, sealValue } from "./sealed";
 
 /**
  * The operator session, carried in one encrypted cookie.
@@ -13,8 +13,7 @@ import { isRole, type Role } from "./roles";
  * tokens: the browser must not be able to read them, and the console must not
  * hold them anywhere else. Nothing about the session lives in a server-side
  * table, so a restart does not sign anyone out and the cookie is the whole
- * state. What is in it is authenticated as well as hidden, so a tampered cookie
- * fails to decrypt rather than decrypting into something else.
+ * state. See `sealed.ts` for how that is done.
  *
  * The refresh token is the sensitive part. It never leaves the server: route
  * handlers read the session, refresh when the access token is close to expiry,
@@ -23,7 +22,10 @@ import { isRole, type Role } from "./roles";
 
 export const SESSION_COOKIE = "csax_session";
 
-/** How long the cookie lives. The API's own token expiry can be shorter. */
+/** The session cookie's audience, so no other sealed cookie can stand in for it. */
+export const SESSION_AUDIENCE = "csaxplus.console";
+
+/** How long the cookie lives. The API's own token expiry is shorter. */
 export const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 
 /**
@@ -34,13 +36,22 @@ export const REFRESH_LEEWAY_SECONDS = 60;
 
 const operatorSchema = z.object({
   id: z.string().min(1),
+  /** What to call this operator on screen: the address they signed in with. */
   label: z.string().min(1),
   role: z.string().refine(isRole, { message: "unknown console role" }),
 });
 
 const sessionSchema = z.object({
-  /** Identifies this cookie to the API's session list and to step-up grants. */
+  /** Identifies this console session, for audit entries written by the console. */
   sid: z.string().min(1),
+  /**
+   * The API's own session id, once the console has learned it. `POST /v1/login`
+   * does not return one, so it is resolved from the session list right after
+   * signing in, and is null when that could not be done: signing out then
+   * clears the console cookie without revoking the API's session. See
+   * BACKEND_GAPS.md.
+   */
+  apiSessionId: z.string().min(1).nullable(),
   operator: operatorSchema,
   api: z.object({
     accessToken: z.string().min(1),
@@ -55,47 +66,13 @@ const sessionSchema = z.object({
 export type Session = z.infer<typeof sessionSchema>;
 export type SessionOperator = z.infer<typeof operatorSchema>;
 
-export const SESSION_ISSUER = "csaxplus";
-export const SESSION_AUDIENCE = "csaxplus.console";
-
-function key(): Uint8Array {
-  return getConfig().session.secret;
-}
-
 export async function sealSession(session: Session): Promise<string> {
-  return new EncryptJWT({ session })
-    .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
-    .setIssuer(SESSION_ISSUER)
-    .setAudience(SESSION_AUDIENCE)
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
-    .encrypt(key());
+  return sealValue(session, SESSION_AUDIENCE, SESSION_MAX_AGE_SECONDS);
 }
 
-/**
- * Opens a cookie value. Returns null for anything that is not a session this
- * console minted: a wrong key, a tampered payload, an expired cookie or a value
- * whose shape has changed since it was written. Expiry is enforced by `jose`
- * against the JWT's own `exp`, and the payload is re-parsed with zod, so a
- * cookie from an older version cannot smuggle in a field the console would act
- * on.
- */
+/** Opens a session cookie. Null for anything this console did not mint. */
 export async function openSession(cookie: string | undefined): Promise<Session | null> {
-  if (cookie === undefined || cookie === "") return null;
-
-  let payload: unknown;
-  try {
-    const result = await jwtDecrypt(cookie, key(), {
-      issuer: SESSION_ISSUER,
-      audience: SESSION_AUDIENCE,
-    });
-    payload = result.payload.session;
-  } catch {
-    return null;
-  }
-
-  const parsed = sessionSchema.safeParse(payload);
-  return parsed.success ? parsed.data : null;
+  return openValue(cookie, SESSION_AUDIENCE, sessionSchema);
 }
 
 /** True when the access token is expired, or close enough that it should be renewed. */

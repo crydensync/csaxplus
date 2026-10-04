@@ -7,7 +7,11 @@ import "server-only";
  */
 
 export function jsonOk<T>(data: T, init: ResponseInit = {}): Response {
-  return Response.json({ data }, init);
+  const headers = new Headers(init.headers);
+  // Every answer here describes live state behind an authenticated cookie, so
+  // none of it may sit in a cache, a proxy or a browser's back-forward store.
+  headers.set("cache-control", "no-store");
+  return Response.json({ data }, { ...init, headers });
 }
 
 export type ApiErrorShape = {
@@ -36,7 +40,15 @@ export const ERROR_CODES = {
   csrf: "csrf_failed",
   forbidden: "forbidden",
   invalidRequest: "invalid_request",
+  payloadTooLarge: "payload_too_large",
   notFound: "not_found",
+  /** A paused sign-in whose pending cookie is gone or expired; start over. */
+  loginExpired: "login_expired",
+  /** The console could not reach the API at all: nothing was attempted. */
+  apiUnreachable: "api_unreachable",
+  /** The API answered, in a shape this console does not understand. */
+  apiMalformed: "api_malformed",
   upstream: "upstream_error",
+  internal: "internal_error",
   methodNotAllowed: "method_not_allowed",
 } as const;

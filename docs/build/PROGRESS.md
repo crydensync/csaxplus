@@ -4,8 +4,9 @@ This file is how a new chat resumes the work. Read it first, continue from the f
 item, and keep it current: tick a step after each commit, and rewrite the tier summary at the end
 of every tier.
 
-Stack: Next.js 15 (App Router) + TypeScript strict, pnpm, Tailwind v4 + the `styles.css` tokens,
-zod, `@simplewebauthn/*`, jose, postgres/drizzle + better-sqlite3, vitest, playwright.
+Stack: Next.js 15 (App Router) + TypeScript strict, pnpm, one global token stylesheet ported from
+the prototype's `styles.css` plus React components (D1, no Tailwind and no CSS Modules), zod,
+`@simplewebauthn/*`, jose, postgres/drizzle + better-sqlite3, vitest, playwright.
 
 Architecture (brief section 11): `browser -> Next.js BFF -> api (/v1/*, /v1/admin/*) -> engine -> Postgres|SQLite`.
 The console never holds the engine's primary credentials. Only `READONLY_DATABASE_URL` is an exception.
@@ -21,7 +22,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 0.3 Config loader (env, `*_FILE`, disk file, defaults) + boot-time fail-fast + `describeConfig()`
 - [x] 0.4 Console store + migrations (Postgres/SQLite, same schema, two drivers), auto-migrate
       unless `SKIP_AUTO_MIGRATE`
-- [ ] 0.5 Operator auth: API-backed login (`/v1/login` + paused-login completions, `/v1/refresh`),
+- [x] 0.5 Operator auth: API-backed login (`/v1/login` + paused-login completions, `/v1/refresh`),
       roles owner/admin/viewer, CSRF, encrypted session cookie
 - [ ] 0.6 Cryden client interface + fixtures adapter + live adapter + health check;
       topbar tag reflects real state (`api-client` / `degraded` / `fixtures` / `offline`)
@@ -111,6 +112,35 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   because pnpm, `next start` and `next-server` are three processes. Launch
   `./node_modules/.bin/next start` directly so `timeout` reaches the server, and check for a
   leftover `next-server` afterwards.
+- **Operator auth (step 0.5).** One encrypted cookie per concern, separated by jose audience:
+  `csax_session` (8 h, `csaxplus.console`) and `csax_pending` (5 min, `csaxplus.pending`). Neither
+  can be presented as the other, and a test holds that. The browser never sees a token: the cookie
+  is `httpOnly`, and the CSRF value it needs comes from `GET /api/auth/session`.
+- The API rotates the refresh token on every call and revokes the one it was given, so a renewal
+  that is not written back signs the operator out on the next call. `requireSession` therefore
+  returns the `Set-Cookie` alongside the session, and every early return in the mutation, CSRF,
+  secrets and admin guards answers through `authorized.respond(...)`. A guard that returns its own
+  `Response` and drops those cookies is a bug, not a style choice.
+- Route handlers are pure `Request` to `Response` functions, with cookies read from and written to
+  the raw headers rather than through `cookies()`. That is what makes them testable in vitest with
+  no mocks; `next/headers` is used only for server components (`readSession`).
+- The console holds no signing key. It decodes `sub`, `role` and `exp` to choose which screens to
+  draw; the API verifies the same token on every real call and remains the authority. `role ===
+  "admin"` is `admin`, anything else is `viewer`, and `owner` is unreachable until
+  `GET /v1/admin/operators` exists (D10, BACKEND_GAPS 4.2).
+- `POST /v1/login` returns no session id, so the console takes the newest from `GET /v1/sessions`
+  right after signing in. When that cannot be read it records `apiSessionId: null` and signing out
+  reports `revoked: false` instead of pretending. BACKEND_GAPS 4.1.
+- Playwright's `baseURL` is `http://localhost:3000`, not `127.0.0.1`, because the route handlers
+  refuse a request whose `Origin` is not `WEBAUTHN_ORIGIN`. The two names are different origins, so
+  browsing to the other one is a refused sign-in by design, not a convenience to paper over.
+- The e2e suite covers the signed-out path only: redirect to `/login`, both fields, focus on load,
+  keyboard reach and focus rings, the 375 px layout, and a failed sign-in reporting itself in place
+  without minting a cookie. **The success and second-factor paths are not covered end to end**,
+  because the console calls the API server-side, so Playwright cannot intercept it, and the
+  fixtures adapter does not exist until 0.6. With no API listening, the only reachable outcome is
+  `api_unreachable`, which is what the spec pins down. The two-step walk itself is covered by
+  `tests/unit/auth-flow.test.ts` (45 cases); the manual steps are a real API plus a real account.
 
 ## Tier summaries
 

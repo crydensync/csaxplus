@@ -1726,6 +1726,161 @@ textarea.text-input {
   }
 }
 
+/* ---------- read-only label and value rows ---------- */
+
+/*
+  The prototype reads key/value pairs out of an editable grid. Screens that only
+  report something need a plain list instead, and this is it.
+*/
+.detail-list {
+  margin: 0;
+  padding: 0;
+}
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.detail-row:last-child {
+  border-bottom: none;
+}
+.detail-row dt {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: none;
+}
+.detail-row dd {
+  margin: 0;
+  font-size: 13px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- the sign-in screen ---------- */
+
+/*
+  The one screen outside the shell. The prototype has no sign-in markup, so this
+  is built from the same tokens and the same surfaces as everything else rather
+  than invented alongside them.
+*/
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(60ch 40ch at 50% -10%, var(--violet-soft), transparent 70%),
+    var(--bg);
+}
+.auth-card {
+  width: 100%;
+  max-width: 412px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 20px;
+}
+.auth-brand .brand-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.auth-brand b {
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  display: block;
+}
+.auth-brand span {
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.auth-lede {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  max-width: 46ch;
+}
+.auth-foot {
+  margin: 18px 0 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.auth-steps {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.auth-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.auth-step.done {
+  color: var(--text-muted);
+}
+.auth-step.current {
+  color: var(--text);
+}
+.auth-step .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.method-choice {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.method-option:hover {
+  border-color: #8b6cfc40;
+}
+.method-option input {
+  accent-color: var(--violet);
+  margin: 0;
+}
+.method-option:has(input:focus-visible) {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+.auth-error {
+  margin-bottom: 16px;
+}
+
 /* ---------- dev-only component gallery (/design) ---------- */
 
 .gallery-block {

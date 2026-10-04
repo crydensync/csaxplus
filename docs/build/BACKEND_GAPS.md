@@ -170,3 +170,58 @@ inspecting the token (`api/httpapi/middleware.go:145-151`).
 
 Action: when the console sees a 501 with that code, it renders a clear "this deployment uses
 SQLite, the console's tables are Postgres-only" state rather than a broken screen.
+
+---
+
+## 4. Found while building operator sign-in (step 0.5)
+
+Read from `api/httpapi/auth_handlers.go`, `session_handlers.go`, `totp_handlers.go`,
+`passkey_handlers.go`, `recovery_handlers.go` and `api/openapi/spec.yaml`.
+
+### 4.1 `POST /v1/login` does not say which session it just created
+
+The success answer is `{access_token, refresh_token}` (`auth.Tokens`,
+`cryden/auth/token.go`, which has exactly those two fields). Signing out needs the other
+direction: `POST /v1/logout` takes `{session_id}` and answers `403 session_not_owned` for a
+session the caller does not own.
+
+So the console signs in, then calls `GET /v1/sessions` and takes the entry with the newest
+`created_at` as its own. That is a guess about which of the account's sessions is the new one,
+and it is wrong whenever two sign-ins land inside the same second (`created_at` is RFC3339 to
+the second) or when the API's clock and the console's disagree.
+
+Action: return the created session's `id` in the login answer, and in the answers of
+`/v1/login/totp`, `/v1/login/recovery-code` and `/v1/login/passkey/finish`, all of which mint a
+session the same way. `newestApiSessionId` in the console (`src/server/auth/flow.ts`) is the only
+place that has to change.
+
+Until then the console degrades rather than pretending: when the list cannot be read, the
+session records `apiSessionId: null` and signing out clears the console cookie while reporting
+`revoked: false`, so the operator is told the API-side session outlives them.
+
+### 4.2 Nothing says which operators may manage other operators
+
+The console's `owner` role has no source. The API's `operators` table carries one string per
+user and the only value any code tests for is `"admin"` (`RequireAdmin`,
+`api/httpapi/middleware.go`). `GET /v1/admin/operators` is in the missing list in section 1, and
+until it exists `owner` is unreachable in the console. See DECISIONS.md D10.
+
+### 4.3 The second-factor endpoints are not in the OpenAPI document
+
+`/v1/login/totp`, `/v1/login/recovery-code`, `/v1/login/passkey/begin`, `/v1/login/passkey/finish`
+and the OAuth, magic-link and passkey-registration routes are registered in
+`api/httpapi/router.go` but absent from `api/openapi/spec.yaml`. Their request and response
+shapes were read from the handlers instead, and every one is checked with `zod` on the way in
+(`src/server/auth/api-auth.ts`), so a change on the API's side shows up as a named failure
+rather than a screen reading a field that is no longer there.
+
+Action: add them to the spec. Not a blocker.
+
+### 4.4 WebAuthn is never a primary login
+
+There is no standalone passkey sign-in. `POST /v1/login/passkey/begin` requires a
+`pending_token`, so a passkey can only finish a login that a password already started. A
+passwordless account cannot sign in at all through this API. The sign-in screen therefore asks
+for the password first and offers a passkey only as one of the pause's methods, which is what
+the API can actually do.
+

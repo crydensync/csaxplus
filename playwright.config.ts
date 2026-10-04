@@ -1,6 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+/**
+ * The origin the tests drive, which has to be the origin the console is
+ * configured for: its route handlers refuse a request whose `Origin` is not
+ * `WEBAUTHN_ORIGIN` (the WebAuthn relying party's own origin), so browsing to
+ * the same server under a different name is a refused sign-in rather than a
+ * development convenience.
+ */
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests/e2e",
