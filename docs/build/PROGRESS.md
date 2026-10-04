@@ -27,8 +27,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 0.6 Cryden client interface + fixtures adapter + live adapter + health check;
       topbar tag reflects real state (`api-client` / `degraded` / `fixtures` / `offline`)
 - [x] 0.7 Landing page ported from `landing.html` to a real route; accessibility fixed
-- [ ] 0.8 README.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md,
-      `docs/build/DECISIONS.md`, `docs/build/BACKEND_GAPS.md`
+- [x] 0.8 README.md, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md,
+      `docs/build/DECISIONS.md`, `docs/build/BACKEND_GAPS.md`; `docs/guide/` and Playwright
+      screenshots
 - [ ] 0.9 Tag v0.1.0 and write the tier summary below
 
 ## Tier 1 - Identity (tag v0.2.0)
@@ -191,6 +192,30 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   where the prototype used `--text-dim`: dim is 2.95:1 on `--bg` and fails AA for text, muted is
   5.88:1. Every text colour on the page passes; the console's own screens still use dim in places
   and have not been re-measured.
+- **Documentation (step 0.8).** The README carries the thirteen things BUILD_NOTE section 8 asks
+  for, and every status statement in it is the state of the code rather than the state of the plan:
+  one screen partial, twenty planned, and each planned one named with the step that builds it. Its
+  configuration table is generated from the zod schema in `src/server/config/index.ts`, with the
+  `SENSITIVE_KEYS` set deciding the secret column, so the table cannot drift from the loader.
+- The README's badge row has no CI badge, and the README says why in one line rather than leaving a
+  reader to notice. The workflow arrives in step 5.6. See D15.
+- Screenshots are generated, not captured by hand: `pnpm screenshots` runs
+  `playwright.screenshots.config.ts` against `tests/screenshots/capture.spec.ts` and writes into
+  `docs/guide/screenshots/`. A separate config on purpose, so a gate run never leaves a dirty tree.
+  The console shots need a session and there is no API here to sign in against, so
+  `tests/screenshots/session.ts` mints one in the console's own cookie format from the gitignored
+  `.env.local`, and the run skips those two shots with a printed reason when no secret is present.
+  The operator they show is `operator@example.test` and the tokens are placeholders, which is why
+  the connection tag in them reads `fixtures`.
+- **Running the production build found three things the dev server hides** (D16): a bad key reported
+  `is not valid` instead of the refine's own message, because `describeIssue` had no `custom` case
+  (fixed, with a test); the standalone server needs `public/` and `.next/static/` copied in or every
+  asset 307s to `/login`; and `next start` warns that it does not work with `output: standalone` and
+  serves anyway. The third is left for step 5.6, which owns packaging.
+- One deviation from D13 is recorded rather than fixed: an unauthenticated request to a path that is
+  not a navigation route is a 307 to `/login`, not the 404 D13 promises, because the `(console)`
+  layout's session check runs before the page. Defensible for a console, and the `robots.txt`
+  consequence is worth its own small follow-up.
 
 ## Tier summaries
 

@@ -30,6 +30,7 @@ const SCAN_ROOT_FILES = [
   "next.config.ts",
   "package.json",
   "playwright.config.ts",
+  "playwright.screenshots.config.ts",
   "tsconfig.json",
   "vitest.config.ts",
 ];

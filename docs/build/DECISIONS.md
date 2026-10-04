@@ -437,3 +437,69 @@ decorative headings were also drawn in `--text-dim`, which measures 2.95:1 again
 background, under AA for text; every text colour on the page is now a token that passes, and the
 one illustration that keeps dim is `aria-hidden` and labelled "example data" in its own title bar,
 so nothing on the page can be mistaken for a reading from a real deployment.
+
+---
+
+## D15. The README has no CI badge yet
+
+BUILD_NOTE section 8 asks the README's badge row for four things: license, CI, Node and the Go
+engine. Three of them are static facts and are there. The fourth is not: the GitHub Actions
+workflow arrives in step 5.6, and a shields.io CI badge would point at a workflow run that does not
+exist. It renders as "no status", which reads as a failing build to anyone who does not click it.
+
+There is no build to report yet, so the badge is left out and the absence is explained in the
+README itself rather than left for a reader to notice. Step 5.6 adds the workflow and the badge
+together, which is the only order in which the badge means anything.
+
+The other three badges were checked before they were written: MIT is `LICENSE`, Node 22 is
+`package.json`'s `engines`, and Go 1.25 is what `cryden/go.mod` and `api/go.mod` both declare. The
+prototype said "Go 1.22+", which was wrong (BACKEND_GAPS 2.2's sibling correction on the landing
+page). Postgres 13 is a fourth badge, from the engine's README: `gen_random_uuid()` is built in from
+13.
+
+## D16. What running the production build found
+
+The tier 0 gate runs `pnpm test:e2e` against a dev server. Tier 0 also builds and serves the
+production output once, and that surfaced three things the dev server hides. All three were
+reproduced before being written down, and the third is a deviation from D13.
+
+**A bad key now says what is wrong with it.** `describeIssue` in `src/server/config/errors.ts` had
+no case for zod's `custom` code, which is the code a `refine` produces, so the most specific
+message in the schema was discarded and an operator with a truncated secret read:
+
+```
+  CSAX_SESSION_SECRET: is not valid
+```
+
+The refine's own message, `must be 32 bytes, base64 encoded (session cookie signing)`, was written
+to be actionable and value-free and was never reaching anybody. Fixed in its own commit, with a
+test that holds it. Every refine in the schema is written the same way, so printing `issue.message`
+cannot leak a value.
+
+**The standalone server needs two directories copied that the build does not copy.**
+`.next/standalone/` gets the server and its pruned dependencies, but `public/` and `.next/static/`
+stay where the build put them. Without them the server starts, serves HTML, and every asset request
+falls through to the console's catch-all and is answered with a 307 to `/login`: the page renders
+unstyled and unhydrated. Verified by requesting a real stylesheet from a standalone server with no
+copies (307) and from `next start` (200). Written down in `docs/guide/deployment.md`, which is where
+somebody hitting it will look.
+
+**`pnpm start` is the wrong entry point for this build.** `next start` prints
+`"next start" does not work with "output: standalone" configuration. Use "node
+.next/standalone/server.js" instead.` and then serves anyway. Serving anyway is worse than failing:
+a deployment that works in testing and is unsupported in production is a trap. Recorded, and left
+alone until step 5.6, which owns packaging; changing `start` now would break the tier 0
+verification habit of `pnpm build && pnpm start` before its replacement exists.
+
+**Deviation from D13.** D13 says `(console)/[...slug]` answers a real 404 for a path that is not one
+of the navigation's routes. That holds when the caller is signed in. When they are not, the
+`(console)` layout's session check runs before the page, so an unmatched path is a 307 to `/login`
+rather than a 404. Reproduced against `next start`: `/robots.txt` and `/_next/static/css/nope.css`
+both answer `307 -> /login`.
+
+That is defensible for a console, where every path really is behind a sign-in, and it is only
+visible to an unauthenticated caller. It is recorded because the promise in D13 is unconditional and
+this is not, and because one consequence is worth fixing on its own: a crawler asking for
+`robots.txt` is redirected into a sign-in page instead of being told to go away. A `public/robots.txt`
+disallowing everything, which is what a private console wants, is a follow-up rather than part of
+this step.

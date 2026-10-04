@@ -5,8 +5,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["better-sqlite3"],
-  // The e2e suite reaches the dev server over 127.0.0.1 rather than localhost.
-  // Development only; it has no effect on a production build.
+  // Next refuses a dev-server request whose Host is not this list, which is what
+  // makes `next dev` reachable from another device on the network. Development
+  // only; it has no effect on a production build. The e2e suite itself uses
+  // localhost, because the route handlers accept only WEBAUTHN_ORIGIN.
   allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 
