@@ -564,3 +564,51 @@ skipping`, and postgres-js prints notices as a raw object on stdout. Verified by
 server twice against the same database. Not fixed here: what an operator should see is the logging
 policy that arrives with `LOG_LEVEL` and JSON logs in step 5.5, and inventing a filter for one
 message now would be a policy chosen by accident.
+
+---
+
+## D18. The dashboard reads through a console route, and reports four sections rather than one result
+
+**Date:** 2026-10-05
+**Status:** accepted
+
+The dashboard needs four admin reports: `GET /v1/admin/users`, `/security/mfa-adoption`,
+`/security/hash-migration` and `/digest/history`. Three choices about how they are fetched are worth
+recording, because each has a cheaper alternative that fails in a way that takes a while to see.
+
+**A console route, not a server component.** `src/app/api/console/dashboard/route.ts` reads the four
+reports and the page's client component fetches them from there. The obvious shape is for the
+dashboard's server component to call the API directly, and it works right up until the access token
+turns over: the API's access token lives fifteen minutes, renewal writes a cookie, and a server
+component cannot write one. The screen would then show four failures until the operator signed out
+and back in, which reads as a bad password rather than an expiring token. `requireSession` renews
+inside a route handler and `respond` carries the `Set-Cookie` out with the answer, so the renewal
+happens on whatever call the screen makes next.
+
+The cost is that the browser fetches the console's own route, so the data is one hop further from
+the page. That hop is also the reason the four states can be tested at all: the end-to-end suite
+cannot intercept a server-side API call, and it can intercept this one.
+
+**Four sections, not one result.** `dashboardOverview` returns a `Section<T>` per report instead of
+throwing or returning a single value. A deployment can have accounts and no digest schedule
+(`DIGEST_INTERVAL_HOURS` unset means the API's digest store is not wired, and the route answers 404
+`not_configured`), or a working digest and a hasher that a future API version renames out from under
+the console. One combined failure would blank three reports that arrived.
+
+**The state is chosen by the API's code, not by the status.** `not_implemented_on_sqlite` becomes
+`unavailable`, `not_operator` becomes `forbidden`, `not_configured` becomes `empty` with a sentence
+specific to whichever report was asked for, and anything else is `error`. The distinction is the
+operator's next move: a SQLite deployment needs `DATABASE_URL` set on the API, a refused account
+needs an operator grant, an unconfigured report needs a setting, and only `error` is worth retrying.
+Collapsing all four into "something went wrong" would send them to the same place for four
+different problems.
+
+A state the screen recognises but the deployment shares everywhere collapses to one screen rather than one card per report: all four unavailable, all four forbidden, or all four failing with the same sentence. Each of those is a fact about the deployment, the account or the connection rather than about any one report, so repeating it six times (four tiles, the digest, the table) is one fact shouted down the page. The first two are answers the API gave correctly and are drawn as states; the third is a fault and is announced as one, with the single retry every card would have offered. The collapse for failures requires an identical sentence from all four: four different failures are four different things to fix, and one sentence would hide three of them. This was not in the first draft, which rendered an unreachable API as six identical alert panels; the state sweep caught it.
+
+**The client component names its types, never its values.** `src/server/dashboard/overview.ts` is
+`server-only`, so the browser-side component imports from it with `import type` only. Type imports
+are erased before the bundler sees them, which is what lets both sides agree on one shape without
+the server module reaching the bundle. The first draft of the component imported `factorNamed`, a
+value, from the server-only `admin.ts`; that would have failed the build, and the function was
+removed rather than duplicated, since the client finds its factor by name in the array it already
+has.

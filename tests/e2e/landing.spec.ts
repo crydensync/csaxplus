@@ -91,10 +91,12 @@ test.describe("landing page", () => {
     await page.goto("/");
 
     await page.locator(".lp-nav-cta").click();
-    // The console group is compiled on its first visit in dev, which can take
-    // longer than the default 5s on a cold server, so this one assertion waits
-    // for the redirect rather than for a compile.
-    await expect(page).toHaveURL(/\/login$/, { timeout: 20_000 });
+    // The console group is compiled on its first visit in dev, and the whole
+    // console shell now hangs off it: a cold `GET /dashboard` measures around
+    // 15 seconds on this machine, and the rest of the suite compiling alongside
+    // it pushes that past the default 5s. So this one assertion waits for the
+    // redirect rather than for a compile, with room to spare.
+    await expect(page).toHaveURL(/\/login$/, { timeout: 60_000 });
     await expect(page.getByLabel("Password")).toBeVisible();
   });
 

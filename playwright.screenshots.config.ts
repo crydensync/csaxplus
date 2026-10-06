@@ -18,6 +18,12 @@ export default defineConfig({
   testDir: "./tests/screenshots",
   fullyParallel: false,
   workers: 1,
+  // A cold dev server compiles each screen on its first visit, and the console
+  // shell is the largest of them: measured at around 15 seconds for
+  // `/dashboard` alone, with `/users` behind it. The default 30 seconds is not
+  // enough for a test that visits both, and a timeout here would be a compile
+  // being reported as a broken screenshot.
+  timeout: 180_000,
   reporter: [["list"]],
   projects: [
     {

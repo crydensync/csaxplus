@@ -12,8 +12,30 @@ one would need a toolchain this repository does not have yet.
 
 ## [Unreleased]
 
-To be tagged `v0.0.2`. Tier 0 uses the `v0.0.x` line; the numbered tiers start at `v0.1.0`
-(BUILD_NOTE section 6). `v0.0.1` was the tier 0 foundation, below.
+To be tagged `v0.1.0`, which closes tier 1. Tier 0 used the `v0.0.x` line; the numbered tiers start
+at `v0.1.0` (BUILD_NOTE section 6).
+
+### Added
+
+- **A real dashboard.** The screen that stood in for one in tier 0 is replaced by the four reports
+  the API can actually answer: the account total and the newest accounts from `GET /v1/admin/users`,
+  second-factor enrolments and removals from `/v1/admin/security/mfa-adoption`, the configured
+  hasher and what is left to upgrade from `/v1/admin/security/hash-migration`, and the latest stored
+  digest from `/v1/admin/digest/history`. Each report carries its own loading, empty, refused and
+  failed state, so one unanswered report does not blank the three that arrived.
+- **`GET /api/console/dashboard`**, the console route that reads those four. It exists so the API
+  access token can be renewed on a screen's own call: only a route handler can write the cookie a
+  renewal sets. See DECISIONS.md D18.
+- **A state per reason, not per status.** `not_implemented_on_sqlite` becomes "this deployment has
+  no admin surface", `not_operator` becomes "this account is not a console operator", and a
+  `not_configured` report says which setting is missing. Only a genuine failure offers a retry. When
+  every report comes back with the same answer, the screen draws that answer once instead of in all
+  six places it would otherwise appear.
+
+## [0.0.2] - 2026-10-04
+
+Tier 0 follow-up: the Postgres half of the console store now runs, and two defects it was hiding are
+fixed. Nothing on screen changed.
 
 ### Fixed
 

@@ -82,6 +82,18 @@ test.describe("guide screenshots", () => {
     // of a real signed-in render rather than the sign-in redirect.
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+
+    // The dashboard reads its reports after hydration, and `settle` can return
+    // before that first fetch lands, which photographs the skeletons. Wait for
+    // the screen to leave its loading state: every skeleton is replaced by a
+    // tile, a table row or a state block, so none of them surviving is the
+    // signal that the screen has settled.
+    //
+    // The wait is long because the first fetch compiles the console's own route
+    // and then makes four calls to the API behind it: the route alone measured
+    // over six seconds cold on this machine, against a default of five.
+    await expect(page.locator(".skeleton")).toHaveCount(0, { timeout: 60_000 });
+
     await page.screenshot({
       path: `${OUTPUT}/console-dashboard.png`,
       animations: "disabled",

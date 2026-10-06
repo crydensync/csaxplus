@@ -134,7 +134,10 @@ It downloads about 120 MB, once, into `~/.cache/ms-playwright`. A fresh machine 
 both need that command.
 
 `pnpm screenshots` regenerates the images in `docs/guide/screenshots/`. It is a separate Playwright
-configuration on purpose, so a gate run never rewrites a committed image.
+configuration on purpose, so a gate run never rewrites a committed image. It pins `CRYDEN_MODE=live`
+itself: the console images are of the live adapter, and the checkout's own default of `fixtures`
+would tag the health check as fixtures while the dashboard's reports, which have no fixtures
+implementation, still said the API was unreachable.
 
 ## When it will not start
 

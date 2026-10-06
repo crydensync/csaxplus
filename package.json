@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "screenshots": "playwright test --config playwright.screenshots.config.ts",
+    "screenshots": "CRYDEN_MODE=live playwright test --config playwright.screenshots.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

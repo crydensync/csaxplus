@@ -638,6 +638,9 @@ tr.clickable:hover td {
   align-items: center;
   gap: 9px;
   margin-bottom: 10px;
+  /* The timestamp is pushed to the right edge. On a narrow screen it drops to
+     its own line rather than squeezing the heading or running off the card. */
+  flex-wrap: wrap;
 }
 .digest-head svg {
   width: 16px;
@@ -659,6 +662,32 @@ tr.clickable:hover td {
 .digest strong {
   color: var(--text);
   font-weight: 600;
+}
+/* The digest's own prose, printed as it arrived. Monospace and pre-wrapped
+   because the engine lays it out in columns and a proportional font would
+   break the alignment it wrote. Capped and scrollable so a long report cannot
+   push the rest of the dashboard off the screen.
+
+   The cap is written in `em` so it lands on a line boundary: the body is 12px
+   with a 1.6 line height, so 13 lines is 13 x 1.6 = 20.8em. Capping at a round
+   pixel value instead cuts the last visible line in half, which reads as a
+   broken panel rather than as one that scrolls. */
+.digest-text {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 20.8em;
+  overflow-y: auto;
+}
+.digest-head .dim {
+  margin-left: auto;
+  font-size: 12px;
 }
 
 /* ---------- oauth cards ---------- */

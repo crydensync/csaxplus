@@ -15,9 +15,14 @@ import { EncryptJWT } from "jose";
  *
  * What it produces is a *signed-in shell* and nothing more. The API tokens it
  * carries are placeholders, so any screen whose data comes from the API shows
- * the state it would show a real operator when the API is unreachable. That is
- * the honest picture for a console whose screens do not exist yet, and it is
- * why the guide labels these images as a fixtures-mode console.
+ * the state it would show a real operator when the API is unreachable. With the
+ * live adapter selected that is a coherent picture: the topbar tag reads
+ * `offline` and the dashboard's reports say they could not be reached, which is
+ * the same answer a real operator would get from a console pointed at an API
+ * that is not running. Run the capture with `CRYDEN_MODE=live` for that; the
+ * checkout's own default of `fixtures` would tag the health check as fixtures
+ * while the dashboard still reported the API as unreachable, which is two
+ * answers to one question.
  *
  * When `.env.local` has no `CSAX_SESSION_SECRET`, the console shots are skipped
  * with a printed reason rather than failing the run: a fresh clone has no

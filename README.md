@@ -18,8 +18,8 @@
 
 > **Status: tier 0 of 5.** The foundation is in place and runs: configuration, the console's own
 > store, operator sign-in against the CrydenSync API, the API client with its health tag, the
-> design system and the landing page. The 21 console screens are not built yet, and every one of
-> them says so on screen rather than showing stand-in data. See
+> design system, the landing page, and the dashboard. Twenty of the 21 console screens are not
+> built yet, and every one of them says so on screen rather than showing stand-in data. See
 > [Feature status](#3-feature-status) for the honest per-screen picture, and
 > [docs/build/PROGRESS.md](docs/build/PROGRESS.md) for what is being worked on now.
 
@@ -134,6 +134,7 @@ Three statuses, and they mean exactly this:
 | Console store and migrations | done | Postgres and SQLite, same schema, two drivers; both dialects execute in the test suite |
 | Operator sign-in | done | `POST /v1/login` plus the paused-login completions and `/v1/refresh`; roles, CSRF, encrypted cookie |
 | API client and health tag | done | `api-client`, `degraded`, `fixtures`, `offline`, each from a real answer |
+| Admin reports | done | the four `/v1/admin` reads the dashboard needs, each parsed with zod before it is used |
 | Design system | done | the prototype's tokens and components, ported to React |
 | Landing page | done | static, and its claims are generated from the console's own navigation |
 | Operator passkeys and step-up unlock | planned | tier 5, step 5.1 |
@@ -146,7 +147,7 @@ The six sidebar groups, and all 21 screens in them.
 
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
-| Overview | Dashboard | partial | tier 1, step 1.1 |
+| Overview | Dashboard | done | tier 1, step 1.1 |
 | Identity | Users | planned | tier 1, step 1.2 |
 | Identity | OAuth Providers | planned | tier 1, step 1.3 |
 | Identity | MFA & Passkeys | planned | tier 1, step 1.4 |
@@ -189,7 +190,7 @@ never rewrites a committed image.
 | ![The landing page](docs/guide/screenshots/landing-hero.png) | ![The console map on the landing page](docs/guide/screenshots/landing-console-map.png) |
 | The landing page at `/`. Its console map is generated from the console's own navigation. | The same page's console section, with the read-only tag on the four AI screens. |
 | ![The sign-in screen](docs/guide/screenshots/sign-in.png) | ![The console dashboard](docs/guide/screenshots/console-dashboard.png) |
-| Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The console at tier 0. The tag reads `fixtures` because that is the mode this checkout runs in. |
+| Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The dashboard. This checkout has no CrydenSync API running, so the tag reads `offline` and all four reports answer with one sentence, drawn once. |
 | ![The design system gallery](docs/guide/screenshots/design-system.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
 | `/design`, the dev-only component gallery. It 404s in a production build. | Every screen that is still planned says so, and names its own route. |
 
@@ -463,7 +464,12 @@ A fuller sketch of the intended shape is in [docs/guide/deployment.md](docs/guid
   sign-in, refresh, sessions, password and email change, OAuth, TOTP, passkeys, recovery codes,
   magic links and API keys on SQLite. Every `/v1/admin/*` route answers
   `501 not_implemented_on_sqlite` without even inspecting the token. The console turns that into a
-  clear state rather than a broken screen (step 5.4).
+  clear state rather than a broken screen.
+- **The console's reads are all operator reads.** `RequireAdmin` refuses any token whose `role`
+  claim is not literally `admin`, and it deliberately does not say whether the account was never an
+  operator, was one and was revoked, or is an ordinary user. The console's `viewer` role can sign in
+  and currently reads nothing; the dashboard says so in one sentence rather than four. See
+  [docs/build/BACKEND_GAPS.md](docs/build/BACKEND_GAPS.md) 4.7.
 - **The console's own store is separate** and may be either engine, independently of what the API
   uses. Its Postgres migrations and queries are executed in the test suite against a real Postgres:
   PGlite behind `@electric-sql/pglite-socket`, a development dependency, serving the wire protocol to

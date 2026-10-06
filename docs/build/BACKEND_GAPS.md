@@ -200,6 +200,44 @@ Action: removed from the landing page (step 0.7), which now lists only `go run
 ./cmd/grant-operator` and `api migrate --baseline`, both read from the API repository. If a CLI is
 ever wanted, it is new work with its own step, not something to advertise first.
 
+### 2.13 The dashboard's four tiles and its activity panel
+
+The prototype's dashboard shows four tiles (Total users, Active sessions, MFA adoption, and a hash
+upgrade bar), a Recent activity panel, and a digest card. Three of those have no honest source on
+this API, and the substitutions are recorded here because each one changes what the screen claims.
+
+**Active sessions.** There is no `GET /v1/admin/sessions` (section 1, tier 2), and the console's
+own session is an operator's, not a count of everyone's. A tile reading zero would be a claim the
+console has not earned, so the tile is not rendered at all. It returns in step 2.1, from the
+endpoint that makes it a count rather than a guess.
+
+**MFA adoption as a percentage.** `mfaFactorDTO` (`api/httpapi/security_handlers.go`) counts
+*events*, and says so in its own comment: an operator who enables TOTP, loses their phone and
+disables it contributes one enrolment and one removal while being enrolled zero times over. There
+is no numerator and denominator here that produce a share of users, so no percentage is derived.
+The two tiles that replaced it report enrolments and removals in the API's window, both directions,
+with the window named from the answer's own `window_days`.
+
+**Recent activity.** There is no `GET /v1/admin/audit` (section 1, tier 2), and no other endpoint
+returns a feed of things that happened. The panel became **Newest accounts**, taken from the same
+`GET /v1/admin/users?limit=5` call that supplies the total, which the API already returns newest
+first. It is real data and it is honest about what it is: who joined, not what anyone did. The
+activity feed arrives in step 2.3 with the audit endpoint.
+
+Action: none for the API. All three are the console declining to render a number it cannot read.
+
+### 2.14 The digest's prose is the API's, and one dash in it reaches the screen
+
+`GET /v1/admin/digest/history` returns the text the engine rendered when the run happened
+(`cryden/admin/digest.go`, `Text()`), stored verbatim and returned unchanged. The console prints it
+as text inside a `pre` block, never as markup.
+
+That text is the one place a dash the console did not write can appear on screen: the engine's
+header line is `Security digest` followed by an em dash and the window. Ground rule 7 forbids em
+dashes in what this repository authors, which is not the same thing as what it renders, and
+rewriting the engine's report before showing it would make the console's digest differ from the
+stored one. Recorded so the character is not mistaken for a lint failure that slipped through.
+
 ## 3. SQLite behaviour
 
 The API, not the engine, owns backend selection: `DATABASE_URL` and `SQLITE_PATH` are mutually
@@ -291,4 +329,22 @@ trusted again.
 
 Action: either guard the handler and answer `{"data": {"status": "unconfigured"}}`, or correct
 the comment. Not a blocker for the console.
+
+### 4.7 A `viewer` console account has nothing it may read on this API version
+
+`RequireAdmin` (`api/httpapi/middleware.go:80-85`) refuses any token whose `role` claim is not
+literally `"admin"`, and every route under `/v1/admin` goes through it on Postgres. The claim is
+set by `main.go`'s `AccessTokenClaims` provider from `operator.Store`, and an ordinary end user's
+token carries no `role` claim at all. Its doc comment is explicit that "an unknown user, a revoked
+operator, and someone who was simply never an operator all fail identically here", and that "that
+distinction is not the caller's to learn".
+
+So the console's `viewer` role is real but currently reads nothing: such an account signs in
+successfully and every admin report answers `403 not_operator`. The console renders that as one
+state, worded as the API refusing the reports rather than the person, and does not try to tell the
+cases apart, because the API deliberately does not say which one it is.
+
+Action: none for the API, and none for the console in tier 1. When a tier 2 or 3 screen has a
+surface a viewer may legitimately read, that endpoint should be registered on the engine's ordinary
+authenticated middleware rather than `AdminOnly`, and this entry should be revised to say which.
 

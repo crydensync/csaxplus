@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/Button";
 import { ErrorState } from "@/components/states";
+import { failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import {
   SECOND_FACTOR_LABELS,
   isSecondFactorMethod,
@@ -27,7 +28,7 @@ import {
  * are what the operator typed and, for a passkey, the browser's own assertion.
  */
 
-type Failure = { message: string; code: string | null };
+type Failure = ConsoleFailure;
 
 type AuthenticationOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
 
@@ -35,18 +36,6 @@ const UNREACHABLE: Failure = {
   message: "The console could not reach its own server. Check your connection and try again.",
   code: "console_unreachable",
 };
-
-/** Reads an answer's error, falling back to the status when it has none. */
-function failureFrom(payload: unknown, status: number): Failure {
-  const error = (payload as { error?: { code?: unknown; message?: unknown } } | null)?.error;
-  return {
-    message:
-      typeof error?.message === "string" && error.message !== ""
-        ? error.message
-        : `The console answered ${status}.`,
-    code: typeof error?.code === "string" ? error.code : null,
-  };
-}
 
 export function LoginForm() {
   const router = useRouter();

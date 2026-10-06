@@ -37,7 +37,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 
 ## Tier 1 - Identity (tag v0.1.0)
 
-- [ ] 1.1 Dashboard: real counts, recent activity, digest card or empty state
+- [x] 1.1 Dashboard: real counts, newest accounts, digest card or empty state. Counts come from
+      `GET /v1/admin/users`, `/security/mfa-adoption` and `/security/hash-migration`; the digest
+      from `/digest/history`. The prototype's "Recent activity" and "Active sessions" have no
+      endpoint (BACKEND_GAPS 2.13) and were replaced rather than faked
 - [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit
 - [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
@@ -237,6 +240,62 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   tier 0 as `v0.1.0` and ended tier 5 at `v1.0.0`, which is one tag too high at every tier. BUILD_NOTE
   fixes both ends (line 85 for tiers 1 to 5, line 155 for tier 0), so check those two lines rather
   than trusting a tier table.
+- **The dashboard (step 1.1).** `src/app/(console)/dashboard/page.tsx` is now a thin server
+  component (session check, redirect, topbar) that hands the screen to a client component. The data
+  comes from `GET /api/console/dashboard`, a console route rather than a call from the server
+  component, because the API access token needs renewing and only a route handler can write the
+  cookie that renewal sets. Full reasoning in D18.
+- `src/server/cryden/admin.ts` holds the four admin reads and is deliberately **not** on the
+  two-adapter `CrydenClient`: every function there takes an operator token, and a token only exists
+  after a real sign-in, so a fixtures implementation would be a fake path to a screen nobody can
+  reach. Each answer is checked with zod before it is used, and a field renamed on the API's side
+  arrives as a named failure rather than as `undefined` on a card.
+- `src/server/dashboard/overview.ts` gathers the four reports and returns a `Section<T>` for each.
+  `unavailable` (`not_implemented_on_sqlite`), `forbidden` (`not_operator`) and `empty`
+  (`not_configured`) are separate from `error` because none of the first three is a fault, and each
+  sends an operator somewhere different. When all four sections share one state, the screen shows one
+  message instead of six identical cards (four tiles, the digest, the table): all unavailable, all
+  forbidden, or all failing with the same sentence. The first two are answers the API gave correctly
+  and are drawn as states; the third is a fault and is announced as one, with a retry. A shared
+  `error` collapses only when all four sentences are identical, since four different failures are
+  four different things to fix.
+- The API's `not_configured` code is shared by every feature whose store was never wired, so the
+  sentence for it is supplied per section: an unconfigured digest says to set
+  `DIGEST_INTERVAL_HOURS`, and an unconfigured anything else says the report has no store. The
+  wording lives in `src/lib/dashboard.ts`, imported by both the server and the browser, so a
+  failure cannot be worded two ways.
+- `formatInstant` formats on UTC and names the zone. These timestamps are read beside API counts and
+  against logs, both of which are UTC, and one clock is also what keeps a server render and a
+  browser render identical.
+- The digest is rendered as `<pre>` text inside `.digest-text`, never as markup, and never rewritten:
+  it is the engine's own report, stored verbatim by the API. It is also the only place an em dash can
+  reach the screen, since the engine's header line contains one (BACKEND_GAPS 2.14).
+- **The four dashboard states cannot be reached in a browser yet**: every one needs a signed-in
+  operator, and a session needs a real sign-in against a real API. They are covered by
+  `tests/unit/dashboard-view.test.tsx`, which renders the component for real in jsdom against a
+  stubbed console route and asserts on the text an operator would read (19 cases). Both collapse
+  tests were checked by mutation: disabling the shared-`error` branch reproduces the six-panel
+  screen exactly. The end-to-end suite still covers the signed-out redirect and the 401 from the
+  console route.
+- Sign-out sits in the dashboard's topbar, where it was in tier 0, because the dashboard is still
+  the only screen with real content. When the sidebar's other entries become screens it belongs in
+  the shell so every one of them has it. Recorded here rather than in the screen.
+- The narrow-viewport check was measured, not eyeballed: at 375 px and 320 px the dashboard's
+  `scrollWidth` equals `innerWidth` with nothing outside the intended scrollers, the digest head
+  wraps its timestamp onto a second line rather than overflowing, and a long report is capped at
+  `20.8em` with its own scrollbar. The cap is in `em` rather than pixels so it lands on a line
+  boundary (13 lines at a 1.6 line height); a round pixel value cut the last visible line in half.
+  The accounts table scrolls inside `.table-scroll`, as the prototype's did.
+- **The guide's dashboard image is the offline state, on purpose.** The screenshot harness mints a
+  session cookie with placeholder API tokens, so with no CrydenSync API running the dashboard has
+  nothing to read and draws the one sentence it draws for an unreachable API, under an `offline`
+  tag. That is a state the console really reaches, which is the rule the capture script sets for
+  itself, and the README caption says so rather than implying the empty screen is the whole screen.
+  Two things came out of capturing it: the shot has to wait for the screen to leave its loading
+  state, because the reads happen after hydration and the first attempt photographed the skeletons;
+  and `pnpm screenshots` now pins `CRYDEN_MODE=live`, because the checkout's default of `fixtures`
+  tagged the health check as fixtures while the reports, which have no fixtures implementation,
+  still said the API was unreachable.
 
 ## Tier summaries
 
@@ -322,4 +381,9 @@ database logged no migration line, which is what "nothing outstanding" looks lik
 
 **What is blocked on the backend.** Unchanged. The same five entries in `BACKEND_GAPS.md` section 4.
 
-**Next step.** Still 1.1, the Dashboard.
+**Next step.** 1.2: Users. Server-side search and pagination over `GET /v1/admin/users` (which
+already takes `limit`, `offset` and `email`), a detail drawer from `GET /v1/admin/users/{userID}`,
+and the account actions, every one of which needs an endpoint the API does not have yet
+(BACKEND_GAPS section 1, tier 1: unlock, suspend, unsuspend, mfa/disable, oauth unlink). Those
+actions are the first thing in this project that writes through the API, so they need the audit
+trail the API does not expose either.

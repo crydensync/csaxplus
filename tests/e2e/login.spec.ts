@@ -51,8 +51,12 @@ test.describe("sign-in", () => {
     // Announced, not just drawn: this is the only thing between the operator and
     // a screen that looks like it worked. Scoped to the form's own error block,
     // because Next's route announcer is a live region with the same role.
+    //
+    // The wait is for the first sign-in on a cold dev server, which compiles the
+    // route on this submit: measured at around 6 seconds here, against a default
+    // 5. It is a compile, not a failure, so the assertion gets the room.
     const alert = page.locator(".auth-error").getByRole("alert");
-    await expect(alert).toBeVisible();
+    await expect(alert).toBeVisible({ timeout: 30_000 });
     await expect(alert).toContainText("That sign-in did not go through");
 
     // The console's own failure vocabulary, so the code can be matched against
