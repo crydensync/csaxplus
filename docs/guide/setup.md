@@ -139,6 +139,12 @@ itself: the console images are of the live adapter, and the checkout's own defau
 would tag the health check as fixtures while the dashboard's reports, which have no fixtures
 implementation, still said the API was unreachable.
 
+Set `CSAX_SCREENSHOT_EMAIL` and `CSAX_SCREENSHOT_PASSWORD` first to have the console images taken
+from a real sign-in, which is how the committed ones were made. Without them the run mints a session
+cookie carrying placeholder API tokens, which still photographs a signed-in shell but shows every
+API-backed report as unreachable. Put the credentials in the gitignored `.env.local`, not in a
+script.
+
 ## When it will not start
 
 The console validates everything at boot and stops with every problem at once, without printing any

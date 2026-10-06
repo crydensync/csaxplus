@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { mintSessionCookie } from "./session";
+import { localSetting, mintSessionCookie } from "./session";
 
 /**
  * Writes the guide's screenshots into `docs/guide/screenshots/`.
@@ -64,22 +64,46 @@ test.describe("guide screenshots", () => {
   });
 
   test("the console, with a session minted locally", async ({ page, context }) => {
-    const cookie = await mintSessionCookie();
-    test.skip(
-      cookie === null,
-      "no CSAX_SESSION_SECRET in .env.local, so a console session cannot be minted here",
-    );
-    if (cookie === null) return;
+    // Two ways to get a session, and which one is available decides what the
+    // console images show. With credentials the shot is of a real deployment,
+    // tiles and rows and all. Without them the minted cookie gives a signed-in
+    // shell whose API tokens are placeholders, so the dashboard shows the state
+    // it shows an operator when the API cannot be reached, which is still a
+    // state the console really reaches.
+    //
+    // The credentials come from the environment or the gitignored `.env.local`,
+    // never from this file: a password written down here would be a password in
+    // the repository.
+    const email = localSetting("CSAX_SCREENSHOT_EMAIL");
+    const password = localSetting("CSAX_SCREENSHOT_PASSWORD");
 
-    await context.addCookies([
-      { name: cookie.name, value: cookie.value, url: "http://localhost:3000" },
-    ]);
+    if (email !== undefined && password !== undefined) {
+      await page.goto("/login");
+      await settle(page);
+      await page.getByLabel("Email").fill(email);
+      await page.getByLabel("Password").fill(password);
+      await page.getByRole("button", { name: "Sign in" }).click();
+      // A cold dev server compiles the console and the route behind the form.
+      await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
+    } else {
+      const cookie = await mintSessionCookie();
+      test.skip(
+        cookie === null,
+        "no CSAX_SCREENSHOT_EMAIL/CSAX_SCREENSHOT_PASSWORD and no CSAX_SESSION_SECRET to mint one with",
+      );
+      if (cookie === null) return;
 
-    await page.goto("/dashboard");
+      await context.addCookies([
+        { name: cookie.name, value: cookie.value, url: "http://localhost:3000" },
+      ]);
+
+      await page.goto("/dashboard");
+    }
+
     await settle(page);
 
-    // The minted cookie is the console's own format, so this proves the shot is
-    // of a real signed-in render rather than the sign-in redirect.
+    // Whichever way the session was obtained, this proves the shot is of a real
+    // signed-in render rather than the sign-in redirect.
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 

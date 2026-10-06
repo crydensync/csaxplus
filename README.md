@@ -190,7 +190,7 @@ never rewrites a committed image.
 | ![The landing page](docs/guide/screenshots/landing-hero.png) | ![The console map on the landing page](docs/guide/screenshots/landing-console-map.png) |
 | The landing page at `/`. Its console map is generated from the console's own navigation. | The same page's console section, with the read-only tag on the four AI screens. |
 | ![The sign-in screen](docs/guide/screenshots/sign-in.png) | ![The console dashboard](docs/guide/screenshots/console-dashboard.png) |
-| Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The dashboard. This checkout has no CrydenSync API running, so the tag reads `offline` and all four reports answer with one sentence, drawn once. |
+| Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The dashboard against a real API: the tag reads `api-client`, the numbers are that deployment's own, and the digest says plainly that no schedule is configured. |
 | ![The design system gallery](docs/guide/screenshots/design-system.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
 | `/design`, the dev-only component gallery. It 404s in a production build. | Every screen that is still planned says so, and names its own route. |
 

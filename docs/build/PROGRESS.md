@@ -286,16 +286,17 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `20.8em` with its own scrollbar. The cap is in `em` rather than pixels so it lands on a line
   boundary (13 lines at a 1.6 line height); a round pixel value cut the last visible line in half.
   The accounts table scrolls inside `.table-scroll`, as the prototype's did.
-- **The guide's dashboard image is the offline state, on purpose.** The screenshot harness mints a
-  session cookie with placeholder API tokens, so with no CrydenSync API running the dashboard has
-  nothing to read and draws the one sentence it draws for an unreachable API, under an `offline`
-  tag. That is a state the console really reaches, which is the rule the capture script sets for
-  itself, and the README caption says so rather than implying the empty screen is the whole screen.
-  Two things came out of capturing it: the shot has to wait for the screen to leave its loading
-  state, because the reads happen after hydration and the first attempt photographed the skeletons;
-  and `pnpm screenshots` now pins `CRYDEN_MODE=live`, because the checkout's default of `fixtures`
-  tagged the health check as fixtures while the reports, which have no fixtures implementation,
-  still said the API was unreachable.
+- **The guide's dashboard image is a real deployment, not a mock.** The capture harness takes
+  `CSAX_SCREENSHOT_EMAIL`/`CSAX_SCREENSHOT_PASSWORD` from the environment or the gitignored
+  `.env.local` and signs in for real, so the committed shot shows the `api-client` tag, live counts
+  and a real `not_configured` digest. Without those variables it falls back to the minted cookie,
+  whose API tokens are placeholders: that still photographs a signed-in shell, with every
+  API-backed report showing the state an unreachable API produces. Two things came out of capturing
+  it: the shot has to wait for the screen to leave its loading state, because the reads happen after
+  hydration and the first attempt photographed the skeletons; and `pnpm screenshots` now pins
+  `CRYDEN_MODE=live`, because the checkout's default of `fixtures` tagged the health check as
+  fixtures while the reports, which have no fixtures implementation, still said the API was
+  unreachable.
 
 ## Tier summaries
 
