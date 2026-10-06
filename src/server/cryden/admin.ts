@@ -28,6 +28,57 @@ export const MFA_ADOPTION_PATH = "/v1/admin/security/mfa-adoption";
 export const DIGEST_HISTORY_PATH = "/v1/admin/digest/history";
 
 /**
+ * One account's own routes. A function rather than a constant because the id is
+ * a path segment: `/v1/admin/users/{id}` and `/v1/admin/users/{id}/metadata`.
+ *
+ * The caller must have already refused an id that is not a plain segment. The
+ * route handlers do that, and it is the one thing in this module that depends on
+ * a decision made elsewhere, so it is stated rather than assumed.
+ */
+export function userPath(userId: string): string {
+  return `${USERS_PATH}/${userId}`;
+}
+
+export function userMetadataPath(userId: string): string {
+  return `${userPath(userId)}/metadata`;
+}
+
+/**
+ * Whether a user id is a plain path segment, and so safe to put in a URL path.
+ *
+ * This is a check on the way in, not a check on whether the account exists: the
+ * API answers that. What it stops is a value from the browser becoming path
+ * syntax in the request the console makes on its behalf. An id containing a `/`,
+ * a `?`, a `#` or a `..` would not be a bad user id, it would be a different
+ * URL, so it is refused here rather than sent.
+ *
+ * Deliberately narrower than "anything the API would accept": the engine mints
+ * these ids itself, the API refuses a path segment that is not a UUID with a
+ * 404 before it reaches a query (`looksLikeUUID`), and a console never needs to
+ * forward anything wider.
+ */
+export function isUserIdSegment(value: string): boolean {
+  return /^[A-Za-z0-9-]{1,64}$/.test(value);
+}
+
+/**
+ * How many accounts one page of the Users screen asks for.
+ *
+ * Twenty-five rather than the dashboard's five: this is a list an operator scans
+ * and pages through, and a page short enough to read at a glance is worth more
+ * than the one round trip a larger page saves.
+ */
+export const USERS_PAGE_SIZE = 25;
+
+/**
+ * How many of an account's recorded events the detail drawer shows. The API caps
+ * this itself (`userActivityLimit`, 20) and ignores anything larger, so this is
+ * the console asking for what the API will actually return rather than a second
+ * opinion about it.
+ */
+export const USER_ACTIVITY_LIMIT = 20;
+
+/**
  * How many accounts the dashboard's "newest" panel asks for. The same call
  * returns the total, so this is a display choice rather than a second request.
  */
@@ -35,14 +86,6 @@ export const DASHBOARD_USER_LIMIT = 5;
 
 /** How many stored digests the dashboard looks back through. It shows the newest. */
 export const DASHBOARD_DIGEST_LIMIT = 1;
-
-/**
- * The code the API answers every `/v1/admin/*` route with on a SQLite
- * deployment, without looking at the token
- * (`api/httpapi/middleware.go:145-151`). Named here because a screen has to
- * tell "this deployment cannot do admin" apart from "this call failed".
- */
-export const NOT_IMPLEMENTED_ON_SQLITE = "not_implemented_on_sqlite";
 
 /** Raised when the API answered, in the envelope, with a shape this console cannot read. */
 function malformed(what: string, path: string): CrydenError {
@@ -76,6 +119,12 @@ const adminUserSchema = z.object({
  * The list answer. `match` is "browse" or "exact_email", and it is kept rather
  * than dropped because the dashboard's total means different things depending
  * on it: a browse total is every account, an email match is one.
+ *
+ * It matters more on the Users screen, where the operator typed the query: the
+ * API's email match is exact *and* case-sensitive, so a search that found
+ * nothing is usually a search that was spelled differently rather than an
+ * account that does not exist. The screen says so, and it can only say so
+ * because the API echoes which mode answered.
  */
 const userListSchema = z.object({
   users: z.array(adminUserSchema),
@@ -89,15 +138,25 @@ const userListSchema = z.object({
 export type AdminUser = z.infer<typeof adminUserSchema>;
 export type AdminUserList = z.infer<typeof userListSchema>;
 
-/** A page of accounts, newest first, plus the total. Admin token required. */
+/**
+ * A page of accounts, newest first, plus the total. Admin token required.
+ *
+ * `query` is passed straight through as the API's `q`. It is an exact-email
+ * lookup there and nothing else, deliberately: partial search would mean SQL
+ * against the engine's own users table from the API layer
+ * (`api/httpapi/user_handlers.go`, UserHandlers.List). The console does not work
+ * around that, and the screen tells the operator what the search is.
+ */
 export async function fetchUsers(options: {
   token: string;
   limit?: number;
   offset?: number;
+  query?: string;
 }): Promise<AdminUserList> {
   const params = new URLSearchParams();
   params.set("limit", String(options.limit ?? DASHBOARD_USER_LIMIT));
   if (options.offset !== undefined) params.set("offset", String(options.offset));
+  if (options.query !== undefined && options.query !== "") params.set("q", options.query);
 
   const data = await apiRequest<unknown>({
     method: "GET",
@@ -107,6 +166,93 @@ export async function fetchUsers(options: {
 
   const parsed = userListSchema.safeParse(data);
   if (!parsed.success) throw malformed("the account list", USERS_PATH);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/admin/users/{userID}
+// ---------------------------------------------------------------------------
+
+/**
+ * One recorded event against an account, as the API returns it.
+ *
+ * `metadata` is passed through as the engine stored it rather than reshaped: its
+ * keys are cryden's, they differ per event type, and a host that renamed them
+ * would be inventing a second vocabulary for the engine's own records.
+ */
+const auditEventSchema = z.object({
+  id: z.string().min(1),
+  type: z.string().min(1),
+  ip: z.string().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
+  created_at: z.string(),
+});
+
+/**
+ * One account's state, its live session count, and its recent history.
+ *
+ * `active_sessions` is a count and not a list, and the console must not present
+ * it as one: the API returns a number deliberately, because listing sessions
+ * would publish every address and user agent an account has signed in from to
+ * anyone holding an operator token (`api/httpapi/user_handlers.go`,
+ * adminUserDetailDTO). The per-account device list is step 2.1's work.
+ */
+const adminUserDetailSchema = z.object({
+  user: adminUserSchema,
+  active_sessions: z.number().int(),
+  recent_activity: z.array(auditEventSchema),
+});
+
+export type AdminUserDetail = z.infer<typeof adminUserDetailSchema>;
+export type AuditEvent = z.infer<typeof auditEventSchema>;
+
+/** One account's state for the detail drawer. Admin token required. */
+export async function fetchUserDetail(options: {
+  token: string;
+  userId: string;
+}): Promise<AdminUserDetail> {
+  const path = userPath(options.userId);
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+
+  const parsed = adminUserDetailSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account", path);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/admin/users/{userID}/metadata
+// ---------------------------------------------------------------------------
+
+/**
+ * An account's metadata, plus the key names it may not use.
+ *
+ * `reserved_claim_names` is the API telling the console what it would refuse, so
+ * the editor can grey those out rather than let an operator find the rule by
+ * being rejected. It is both halves of the rule: the seven registered JWT claim
+ * names, and the API's own `role` (`usermeta.ReservedKeys`).
+ *
+ * The values are `unknown` on purpose. Metadata is arbitrary JSON that feeds JWT
+ * claims, so the console renders it as JSON rather than pretending to know its
+ * shape.
+ */
+const userMetadataSchema = z.object({
+  user_id: z.string().min(1),
+  metadata: z.record(z.string(), z.unknown()),
+  reserved_claim_names: z.array(z.string()),
+});
+
+export type UserMetadata = z.infer<typeof userMetadataSchema>;
+
+/** One account's metadata. Admin token required, and Postgres-only. */
+export async function fetchUserMetadata(options: {
+  token: string;
+  userId: string;
+}): Promise<UserMetadata> {
+  const path = userMetadataPath(options.userId);
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+
+  const parsed = userMetadataSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account's metadata", path);
   return parsed.data;
 }
 

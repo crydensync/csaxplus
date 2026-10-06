@@ -14,6 +14,10 @@ import { Button } from "@/components/Button";
  * own session. When it did not, this stays on the page instead of navigating,
  * because that sentence is the whole point and it would be gone by the time the
  * sign-in screen rendered. See DECISIONS.md D11.
+ *
+ * It lives beside the topbar rather than inside one screen because every screen
+ * carries it. When the shell grows a place for it that is not a screen's topbar,
+ * this moves there rather than being copied.
  */
 export function SignOutButton({ csrf }: { csrf: string }) {
   const router = useRouter();

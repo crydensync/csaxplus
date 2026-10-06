@@ -10,6 +10,8 @@ import {
   fetchDigestHistory,
   fetchHashMigration,
   fetchMfaAdoption,
+  fetchUserDetail,
+  fetchUserMetadata,
   fetchUsers,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
@@ -208,6 +210,136 @@ describe("reading accounts", () => {
       status: 501,
       code: "not_implemented_on_sqlite",
     });
+  });
+
+  it("sends a search as the API's own `q`, and echoes back which mode answered", async () => {
+    const seen = stubApi(() =>
+      jsonResponse({
+        data: { ...A_USER_LIST, match: "exact_email", query: "operator@example.invalid" },
+      }),
+    );
+
+    const list = await fetchUsers({ token: TOKEN, limit: 25, query: "operator@example.invalid" });
+
+    expect(seen[0]?.search).toBe(`?limit=25&q=operator%40example.invalid`);
+    // The mode is kept rather than inferred from whether the caller typed
+    // something: only the API knows which one it ran, and the screen words a
+    // miss differently depending on it.
+    expect(list.match).toBe("exact_email");
+    expect(list.query).toBe("operator@example.invalid");
+  });
+
+  it("omits `q` entirely when there is nothing to search for", async () => {
+    const seen = stubApi(() => jsonResponse({ data: A_USER_LIST }));
+
+    await fetchUsers({ token: TOKEN, limit: 25, query: "" });
+
+    // An empty `q=` is a search for nothing, not the absence of one, and the
+    // API is entitled to read it either way. The console does not make it guess.
+    expect(seen[0]?.search).toBe("?limit=25");
+  });
+});
+
+describe("reading one account", () => {
+  const DETAIL = {
+    user: AN_ACCOUNT,
+    active_sessions: 3,
+    recent_activity: [
+      {
+        id: "01J0000000000000000000000E",
+        type: "login_success",
+        ip: "203.0.113.7",
+        created_at: "2026-10-05T08:00:00Z",
+      },
+      {
+        id: "01J0000000000000000000000F",
+        type: "token_rotated",
+        metadata: { family: "01J0000000000000000000000G" },
+        created_at: "2026-10-05T07:00:00Z",
+      },
+    ],
+  };
+
+  it("asks for the account by id and keeps its session count", async () => {
+    const seen = stubApi(() => jsonResponse({ data: DETAIL }));
+
+    const detail = await fetchUserDetail({ token: TOKEN, userId: AN_ACCOUNT.id });
+
+    expect(seen[0]?.path).toBe(`${USERS_PATH}/${AN_ACCOUNT.id}`);
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(detail.active_sessions).toBe(3);
+    expect(detail.user.email).toBe(AN_ACCOUNT.email);
+  });
+
+  it("keeps an event's metadata as the engine recorded it", async () => {
+    stubApi(() => jsonResponse({ data: DETAIL }));
+
+    const detail = await fetchUserDetail({ token: TOKEN, userId: AN_ACCOUNT.id });
+    const [withIp, withMetadata] = detail.recent_activity;
+
+    // Both optional and both passed through untouched: the keys are cryden's,
+    // they differ per event type, and a console that renamed them would be
+    // inventing a vocabulary the engine does not have.
+    expect(withIp?.ip).toBe("203.0.113.7");
+    expect(withIp?.metadata).toBeUndefined();
+    expect(withMetadata?.metadata).toEqual({ family: "01J0000000000000000000000G" });
+    expect(withMetadata?.ip).toBeUndefined();
+  });
+
+  it("lets the 404 through, because a missing record is the API's answer", async () => {
+    stubApi(() => jsonResponse({ error: { code: "not_found", message: "no such user" } }, 404));
+
+    await expect(fetchUserDetail({ token: TOKEN, userId: AN_ACCOUNT.id })).rejects.toMatchObject({
+      kind: "http",
+      status: 404,
+      code: "not_found",
+    });
+  });
+
+  it("refuses an answer with no account in it", async () => {
+    stubApi(() => jsonResponse({ data: { active_sessions: 3, recent_activity: [] } }));
+
+    await expect(fetchUserDetail({ token: TOKEN, userId: AN_ACCOUNT.id })).rejects.toThrow(
+      `${USERS_PATH}/${AN_ACCOUNT.id}`,
+    );
+  });
+});
+
+describe("reading an account's metadata", () => {
+  const METADATA = {
+    user_id: AN_ACCOUNT.id,
+    metadata: { plan: "scale", seats: 12, beta: true, tags: ["a", "b"] },
+    reserved_claim_names: ["aud", "exp", "iat", "iss", "jti", "nbf", "role", "sub"],
+  };
+
+  it("asks under the account and keeps every value type", async () => {
+    const seen = stubApi(() => jsonResponse({ data: METADATA }));
+
+    const metadata = await fetchUserMetadata({ token: TOKEN, userId: AN_ACCOUNT.id });
+
+    expect(seen[0]?.path).toBe(`${USERS_PATH}/${AN_ACCOUNT.id}/metadata`);
+    // Arbitrary JSON, so nothing is coerced on the way through: a panel that
+    // flattened a list or a number into a string would be rewriting a value that
+    // ends up as a JWT claim.
+    expect(metadata.metadata).toEqual(METADATA.metadata);
+  });
+
+  it("keeps the names the API said it would refuse", async () => {
+    stubApi(() => jsonResponse({ data: METADATA }));
+
+    // The rule lives in the API, so the console is told it rather than repeating
+    // it. A key added to the reserved set on the API's side therefore reaches
+    // the screen without a console change.
+    const metadata = await fetchUserMetadata({ token: TOKEN, userId: AN_ACCOUNT.id });
+    expect(metadata.reserved_claim_names).toContain("role");
+    expect(metadata.reserved_claim_names).toContain("sub");
+  });
+
+  it("accepts an account that carries none", async () => {
+    stubApi(() => jsonResponse({ data: { ...METADATA, metadata: {} } }));
+
+    const metadata = await fetchUserMetadata({ token: TOKEN, userId: AN_ACCOUNT.id });
+    expect(metadata.metadata).toEqual({});
   });
 });
 

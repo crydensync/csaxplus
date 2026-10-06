@@ -41,7 +41,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       `GET /v1/admin/users`, `/security/mfa-adoption` and `/security/hash-migration`; the digest
       from `/digest/history`. The prototype's "Recent activity" and "Active sessions" have no
       endpoint (BACKEND_GAPS 2.13) and were replaced rather than faked
-- [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit
+- [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit.
+      Split into three commits: **(a) the read-only screen (done)**, (b) WebAuthn step-up, then
+      (c) the six Go endpoints and the actions that need them
 - [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
@@ -297,6 +299,63 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `CRYDEN_MODE=live`, because the checkout's default of `fixtures` tagged the health check as
   fixtures while the reports, which have no fixtures implementation, still said the API was
   unreachable.
+
+- **The Users screen (step 1.2a).** Read-only, and deliberately so: the actions the step calls for
+  need six endpoints the API does not have (BACKEND_GAPS section 1, tier 1), so this commit is the
+  list, the search, the pager and the detail drawer, and the actions follow once the Go side exists.
+  `src/app/(console)/users/page.tsx` is the same thin server component the dashboard's is:
+  session check, redirect, topbar, hand off to a client component.
+- `src/app/api/console/users/route.ts` and `.../users/[userID]/route.ts` are console routes for the
+  reason D18 gives: the API access token is renewed on the screen's own call, and only a route
+  handler can write the cookie that renewal sets. The detail route reads `GET /v1/admin/users/{id}`
+  and `GET /v1/admin/users/{id}/metadata` together and answers one envelope with a `Section` for
+  each, so a deployment whose metadata store is not wired still shows the account.
+- **The table shows the fields the API sends.** Account, Created, Last change, Failed attempts and
+  Status. The prototype's Provider, MFA and Last seen have no endpoint behind them, and an empty
+  cell would read as an account with no provider rather than as a console that cannot know. Full
+  reasoning in D19 and BACKEND_GAPS section 5.
+- **Search is one exact address, and the screen says so.** The API's `email` parameter is an exact,
+  case-sensitive match, so the pager prints the API's own `match` field as a sentence and a miss is
+  worded as a search that found nothing, never as an account the API has lost. A console-side
+  substring filter was rejected: it would filter one page of twenty-five while the count below it
+  described the whole table.
+- The pager derives everything from the answer: `offset`, `limit`, `total` and how many rows came
+  back. Previous is disabled at offset 0 and Next when `offset + shown` reaches `total`, so a last
+  page that is short does not produce an empty one.
+- `src/components/Drawer.tsx` is new, sharing the modal's keyboard contract through the existing
+  `useFocusTrap`: focus moves in on open, Escape closes, focus returns to the row that opened it,
+  and body overflow is restored. Its first focusable element is the close control rather than an
+  action, so the panel cannot be triggered by pressing Enter twice.
+- **Overlays now render into the document body** through `src/components/overlay-portal.tsx`, and
+  both `Drawer` and `Modal` use it. Found by probing the drawer in a real browser: it measured
+  1180x423.25 against a 1440x1000 window because `.view.anim` fills a `translateY` keyframe, which
+  makes every screen a containing block for `position: fixed`. D20 has the reasoning and the two
+  things that are load-bearing about the fix.
+- `src/components/section-state.tsx` is the "answered, but not with data" panel the dashboard had
+  grown, lifted out and reused: `unavailable`, `forbidden` and `empty` render through it, and only
+  `error` is announced as a fault with a retry. `src/components/sign-out-button.tsx` moved up out of
+  the dashboard's directory, since both screens now carry it.
+- The Users states cannot be reached in a browser without a signed-in operator, so they are covered
+  by `tests/unit/users-view.test.tsx` (21 cases: loading, real fields, the pager and match sentence,
+  a lockout's expiry, the empty deployment, search and its miss, clearing the search, both paging
+  directions, the SQLite state, a failed route, an unreadable answer, and the drawer's read, its
+  metadata, focus in and focus back). `tests/unit/users-browse.test.ts` (13 cases) covers the mapping
+  from API codes to sections, and `tests/unit/cryden-admin.test.ts` grew the two new reads. The
+  end-to-end suite gained `/users` in the signed-out redirect loop, which is what the console group's
+  layout guard is for.
+- **The guide's Users image is taken through the screen's own search.** Re-capturing the console
+  shots against the live API photographed two real accounts that had been created on that
+  deployment since the last capture, and the list is every account the deployment holds. The capture
+  now narrows the Users shot to the address the run signed in as, so the image is a real search over
+  a real row and no one else's address goes into the repository. The dashboard's newest-accounts
+  table cannot be narrowed that way, so its committed image stays the one taken from a deployment
+  holding sample data only, and that is written down in the guide's setup page rather than left as a
+  trap for the next person who runs the capture.
+- Verified against the live API with a real operator session, not only in tests: the list, an exact
+  search that hits, one that misses, a detail read, a traversal-shaped id (400 `invalid_request`), a
+  missing id (`not_found`, both sections empty), the reserved claim names and an empty metadata
+  object. The screen was opened in a browser at 1440 px, and measured at 375 px inside an iframe:
+  `scrollWidth` equals `clientWidth`, with the table inside `.table-scroll` as the prototype had it.
 
 ## Tier summaries
 

@@ -145,6 +145,12 @@ cookie carrying placeholder API tokens, which still photographs a signed-in shel
 API-backed report as unreachable. Put the credentials in the gitignored `.env.local`, not in a
 script.
 
+The Users image is taken through that screen's own search, narrowed to the account the run signed in
+as, because the list otherwise shows every account the deployment holds and those addresses would go
+into the repository with the image. The dashboard's newest-accounts table cannot be narrowed that
+way, so its committed image is from a deployment holding sample data only: if your deployment has
+real accounts, expect that one image to need a look before you commit it.
+
 ## When it will not start
 
 The console validates everything at boot and stops with every problem at once, without printing any

@@ -612,3 +612,80 @@ the server module reaching the bundle. The first draft of the component imported
 value, from the server-only `admin.ts`; that would have failed the build, and the function was
 removed rather than duplicated, since the client finds its factor by name in the array it already
 has.
+
+---
+
+## D19. The Users table shows the fields the API sends, and searches the way the API searches
+
+**Date:** 2026-10-06
+**Status:** accepted
+
+Two of the prototype's Users screen behaviours have no source in the API, and one of them has a
+source that behaves differently from what the prototype implies. Both are answered by changing the
+screen rather than by inventing the data.
+
+**The table is the API's fields, not the prototype's.** The prototype's table has columns for
+Provider, MFA and Last seen. `GET /v1/admin/users` returns `id`, `email`, `created_at`, `updated_at`,
+`failed_attempts`, `locked` and `locked_until`, and none of those three is in it or derivable from
+it. The screen shows Account, Created, Last change, Failed attempts and Status instead. The
+alternative, kept in the first draft, was to render the three missing columns empty or with a dash,
+which is the failure mode the dashboard already rejected (BACKEND_GAPS 2.13): a blank cell under
+"Provider" reads as an account with no provider rather than as a console that cannot know. An
+account's second factor is visible where the API does publish it, on the dashboard's MFA adoption
+report, which is a count rather than this table's row.
+
+The same rule is why the drawer's "Active sessions" line is a count and not a list: the detail
+endpoint answers `active_sessions` as a number, so the screen can say four sessions are live and
+cannot say from where. A list here would have to come from `GET /v1/sessions` for the operator's own
+account, which is a different account's data and not this endpoint's to give.
+
+**Search is one exact address, so the screen says one exact address.** `GET /v1/admin/users` takes
+`email` as an exact, case-sensitive match; there is no partial match and no other field is
+searchable. The prototype's search box implies a substring search over several fields. Three
+options: search on the server with an exact match and label the result, add a console-side filter
+over a fetched page, or ask the API for a `q` parameter. The second is wrong rather than merely
+limited, because it would filter one page of twenty-five while the count and the pager below it
+described the whole table. The third is a new API feature, and the exactness is deliberate on the
+engine's side: `operator.Store` looks accounts up by primary key or by exact email, so a substring
+search would be a new query shape and a new index rather than a parameter. The screen therefore
+searches exactly, and says so: the pager prints `describeMatch`, which turns the API's own `match`
+field into the sentence "The API matched one exact address." rather than leaving the operator to
+infer the mode from an empty table. A miss is worded as a working search that found nothing
+(`EXACT_EMAIL_MISS_DETAIL`), never as the sentence for an account the API has lost, because the two
+are the same empty table and completely different problems.
+
+---
+
+## D20. Overlays render into the document body, through one component
+
+**Date:** 2026-10-06
+**Status:** accepted
+
+`Modal` and `Drawer` render their overlay through `OverlayPortal`, which is a `createPortal` into
+`document.body`. The drawer is what found the need: opened from a row of the Users table, its panel
+was 423 px tall instead of full height, ending at the bottom of the card it was opened from.
+
+The cause is not stacking and not z-index. `position: fixed` is resolved against the nearest ancestor
+that establishes a containing block, and an ancestor with a `transform`, a `filter` or a
+`will-change` does. Every console screen is wrapped in `.view.anim`, whose `fadeUp` animation fills
+its final keyframe: `animation: fadeUp 0.35s ease both` leaves the element with a `translateY(0)`
+that `getComputedStyle` reports as `matrix(1, 0, 0, 1, 0, 0)`. The identity matrix is still a
+matrix, so the `fixed` overlay was laid out against the 1180 px content column and the height of the
+row it sat in. Verified by probing the element, not by reading the CSS: the overlay measured
+1180x423.25 against a 1440x1000 window, and 1440x1000 after the portal.
+
+The one-line alternative was to drop the animation's fill mode, or to remove `translateY` from the
+keyframe. That fixes today's cause and leaves the next one: any wrapper that adds a transform, a
+`filter` for a backdrop blur, or a `will-change` for a scroll animation reintroduces the bug, and it
+reappears on whichever screen added it rather than at the component that is actually wrong. A portal
+takes the overlay out from under all of them at once, which is why it is one shared component rather
+than a rule each screen has to remember.
+
+Two consequences are load-bearing. `OverlayPortal` reads `document` synchronously and renders
+nothing on the server, so an overlay must not be open in the first paint; neither can be, since both
+take `open`, start closed and are opened by a click. And the portal target is read during render
+rather than held in state from an effect: a target that arrives one render late means the focus
+trap's lifecycle effect runs with a null container, focuses nothing, and never runs again, because
+its dependency array has not changed. The first draft of this component used
+`useState`/`useEffect` and focus never entered the panel. `tests/unit/users-view.test.tsx` holds
+focus-in and the focus return on close, so that failure cannot come back quietly.

@@ -148,7 +148,7 @@ The six sidebar groups, and all 21 screens in them.
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
 | Overview | Dashboard | done | tier 1, step 1.1 |
-| Identity | Users | planned | tier 1, step 1.2 |
+| Identity | Users | partial | tier 1, step 1.2. The list, the exact-address search, the pager and the detail drawer read the API for real; the account actions need six endpoints the API does not have yet |
 | Identity | OAuth Providers | planned | tier 1, step 1.3 |
 | Identity | MFA & Passkeys | planned | tier 1, step 1.4 |
 | Identity | Email & Magic Link | planned | tier 1, step 1.5 |
@@ -191,13 +191,22 @@ never rewrites a committed image.
 | The landing page at `/`. Its console map is generated from the console's own navigation. | The same page's console section, with the read-only tag on the four AI screens. |
 | ![The sign-in screen](docs/guide/screenshots/sign-in.png) | ![The console dashboard](docs/guide/screenshots/console-dashboard.png) |
 | Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The dashboard against a real API: the tag reads `api-client`, the numbers are that deployment's own, and the digest says plainly that no schedule is configured. |
-| ![The design system gallery](docs/guide/screenshots/design-system.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
-| `/design`, the dev-only component gallery. It 404s in a production build. | Every screen that is still planned says so, and names its own route. |
+| ![The Users screen](docs/guide/screenshots/console-users.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
+| Users, against the same deployment, photographed through its own search: one exact address, the row that matched, and the API's own match mode named below the table. | Every screen that is still planned says so, and names its own route. |
+| ![The design system gallery](docs/guide/screenshots/design-system.png) | |
+| `/design`, the dev-only component gallery. It 404s in a production build. | |
 
-The console screenshots use a session minted locally in the console's own cookie format, because
-there is no API in this checkout to sign in against. The operator they show,
-`operator@example.test`, is sample data on a reserved domain, and the API tokens in that session
-are placeholders. That is why the connection tag in them reads `fixtures`.
+The console screenshots are taken from a real sign-in: `pnpm screenshots` signs in with
+`CSAX_SCREENSHOT_EMAIL` and `CSAX_SCREENSHOT_PASSWORD`, read from the environment or the gitignored
+`.env.local`, so the account it photographs is a real account on a real API and no password is
+written into a script. Without those variables it falls back to a session minted in the console's
+own cookie format, whose API tokens are placeholders: that still photographs a signed-in shell, with
+every API-backed report showing the state an unreachable API produces.
+
+The Users shot is narrowed with the screen's own search to the account the run signed in as. The
+list is every account the deployment holds, and a guide image should not publish the addresses of
+accounts the reader has nothing to do with. The dashboard's newest-accounts table has no such
+control, so its committed image is the one taken from a deployment holding sample data only.
 
 ---
 

@@ -1,16 +1,10 @@
 import "server-only";
 
-import {
-  DIGEST_NONE_STORED_DETAIL,
-  DIGEST_NOT_SCHEDULED_DETAIL,
-  NOT_OPERATOR_DETAIL,
-  SQLITE_ADMIN_DETAIL,
-} from "@/lib/dashboard";
+import { DIGEST_NONE_STORED_DETAIL, DIGEST_NOT_SCHEDULED_DETAIL } from "@/lib/dashboard";
 
 import {
   DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
-  NOT_IMPLEMENTED_ON_SQLITE,
   fetchDigestHistory,
   fetchHashMigration,
   fetchMfaAdoption,
@@ -20,7 +14,7 @@ import {
   type HashMigration,
   type MfaAdoption,
 } from "../cryden/admin";
-import { CrydenError } from "../cryden/http";
+import { noStoreDetail, sectionFailure, type Section } from "../cryden/section";
 
 /**
  * What the dashboard shows, gathered in one place so the page and its route
@@ -44,35 +38,14 @@ import { CrydenError } from "../cryden/http";
 export const DASHBOARD_WINDOW_DAYS = 7;
 
 /**
- * The API's code for "this feature has no backing store on this deployment"
- * (`api/httpapi/errors.go`, errAdminStoresUnavailable). For the digest history
- * it is how a deployment with no schedule answers, which is a state rather than
- * a fault.
- */
-const NOT_CONFIGURED = "not_configured";
-
-/**
- * The API's code for a valid token whose account holds no operator grant
- * (`api/httpapi/errors.go`, errNotOperator). Every other refusal and every
- * unknown account look identical to it on purpose, so the console reads it as
- * one state rather than trying to tell them apart.
- */
-const NOT_OPERATOR = "not_operator";
-
-/**
- * One section's outcome.
+ * One section's outcome, and how a failed read becomes one.
  *
- * `unavailable` and `forbidden` are separated from `error` because neither is a
- * fault: a SQLite deployment has no admin surface by design, and a refused
- * account was refused on purpose. `empty` is the same distinction one step down,
- * for a feature that answered correctly and has nothing to report.
+ * Both live in `cryden/section.ts` because the Users screen reads the same admin
+ * surface and has to describe a refusal the same way. Re-exported here so a
+ * client component can name the type without reaching past this module into a
+ * server-only neighbour.
  */
-export type Section<T> =
-  | { state: "ok"; data: T }
-  | { state: "unavailable"; detail: string; code: string }
-  | { state: "forbidden"; detail: string; code: string }
-  | { state: "empty"; detail: string }
-  | { state: "error"; detail: string; code: string | null };
+export type { Section };
 
 export type AccountsSection = {
   /** Every account, from the API's own count rather than the page length. */
@@ -96,48 +69,6 @@ export type DashboardOverview = {
 export type { AdminUser, DigestRun, HashMigration, MfaAdoption };
 
 /**
- * Turns a failed read into the section state that describes it.
- *
- * The order of the checks is the point. A deployment that cannot serve admin at
- * all is reported as that before anything about the call is considered, because
- * "this console cannot read this deployment" and "this call failed" send an
- * operator to two different places. A refused operator is checked next for the
- * same reason: the API refused the account, not the call.
- *
- * `emptyDetail` is what a `not_configured` answer means for this particular
- * section: the API uses that code for every feature whose store was never wired,
- * and only the caller knows which feature it just asked for.
- */
-function failure(error: unknown, what: string, emptyDetail: string): Section<never> {
-  if (error instanceof CrydenError) {
-    if (error.code === NOT_IMPLEMENTED_ON_SQLITE) {
-      return { state: "unavailable", detail: SQLITE_ADMIN_DETAIL, code: error.code };
-    }
-    if (error.code === NOT_OPERATOR) {
-      return { state: "forbidden", detail: NOT_OPERATOR_DETAIL, code: error.code };
-    }
-    if (error.code === NOT_CONFIGURED) {
-      return { state: "empty", detail: emptyDetail };
-    }
-    return { state: "error", detail: error.message, code: error.code };
-  }
-
-  // Not a CrydenError: something threw that the transport does not map, which is
-  // a console bug rather than an API failure. Reported as one rather than guessed
-  // at.
-  return {
-    state: "error",
-    detail: `The console could not read ${what}, and did not recognise the failure.`,
-    code: null,
-  };
-}
-
-/** What `not_configured` means for a report whose store was never wired. */
-function noStoreDetail(what: string): string {
-  return `This deployment has no store configured for ${what}, so there is nothing to report.`;
-}
-
-/**
  * Every section of the dashboard for one operator's token.
  *
  * The four reads run together: they are independent GETs against the same API,
@@ -152,7 +83,7 @@ export async function dashboardOverview(token: string): Promise<DashboardOvervie
         const list = await fetchUsers({ token, limit: DASHBOARD_USER_LIMIT });
         return { state: "ok", data: { total: list.total, newest: list.users } };
       } catch (error) {
-        return failure(error, "the account list", noStoreDetail("the account list"));
+        return sectionFailure(error, "the account list", noStoreDetail("the account list"));
       }
     })(),
 
@@ -163,7 +94,7 @@ export async function dashboardOverview(token: string): Promise<DashboardOvervie
           data: await fetchMfaAdoption({ token, windowDays: DASHBOARD_WINDOW_DAYS }),
         };
       } catch (error) {
-        return failure(error, "the second-factor report", noStoreDetail("second factors"));
+        return sectionFailure(error, "the second-factor report", noStoreDetail("second factors"));
       }
     })(),
 
@@ -174,7 +105,7 @@ export async function dashboardOverview(token: string): Promise<DashboardOvervie
           data: await fetchHashMigration({ token, windowDays: DASHBOARD_WINDOW_DAYS }),
         };
       } catch (error) {
-        return failure(error, "the password hash report", noStoreDetail("password hashes"));
+        return sectionFailure(error, "the password hash report", noStoreDetail("password hashes"));
       }
     })(),
 
@@ -185,7 +116,7 @@ export async function dashboardOverview(token: string): Promise<DashboardOvervie
         if (newest === undefined) return { state: "empty", detail: DIGEST_NONE_STORED_DETAIL };
         return { state: "ok", data: newest };
       } catch (error) {
-        return failure(error, "the digest", DIGEST_NOT_SCHEDULED_DETAIL);
+        return sectionFailure(error, "the digest", DIGEST_NOT_SCHEDULED_DETAIL);
       }
     })(),
   ]);

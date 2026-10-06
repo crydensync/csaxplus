@@ -7,15 +7,11 @@ import { Card, StatCard } from "@/components/Card";
 import { DataTable, type Column } from "@/components/DataTable";
 import { IconRefresh, IconSparkle } from "@/components/icons";
 import { Pill } from "@/components/Pill";
+import { SectionState } from "@/components/section-state";
 import { EmptyState, ErrorState, LoadingAnnouncement, Skeleton } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
-import {
-  formatCount,
-  formatInstant,
-  describeWindow,
-  NOT_OPERATOR_DETAIL,
-  SQLITE_ADMIN_DETAIL,
-} from "@/lib/dashboard";
+import { NOT_OPERATOR_DETAIL, SQLITE_ADMIN_DETAIL } from "@/lib/dashboard";
+import { describeWindow, formatCount, formatInstant } from "@/lib/format";
 // Types only, and deliberately so: `overview.ts` is server-only, and a value
 // import from it here would fail the build. A type import is erased before the
 // bundler sees it, which is what lets the browser and the route that feeds it
@@ -244,41 +240,6 @@ function sharedState(
   }
 
   return null;
-}
-
-/** A title for a section that answered without data, chosen by why. */
-function stateTitle(state: "unavailable" | "forbidden" | "empty"): string {
-  if (state === "unavailable") return "Not available on this deployment";
-  if (state === "forbidden") return "Refused by the API";
-  return "Nothing to report";
-}
-
-/**
- * The body of a section that did not answer with data.
- *
- * `error` is the only state that is a fault, so it is the only one that gets an
- * alert and a retry. A refusal or an unconfigured report was answered correctly,
- * and announcing those as something going wrong would be the console's mistake
- * rather than the deployment's.
- */
-function SectionState({
-  section,
-  onRetry,
-}: {
-  section: Exclude<Section<unknown>, { state: "ok" }>;
-  onRetry: () => void;
-}) {
-  if (section.state === "error") {
-    return (
-      <ErrorState
-        bare
-        description={section.detail}
-        code={section.code ?? undefined}
-        onRetry={onRetry}
-      />
-    );
-  }
-  return <EmptyState bare title={stateTitle(section.state)} description={section.detail} />;
 }
 
 /**

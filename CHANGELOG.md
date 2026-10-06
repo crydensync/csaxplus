@@ -31,6 +31,24 @@ at `v0.1.0` (BUILD_NOTE section 6).
   `not_configured` report says which setting is missing. Only a genuine failure offers a retry. When
   every report comes back with the same answer, the screen draws that answer once instead of in all
   six places it would otherwise appear.
+- **A Users screen.** Every account the API knows, read through `GET /api/console/users`, with
+  server-side paging and an exact-address search, a row that opens a detail drawer, and the fields
+  the API actually sends: Account, Created, Last change, Failed attempts and Status. The prototype's
+  Provider, MFA and Last seen columns have no endpoint behind them and are not rendered, since an
+  empty cell reads as an account with no provider rather than as a console that cannot know. See
+  DECISIONS.md D19 and BACKEND_GAPS section 5. The account actions (create, suspend, force-disable
+  MFA, revoke sessions, unlink an OAuth provider) need six endpoints the API does not have yet and
+  follow once they exist.
+- **`GET /api/console/users` and `GET /api/console/users/{id}`**, the console routes behind that
+  screen. The detail route reads the account and its metadata together and answers a state for each,
+  so a deployment with no metadata store still shows the account.
+- **A drawer, and overlays that render into the document body.** `Drawer` shares the modal's
+  keyboard contract. Both now render through a portal into `document.body`, because `position:
+  fixed` is resolved against the nearest transformed ancestor and every console screen animates one:
+  the drawer was sized to the content column instead of the window. See DECISIONS.md D20.
+- **An honest search.** The API's `email` parameter is an exact, case-sensitive match, so the pager
+  names the mode the API reported and a miss is worded as a search that found nothing rather than as
+  an account that is gone.
 
 ## [0.0.2] - 2026-10-04
 

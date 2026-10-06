@@ -348,3 +348,51 @@ Action: none for the API, and none for the console in tier 1. When a tier 2 or 3
 surface a viewer may legitimately read, that endpoint should be registered on the engine's ordinary
 authenticated middleware rather than `AdminOnly`, and this entry should be revised to say which.
 
+
+---
+
+## 5. Found while building the Users screen (step 1.2)
+
+### 5.1 The list searches one exact address, and nothing else
+
+`GET /v1/admin/users` takes `email` and matches it exactly and case-sensitively. There is no
+partial match, no search over other fields, and no free-text parameter. The engine is the reason:
+`operator.Store` looks accounts up by primary key or by exact email, so a substring search would be
+a new query shape and a new index rather than a parameter on an existing one.
+
+The prototype's search box implies the other thing, and the two look identical when a search
+misses. The console therefore labels which one answered: the API returns a `match` field
+(`browse` or `exact_email`) and the screen turns it into a sentence under the table, and a miss is
+worded as a search that found nothing rather than as an account that is gone. See DECISIONS.md D19.
+
+Action: none for the API in tier 1. A `q` parameter over email and id would be additive and
+backwards compatible if a later tier wants it; until then the console says what it did.
+
+### 5.2 Three of the prototype's user columns have no endpoint behind them
+
+The prototype's table has Provider, MFA and Last seen. Nothing in the API answers any of them for a
+list of accounts:
+
+- **Provider** is per-account OAuth links. There is a `DELETE
+  /v1/admin/users/{id}/oauth/{provider}` in tier 1's missing list and no read alongside it, so a
+  Provider cell could not be filled even once the unlink route exists.
+- **MFA** is per-account factors. `GET /v1/admin/security/mfa-adoption` counts enrolment and removal
+  events across the deployment, which is the dashboard's report and not a per-user fact. The
+  engine's per-user factor read is `cryden/auth/mfa.go`'s own user-facing path, which needs the
+  account's password.
+- **Last seen** needs a last-login instant. `store.User` carries `CreatedAt` and `UpdatedAt` and no
+  such field; `updated_at` moves for any change to the account, so it is not a substitute.
+
+Action: the three columns are not rendered, and the table shows the fields the API sends
+(DECISIONS.md D19). Each returns when an endpoint answers it, not before.
+
+### 5.3 The detail endpoint counts a user's sessions rather than listing them
+
+`GET /v1/admin/users/{userID}` answers `active_sessions` as a number. There is no per-user session
+list until `GET /v1/admin/sessions` exists in tier 2 (section 1), and the console's own
+`GET /v1/sessions` is the signed-in operator's own sessions, which is a different account's data and
+is not this endpoint's to publish.
+
+So the drawer says how many sessions are live and says that it cannot say more, naming the reason in
+the copy rather than leaving a bare integer to be read as a list that failed to load. Action: none
+for the API; the count is real and the screen is explicit about what it is.

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { readSession } from "@/server/auth/guard";
 
 import { ConsoleTopbar } from "../console-topbar";
+import { SignOutButton } from "../sign-out-button";
 import { DashboardOverview } from "./overview";
-import { SignOutButton } from "./sign-out-button";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -23,11 +23,6 @@ export const metadata: Metadata = {
  *
  * The subtitle claims nothing about the numbers below it, because the numbers
  * come from the API and this component has not seen them.
- *
- * Sign-out sits in this screen's topbar. It is the only screen with real content
- * so far, and a console with one screen does not need a second place to put it;
- * when the sidebar's other entries become screens it belongs in the shell, where
- * every one of them has it.
  */
 export default async function DashboardPage() {
   const session = await readSession();

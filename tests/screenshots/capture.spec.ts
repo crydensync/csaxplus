@@ -63,7 +63,7 @@ test.describe("guide screenshots", () => {
     });
   });
 
-  test("the console, with a session minted locally", async ({ page, context }) => {
+  test("the console screens", async ({ page, context }) => {
     // Two ways to get a session, and which one is available decides what the
     // console images show. With credentials the shot is of a real deployment,
     // tiles and rows and all. Without them the minted cookie gives a signed-in
@@ -123,11 +123,38 @@ test.describe("guide screenshots", () => {
       animations: "disabled",
     });
 
-    // A screen the sidebar links to but no tier has built. The image is of the
-    // gap, stated plainly, which is what a reader of the guide should see.
+    // The second screen with real content. Same wait as the dashboard's, for the
+    // same reason: the accounts are read after hydration, and photographing the
+    // skeletons would be a picture of the console thinking rather than of what
+    // it found. With a minted cookie this lands on the screen's own failure
+    // state, which is still a state the console really reaches.
     await page.goto("/users");
     await settle(page);
     await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
+
+    // This screen lists every account the deployment holds, and a guide image
+    // must not publish the addresses of accounts the reader has nothing to do
+    // with. So the shot is taken through the screen's own search, narrowed to
+    // the one account this run signed in as: a real call, a real row, and no
+    // one else's address in the repository. The dashboard above photographs
+    // whatever the deployment's newest accounts are, which is why its image is
+    // the one committed from a deployment holding sample data only.
+    if (email !== undefined) {
+      await page.getByLabel("Search by exact email").fill(email);
+      await page.getByRole("button", { name: "Search", exact: true }).click();
+    }
+
+    await expect(page.locator(".skeleton")).toHaveCount(0, { timeout: 60_000 });
+    await page.screenshot({
+      path: `${OUTPUT}/console-users.png`,
+      animations: "disabled",
+    });
+
+    // A screen the sidebar links to but no tier has built. The image is of the
+    // gap, stated plainly, which is what a reader of the guide should see.
+    await page.goto("/mfa");
+    await settle(page);
+    await expect(page.getByRole("heading", { name: "MFA & Passkeys" })).toBeVisible();
     await page.screenshot({
       path: `${OUTPUT}/console-screen-not-built-yet.png`,
       animations: "disabled",

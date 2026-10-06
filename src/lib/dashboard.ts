@@ -1,10 +1,10 @@
 /**
- * Copy and formatting the dashboard needs on both sides of the wire.
+ * Copy the dashboard needs on both sides of the wire.
  *
  * The server composes section states and the browser renders them, so the
  * sentences live here rather than in either one: a failure worded in two places
  * is a failure worded two ways. Same reason `api-status.ts` exists for the
- * topbar tag.
+ * topbar tag. Formatting lives in `format.ts`, which the Users screen shares.
  */
 
 /**
@@ -35,39 +35,3 @@ export const DIGEST_NONE_STORED_DETAIL =
  */
 export const NOT_OPERATOR_DETAIL =
   "The API does not recognise this account as a console operator, and every admin report is behind that. An operator grant on the API's side is what changes it.";
-
-/**
- * Formats an instant the API sent, in UTC, with the zone named.
- *
- * UTC rather than the reader's local time on purpose: these timestamps sit
- * beside API-supplied counts and are read next to logs and audit rows, all of
- * which are UTC. Naming the zone is what keeps that from being a guess, and
- * formatting on one clock is also what keeps the server's render and the
- * browser's identical.
- */
-export function formatInstant(iso: string): string {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return "an unreadable time";
-  return `${new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  }).format(at)} UTC`;
-}
-
-/** `7 days` / `1 day`, for a report whose window the API chose. */
-export function describeWindow(days: number): string {
-  return days === 1 ? "1 day" : `${days} days`;
-}
-
-/**
- * A count with its thousands separated, on one locale so the same number is
- * written the same way wherever it is read.
- */
-export function formatCount(value: number): string {
-  return new Intl.NumberFormat("en-GB").format(value);
-}

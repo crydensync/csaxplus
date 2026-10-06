@@ -14,8 +14,13 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("sign-in", () => {
   test("a signed-out visit to the console is sent to the sign-in screen", async ({ page }) => {
-    await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/login$/);
+    // Two of the routes under the console group, one of them added after the
+    // guard was: the check lives in the group's layout, so every screen in it is
+    // behind the gate rather than each screen remembering to be.
+    for (const route of ["/dashboard", "/users"]) {
+      await page.goto(route);
+      await expect(page).toHaveURL(/\/login$/);
+    }
   });
 
   test("the screen says what it is for and offers both fields", async ({ page }) => {
