@@ -88,14 +88,20 @@ test.describe("landing page", () => {
   test("Open console leads to the console, which asks for a sign-in when signed out", async ({
     page,
   }) => {
-    await page.goto("/");
-
-    await page.locator(".lp-nav-cta").click();
     // The console group is compiled on its first visit in dev, and the whole
     // console shell now hangs off it: a cold `GET /dashboard` measures around
     // 15 seconds on this machine, and the rest of the suite compiling alongside
-    // it pushes that past the default 5s. So this one assertion waits for the
-    // redirect rather than for a compile, with room to spare.
+    // it pushes it to 24 seconds or more. That is near enough to the 30 second
+    // default that a bulky recompile loses the race, so the test is marked slow
+    // (90 seconds) and this assertion waits for the redirect rather than for a
+    // compile. Both are needed: the assertion's own timeout below is unreachable
+    // without it, because the test-level default stops the test first, which is
+    // exactly how this failed under the load of reformatting 21 files at once.
+    test.slow();
+
+    await page.goto("/");
+
+    await page.locator(".lp-nav-cta").click();
     await expect(page).toHaveURL(/\/login$/, { timeout: 60_000 });
     await expect(page.getByLabel("Password")).toBeVisible();
   });
