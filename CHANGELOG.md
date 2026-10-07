@@ -50,6 +50,24 @@ at `v0.1.0` (BUILD_NOTE section 6).
   names the mode the API reported and a miss is worded as a search that found nothing rather than as
   an account that is gone.
 
+### Changed
+
+- **The whole tree is formatted with Prettier.** `pnpm format:check` had been failing on 21 files,
+  and nothing noticed because the verification gate is lint, typecheck and test: `format:check` was
+  never in the loop, and the step 5.6 CI would have been the first thing to run it. The drift is old
+  (`src/lib/api-status.ts` was already unformatted at its birth commit in tier 0), so it is not
+  something a recent step introduced. Formatting only, with one change worth naming: a two-line
+  `radial-gradient` in `globals.css` is joined onto one line, which is the same value list separated
+  by a comma.
+
+### Fixed
+
+- **The landing page's sign-in redirect test could fail on its own timeout.** Its assertion waits 60
+  seconds for the console group's first compile, but the test-level default stopped the test at 30,
+  so the assertion's own timeout was unreachable and a slow recompile lost the race instead of being
+  waited out. The test is now marked slow, which gives it 90 seconds, and was seen passing at 24
+  seconds on a cold server.
+
 ## [0.0.2] - 2026-10-04
 
 Tier 0 follow-up: the Postgres half of the console store now runs, and two defects it was hiding are

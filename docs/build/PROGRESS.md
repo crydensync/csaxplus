@@ -356,6 +356,19 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   missing id (`not_found`, both sections empty), the reserved claim names and an empty metadata
   object. The screen was opened in a browser at 1440 px, and measured at 375 px inside an iframe:
   `scrollWidth` equals `clientWidth`, with the table inside `.table-scroll` as the prototype had it.
+- **`pnpm format:check` is not in the gate, and drifted long enough to matter.** The gate is lint,
+  typecheck and test, so `format:check` was never run and had been failing on 21 files since tier 0:
+  `src/lib/api-status.ts` was already unformatted at its birth commit. It is clean now, in its own
+  commit, but the step 5.6 CI would otherwise have opened on a red run that had nothing to do with
+  the code it was checking. Worth deciding whether the gate should call it, since a formatter nobody
+  runs is a formatter that lies about the tree.
+- **One e2e test raced its own timeout, and the shape is worth recognising.** The landing page's
+  sign-in redirect test cold-compiles the whole console group: about 15 s idle, 24 s with the rest of
+  the suite compiling alongside it. Its assertion allowed 60 s, but no test-level override was set,
+  so the 30 s default stopped the test first and the 60 s could never be reached. It failed twice
+  while 21 files were being reformatted at once, and passed before and after. The test is marked slow
+  now (90 s). Every other test that raises an assertion timeout above its test timeout has the same
+  bug, so check both numbers, not just the one in the assertion.
 
 ## Tier summaries
 
