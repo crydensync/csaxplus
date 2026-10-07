@@ -48,12 +48,7 @@ const COLUMNS: ReadonlyArray<Column<PreviewRow>> = [
   },
 ];
 
-const STATUSES: ReadonlyArray<ApiStatus> = [
-  "api-client",
-  "degraded",
-  "fixtures",
-  "offline",
-];
+const STATUSES: ReadonlyArray<ApiStatus> = ["api-client", "degraded", "fixtures", "offline"];
 
 function GalleryBody() {
   const toast = useToast();

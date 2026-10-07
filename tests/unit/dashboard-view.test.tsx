@@ -301,7 +301,11 @@ describe("when the console's own route fails", () => {
 
 describe("when the whole deployment refuses", () => {
   it("says the admin surface is missing, once, when every report says SQLite", async () => {
-    const unavailable = { state: "unavailable", detail: SQLITE_ADMIN_DETAIL, code: "not_implemented_on_sqlite" };
+    const unavailable = {
+      state: "unavailable",
+      detail: SQLITE_ADMIN_DETAIL,
+      code: "not_implemented_on_sqlite",
+    };
     await renderDashboard(() =>
       jsonResponse({
         data: {
@@ -323,7 +327,9 @@ describe("when the whole deployment refuses", () => {
   it("says the account is not an operator when every report is refused", async () => {
     const forbidden = { state: "forbidden", detail: NOT_OPERATOR_DETAIL, code: "not_operator" };
     await renderDashboard(() =>
-      jsonResponse({ data: { accounts: forbidden, factors: forbidden, hashes: forbidden, digest: forbidden } }),
+      jsonResponse({
+        data: { accounts: forbidden, factors: forbidden, hashes: forbidden, digest: forbidden },
+      }),
     );
 
     expect(text()).toContain("This account is not a console operator");

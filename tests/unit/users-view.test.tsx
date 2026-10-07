@@ -374,9 +374,13 @@ describe("when the API refuses", () => {
   it("reads a SQLite deployment as having no admin surface", async () => {
     await renderUsers({
       [LIST_ROUTE]: () =>
-        jsonResponse(
-          { data: { state: "unavailable", detail: SQLITE_ADMIN_DETAIL, code: "not_implemented_on_sqlite" } },
-        ),
+        jsonResponse({
+          data: {
+            state: "unavailable",
+            detail: SQLITE_ADMIN_DETAIL,
+            code: "not_implemented_on_sqlite",
+          },
+        }),
     });
 
     expect(text()).toContain("Not available on this deployment");
@@ -387,7 +391,8 @@ describe("when the API refuses", () => {
 
   it("reports a console route that failed with the code to chase", async () => {
     await renderUsers({
-      [LIST_ROUTE]: () => jsonResponse({ error: { code: "unauthenticated", message: "no session" } }, 401),
+      [LIST_ROUTE]: () =>
+        jsonResponse({ error: { code: "unauthenticated", message: "no session" } }, 401),
     });
 
     expect(text()).toContain("The account list did not load");

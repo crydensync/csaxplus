@@ -50,7 +50,11 @@ export async function GET(request: Request): Promise<Response> {
   const parsed = querySchema.safeParse(input);
   if (!parsed.success) {
     return authorized.respond(
-      jsonError(400, ERROR_CODES.invalidRequest, "That is not a page of accounts the console can ask for."),
+      jsonError(
+        400,
+        ERROR_CODES.invalidRequest,
+        "That is not a page of accounts the console can ask for.",
+      ),
     );
   }
 

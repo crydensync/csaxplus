@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type SecondFactorMethod } from "@/lib/second-factor";
-import {
-  beginPasskey,
-  completeTotp,
-  signInWithPassword,
-} from "@/server/auth/api-auth";
+import { beginPasskey, completeTotp, signInWithPassword } from "@/server/auth/api-auth";
 import { decodeAccessToken } from "@/server/auth/claims";
 import { clearCookie, parseCookieHeader, serializeCookie } from "@/server/auth/cookies";
 import {
@@ -17,8 +13,18 @@ import {
   signIn,
   signOut,
 } from "@/server/auth/flow";
-import { requireCsrf, requireMutation, requireSameOrigin, requireSession } from "@/server/auth/guard";
-import { openPendingLogin, startPending, sealPendingLogin, withCeremonyToken } from "@/server/auth/pending";
+import {
+  requireCsrf,
+  requireMutation,
+  requireSameOrigin,
+  requireSession,
+} from "@/server/auth/guard";
+import {
+  openPendingLogin,
+  startPending,
+  sealPendingLogin,
+  withCeremonyToken,
+} from "@/server/auth/pending";
 import { ERROR_CODES } from "@/server/auth/response";
 import { sealValue } from "@/server/auth/sealed";
 import {
@@ -78,7 +84,8 @@ type Handler = (request: Request) => Response | Promise<Response>;
  * would have to interpret.
  */
 function stubApi(routes: Record<string, Handler>) {
-  const seen: Array<{ method: string; path: string; body: unknown; authorization: string | null }> = [];
+  const seen: Array<{ method: string; path: string; body: unknown; authorization: string | null }> =
+    [];
 
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -241,8 +248,7 @@ describe("a sealed value", () => {
 describe("the API's login answers", () => {
   it("reads tokens", async () => {
     stubApi({
-      "POST /v1/login": () =>
-        jsonResponse({ data: { access_token: "at", refresh_token: "rt" } }),
+      "POST /v1/login": () => jsonResponse({ data: { access_token: "at", refresh_token: "rt" } }),
     });
     await expect(signInWithPassword("a@b.invalid", "pw")).resolves.toEqual({
       kind: "tokens",
@@ -270,7 +276,9 @@ describe("the API's login answers", () => {
   it("fails loudly when the only factor offered is one it cannot complete", async () => {
     stubApi({
       "POST /v1/login": () =>
-        jsonResponse({ data: { second_factor_required: true, pending_token: "p", methods: ["sms"] } }),
+        jsonResponse({
+          data: { second_factor_required: true, pending_token: "p", methods: ["sms"] },
+        }),
     });
     const error = await signInWithPassword("a@b.invalid", "pw").catch((e: unknown) => e);
     expect((error as CrydenError).kind).toBe("malformed");
@@ -293,7 +301,8 @@ describe("the API's login answers", () => {
 
   it("passes a pause's pending token on the completing call", async () => {
     const seen = stubApi({
-      "POST /v1/login/totp": () => jsonResponse({ data: { access_token: "at", refresh_token: "rt" } }),
+      "POST /v1/login/totp": () =>
+        jsonResponse({ data: { access_token: "at", refresh_token: "rt" } }),
     });
 
     await completeTotp("pending-value", "123456");
@@ -335,7 +344,10 @@ describe("building a session", () => {
   it("takes the operator from the token and the newest API session as its own", async () => {
     stubApi(sessions);
     const session = await sessionFromTokens(
-      { accessToken: accessToken({ sub: "user-9", role: "admin", exp: NOW_SECONDS + 900 }), refreshToken: "rt" },
+      {
+        accessToken: accessToken({ sub: "user-9", role: "admin", exp: NOW_SECONDS + 900 }),
+        refreshToken: "rt",
+      },
       "op@example.invalid",
     );
 
@@ -354,7 +366,10 @@ describe("building a session", () => {
       "GET /v1/sessions": () => jsonResponse({ error: { code: "not_configured" } }, 404),
     });
     const session = await sessionFromTokens(
-      { accessToken: accessToken({ sub: "u", role: "admin", exp: NOW_SECONDS + 900 }), refreshToken: "rt" },
+      {
+        accessToken: accessToken({ sub: "u", role: "admin", exp: NOW_SECONDS + 900 }),
+        refreshToken: "rt",
+      },
       "op@example.invalid",
     );
     expect(session.apiSessionId).toBeNull();
@@ -382,7 +397,9 @@ describe("signing in", () => {
         }),
       "GET /v1/sessions": () =>
         jsonResponse({
-          data: [{ id: "s1", label: "l", created_at: "2026-01-01T00:00:00Z", user_agent: "", ip: "" }],
+          data: [
+            { id: "s1", label: "l", created_at: "2026-01-01T00:00:00Z", user_agent: "", ip: "" },
+          ],
         }),
     });
 
@@ -395,7 +412,9 @@ describe("signing in", () => {
   it("returns the pause without inventing a session", async () => {
     stubApi({
       "POST /v1/login": () =>
-        jsonResponse({ data: { second_factor_required: true, pending_token: "p", methods: ["webauthn"] } }),
+        jsonResponse({
+          data: { second_factor_required: true, pending_token: "p", methods: ["webauthn"] },
+        }),
     });
 
     const outcome = await signIn("op@example.invalid", "pw");
@@ -409,7 +428,8 @@ describe("signing in", () => {
     const token = accessToken({ sub: "u2", role: "viewer", exp: NOW_SECONDS + 900 });
     stubApi({
       "GET /v1/sessions": () => jsonResponse({ data: [] }),
-      "POST /v1/login/totp": () => jsonResponse({ data: { access_token: token, refresh_token: "r1" } }),
+      "POST /v1/login/totp": () =>
+        jsonResponse({ data: { access_token: token, refresh_token: "r1" } }),
       "POST /v1/login/recovery-code": () =>
         jsonResponse({ data: { access_token: token, refresh_token: "r2" } }),
       "POST /v1/login/passkey/finish": () =>
@@ -418,12 +438,12 @@ describe("signing in", () => {
 
     // An account with no role claim is a console viewer.
     expect((await sessionFromTotp(pausedLogin(), "123456")).operator.role).toBe("viewer");
-    expect((await sessionFromRecoveryCode(pausedLogin(["recovery_code"]), "abcd-efgh")).operator.id).toBe(
-      "u2",
-    );
-    expect((await sessionFromPasskey(pausedLogin(["webauthn"]), "cer", { id: "x" })).operator.id).toBe(
-      "u2",
-    );
+    expect(
+      (await sessionFromRecoveryCode(pausedLogin(["recovery_code"]), "abcd-efgh")).operator.id,
+    ).toBe("u2");
+    expect(
+      (await sessionFromPasskey(pausedLogin(["webauthn"]), "cer", { id: "x" })).operator.id,
+    ).toBe("u2");
   });
 
   it("sends the ceremony token it was given, not one from the caller", async () => {
@@ -517,7 +537,9 @@ describe("signing out", () => {
   };
 
   it("revokes the API session it recorded at sign-in", async () => {
-    const seen = stubApi({ "POST /v1/logout": () => jsonResponse({ data: { status: "logged out" } }) });
+    const seen = stubApi({
+      "POST /v1/logout": () => jsonResponse({ data: { status: "logged out" } }),
+    });
     await expect(signOut(session)).resolves.toEqual({ revoked: true });
     expect(seen[0]?.body).toEqual({ session_id: "api-1" });
     expect(seen[0]?.authorization).toBe("Bearer access");
@@ -528,7 +550,9 @@ describe("signing out", () => {
   });
 
   it("reports that it could not revoke when the API refuses or is unreachable", async () => {
-    stubApi({ "POST /v1/logout": () => jsonResponse({ error: { code: "session_not_owned" } }, 403) });
+    stubApi({
+      "POST /v1/logout": () => jsonResponse({ error: { code: "session_not_owned" } }, 403),
+    });
     await expect(signOut(session)).resolves.toEqual({ revoked: false });
 
     vi.stubGlobal("fetch", async () => {
@@ -541,7 +565,12 @@ describe("signing out", () => {
 describe("the guards", () => {
   function requestFor(
     cookie: string | null,
-    init: { origin?: string | null; host?: string | null; csrf?: string | null; method?: string } = {},
+    init: {
+      origin?: string | null;
+      host?: string | null;
+      csrf?: string | null;
+      method?: string;
+    } = {},
   ): Request {
     const headers = new Headers();
     if (cookie !== null) headers.set("cookie", cookie);
@@ -625,9 +654,7 @@ describe("the guards", () => {
     // Without this cookie the console would still hold a refresh token the API
     // has already revoked, and the next call would sign the operator out.
     expect(guarded.setCookies).toHaveLength(1);
-    const renewed = await openSession(
-      parseCookieHeader(guarded.setCookies[0]).get(SESSION_COOKIE),
-    );
+    const renewed = await openSession(parseCookieHeader(guarded.setCookies[0]).get(SESSION_COOKIE));
     expect(renewed?.api.refreshToken).toBe("rotated");
     expect(renewed?.sid).toBe("sid-1");
   });
@@ -711,11 +738,16 @@ describe("the guards", () => {
     expect(wrongOrigin.ok).toBe(false);
 
     const viewer = await requireMutation(
-      requestFor(await sessionCookie(sessionAt(Date.now() + 600_000, { operator: { id: "u", label: "l", role: "viewer" } })), {
-        origin: ORIGIN,
-        host: HOST,
-        csrf: "the-csrf-value",
-      }),
+      requestFor(
+        await sessionCookie(
+          sessionAt(Date.now() + 600_000, { operator: { id: "u", label: "l", role: "viewer" } }),
+        ),
+        {
+          origin: ORIGIN,
+          host: HOST,
+          csrf: "the-csrf-value",
+        },
+      ),
     );
     expect(viewer.ok).toBe(false);
     if (viewer.ok) throw new Error("unreachable");

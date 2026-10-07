@@ -30,11 +30,7 @@ const NAV_LABELS = new Map(
  * Each tier deletes nothing here: the first page that adds its own route under
  * `(console)` takes precedence over this one automatically.
  */
-export default async function NotBuiltYetPage({
-  params,
-}: {
-  params: Promise<{ slug: string[] }>;
-}) {
+export default async function NotBuiltYetPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
   const path = `/${slug.join("/")}`;
   const label = NAV_LABELS.get(path);

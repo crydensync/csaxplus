@@ -2719,8 +2719,7 @@ textarea.text-input {
   place-items: center;
   padding: 24px 16px;
   background:
-    radial-gradient(60ch 40ch at 50% -10%, var(--violet-soft), transparent 70%),
-    var(--bg);
+    radial-gradient(60ch 40ch at 50% -10%, var(--violet-soft), transparent 70%), var(--bg);
 }
 .auth-card {
   width: 100%;

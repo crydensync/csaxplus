@@ -41,9 +41,9 @@ export function SignOutButton({ csrf }: { csrf: string }) {
         return;
       }
 
-      const payload = (await response.json().catch(() => null)) as
-        | { data?: { revoked?: unknown } }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        data?: { revoked?: unknown };
+      } | null;
 
       if (payload?.data?.revoked !== true) {
         setNote(

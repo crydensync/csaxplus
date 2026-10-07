@@ -2,7 +2,11 @@ import "server-only";
 
 import { z } from "zod";
 
-import { SECOND_FACTOR_METHODS, isSecondFactorMethod, type SecondFactorMethod } from "@/lib/second-factor";
+import {
+  SECOND_FACTOR_METHODS,
+  isSecondFactorMethod,
+  type SecondFactorMethod,
+} from "@/lib/second-factor";
 
 import { CrydenError, apiRequest } from "../cryden/http";
 
@@ -32,8 +36,7 @@ export type PausedLogin = {
 };
 
 export type SignInResult =
-  | { kind: "tokens"; tokens: ApiTokens }
-  | { kind: "second-factor"; paused: PausedLogin };
+  { kind: "tokens"; tokens: ApiTokens } | { kind: "second-factor"; paused: PausedLogin };
 
 /** A session the API has on record for this account. */
 export type NamedSession = {
@@ -129,10 +132,7 @@ export async function completeTotp(pendingToken: string, code: string): Promise<
 }
 
 /** `POST /v1/login/recovery-code`. Consumes one of the account's recovery codes. */
-export async function completeRecoveryCode(
-  pendingToken: string,
-  code: string,
-): Promise<ApiTokens> {
+export async function completeRecoveryCode(pendingToken: string, code: string): Promise<ApiTokens> {
   const data = await apiRequest<unknown>({
     method: "POST",
     path: "/v1/login/recovery-code",

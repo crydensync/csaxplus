@@ -168,7 +168,12 @@ describe("reading accounts", () => {
         data: {
           ...A_USER_LIST,
           users: [
-            { ...AN_ACCOUNT, failed_attempts: 5, locked: false, locked_until: "2026-09-30T10:15:00Z" },
+            {
+              ...AN_ACCOUNT,
+              failed_attempts: 5,
+              locked: false,
+              locked_until: "2026-09-30T10:15:00Z",
+            },
           ],
         },
       }),
@@ -347,7 +352,9 @@ describe("reading the password hash report", () => {
   it("asks for the window it was given", async () => {
     const seen = stubApi(() => jsonResponse({ data: A_HASH_REPORT }));
 
-    await expect(fetchHashMigration({ token: TOKEN, windowDays: 7 })).resolves.toEqual(A_HASH_REPORT);
+    await expect(fetchHashMigration({ token: TOKEN, windowDays: 7 })).resolves.toEqual(
+      A_HASH_REPORT,
+    );
     expect(seen[0]?.path).toBe(HASH_MIGRATION_PATH);
     expect(seen[0]?.search).toBe("?window_days=7");
   });
@@ -411,9 +418,7 @@ describe("reading second-factor adoption", () => {
   });
 
   it("refuses a factor without its event counts", async () => {
-    stubApi(() =>
-      jsonResponse({ data: { ...AN_MFA_REPORT, factors: [{ factor: "totp" }] } }),
-    );
+    stubApi(() => jsonResponse({ data: { ...AN_MFA_REPORT, factors: [{ factor: "totp" }] } }));
     await expect(fetchMfaAdoption({ token: TOKEN })).rejects.toThrow(MFA_ADOPTION_PATH);
   });
 });
@@ -454,7 +459,9 @@ describe("reading the digest history", () => {
 
   it("keeps the report's text verbatim", async () => {
     const text = "Security digest\n\nNeeds attention\n  - 2 accounts locked\n";
-    stubApi(() => jsonResponse({ data: { runs: [{ ...A_DIGEST_RUN, text }], count: 1, limit: 1 } }));
+    stubApi(() =>
+      jsonResponse({ data: { runs: [{ ...A_DIGEST_RUN, text }], count: 1, limit: 1 } }),
+    );
 
     // The engine rendered this when the run happened. Nothing re-renders it, so
     // the console must not either.

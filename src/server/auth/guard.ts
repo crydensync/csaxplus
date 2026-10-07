@@ -64,7 +64,9 @@ export function withSetCookies(response: Response, cookies: readonly string[]): 
   });
 }
 
-export function sessionFromCookieHeader(header: string | null | undefined): Promise<Session | null> {
+export function sessionFromCookieHeader(
+  header: string | null | undefined,
+): Promise<Session | null> {
   return openSession(parseCookieHeader(header).get(SESSION_COOKIE));
 }
 
@@ -108,7 +110,10 @@ export async function requireSession(request: Request): Promise<Authorized> {
   if (session === null) {
     const response = jsonError(401, ERROR_CODES.unauthenticated, "Sign in to continue.");
     if (presented === undefined) return { ok: false, response };
-    return { ok: false, response: withSetCookies(response, [clearCookie(SESSION_COOKIE, options)]) };
+    return {
+      ok: false,
+      response: withSetCookies(response, [clearCookie(SESSION_COOKIE, options)]),
+    };
   }
 
   if (!accessTokenNeedsRefresh(session)) return granted(session, []);

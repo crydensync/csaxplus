@@ -56,7 +56,10 @@ export function LoginForm() {
     firstField.current?.focus();
   }, [step]);
 
-  async function post(path: string, body: unknown): Promise<{ ok: boolean; payload: unknown; status: number }> {
+  async function post(
+    path: string,
+    body: unknown,
+  ): Promise<{ ok: boolean; payload: unknown; status: number }> {
     const response = await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -86,14 +89,13 @@ export function LoginForm() {
         return;
       }
 
-      const data = (answer.payload as { data?: { secondFactorRequired?: unknown; methods?: unknown } })
-        .data;
+      const data = (
+        answer.payload as { data?: { secondFactorRequired?: unknown; methods?: unknown } }
+      ).data;
 
       if (data?.secondFactorRequired === true) {
         const offered = Array.isArray(data.methods)
-          ? data.methods
-              .map((entry) => String(entry))
-              .filter(isSecondFactorMethod)
+          ? data.methods.map((entry) => String(entry)).filter(isSecondFactorMethod)
           : [];
         setMethods(offered);
         setMethod(offered[0] ?? "totp");
@@ -128,7 +130,8 @@ export function LoginForm() {
       // Dismissed by the operator, or no passkey on this device matches. Either
       // way the API has not been asked anything, so this is not an API failure.
       setFailure({
-        message: "That passkey prompt was dismissed, or this device has no passkey for the account.",
+        message:
+          "That passkey prompt was dismissed, or this device has no passkey for the account.",
         code: "passkey_cancelled",
       });
       return;
@@ -153,8 +156,7 @@ export function LoginForm() {
         return;
       }
 
-      const path =
-        method === "totp" ? "/api/auth/login/totp" : "/api/auth/login/recovery-code";
+      const path = method === "totp" ? "/api/auth/login/totp" : "/api/auth/login/recovery-code";
       const answer = await post(path, { code });
       if (!answer.ok) {
         setFailure(failureFrom(answer.payload, answer.status));

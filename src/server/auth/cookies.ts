@@ -54,11 +54,7 @@ export type CookieAttributes = {
 };
 
 /** One `Set-Cookie` value. Values here are base64url and dots, so nothing is quoted or escaped. */
-export function serializeCookie(
-  name: string,
-  value: string,
-  attributes: CookieAttributes,
-): string {
+export function serializeCookie(name: string, value: string, attributes: CookieAttributes): string {
   const parts = [
     `${name}=${value}`,
     `Path=${attributes.path}`,

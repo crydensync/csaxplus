@@ -3,7 +3,13 @@ import "server-only";
 import { type z } from "zod";
 
 import { clearCookie, parseCookieHeader, serializeCookie } from "./cookies";
-import { PENDING_COOKIE, openPendingLogin, pendingCookieOptions, sealPendingLogin, type PendingLogin } from "./pending";
+import {
+  PENDING_COOKIE,
+  openPendingLogin,
+  pendingCookieOptions,
+  sealPendingLogin,
+  type PendingLogin,
+} from "./pending";
 import { ERROR_CODES, jsonError } from "./response";
 import {
   SESSION_COOKIE,
@@ -89,7 +95,11 @@ export async function readJsonBody<T>(
 }
 
 function tooLarge(): Response {
-  return jsonError(413, ERROR_CODES.payloadTooLarge, "That request was larger than this endpoint accepts.");
+  return jsonError(
+    413,
+    ERROR_CODES.payloadTooLarge,
+    "That request was larger than this endpoint accepts.",
+  );
 }
 
 /** What the browser is told about the signed-in operator. Never a token. */

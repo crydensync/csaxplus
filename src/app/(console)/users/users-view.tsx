@@ -79,11 +79,14 @@ export function UsersView() {
 
     let response: Response;
     try {
-      response = await fetch(search === "" ? "/api/console/users" : `/api/console/users?${search}`, {
-        credentials: "same-origin",
-        headers: { accept: "application/json" },
-        signal: controller.signal,
-      });
+      response = await fetch(
+        search === "" ? "/api/console/users" : `/api/console/users?${search}`,
+        {
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+          signal: controller.signal,
+        },
+      );
     } catch {
       if (controller.signal.aborted) return;
       setLoad({ kind: "failed", failure: CONSOLE_UNREACHABLE });

@@ -33,8 +33,7 @@ import { withRefreshedTokens, type Session } from "./session";
  */
 
 export type SignInOutcome =
-  | { kind: "session"; session: Session }
-  | { kind: "second-factor"; paused: PausedLogin };
+  { kind: "session"; session: Session } | { kind: "second-factor"; paused: PausedLogin };
 
 export type Renewal = { kind: "session"; session: Session } | { kind: "expired" };
 

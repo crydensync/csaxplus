@@ -90,7 +90,13 @@ const DIGEST_TEXT = "Security digest\n\nNothing needs attention.\n";
 /** Answers each of the four admin routes with whatever this test wants it to. */
 function stubApi(
   routes: Partial<
-    Record<typeof USERS_PATH | typeof MFA_ADOPTION_PATH | typeof HASH_MIGRATION_PATH | typeof DIGEST_HISTORY_PATH, () => Response>
+    Record<
+      | typeof USERS_PATH
+      | typeof MFA_ADOPTION_PATH
+      | typeof HASH_MIGRATION_PATH
+      | typeof DIGEST_HISTORY_PATH,
+      () => Response
+    >
   >,
 ): string[] {
   const asked: string[] = [];
@@ -111,7 +117,9 @@ function stubApi(
 
 const ALL_OK = {
   [USERS_PATH]: () =>
-    jsonResponse({ data: { users: ACCOUNTS, total: 41, limit: 5, offset: 0, match: "browse", query: "" } }),
+    jsonResponse({
+      data: { users: ACCOUNTS, total: 41, limit: 5, offset: 0, match: "browse", query: "" },
+    }),
   [MFA_ADOPTION_PATH]: () =>
     jsonResponse({
       data: {
@@ -179,7 +187,10 @@ describe("gathering the dashboard", () => {
     });
     expect(overview.factors.state).toBe("ok");
     expect(overview.hashes.state).toBe("ok");
-    expect(overview.digest).toEqual({ state: "ok", data: expect.objectContaining({ text: DIGEST_TEXT }) });
+    expect(overview.digest).toEqual({
+      state: "ok",
+      data: expect.objectContaining({ text: DIGEST_TEXT }),
+    });
   });
 
   it("takes the account total from the API and the newest page from the same answer", async () => {
@@ -375,8 +386,20 @@ describe("the digest", () => {
         jsonResponse({
           data: {
             runs: [
-              { id: 10, window_start: "a", window_end: "b", generated_at: "2026-10-05T00:00:00Z", text: "newer" },
-              { id: 9, window_start: "a", window_end: "b", generated_at: "2026-10-04T00:00:00Z", text: "older" },
+              {
+                id: 10,
+                window_start: "a",
+                window_end: "b",
+                generated_at: "2026-10-05T00:00:00Z",
+                text: "newer",
+              },
+              {
+                id: 9,
+                window_start: "a",
+                window_end: "b",
+                generated_at: "2026-10-04T00:00:00Z",
+                text: "older",
+              },
             ],
             count: 2,
             limit: 1,

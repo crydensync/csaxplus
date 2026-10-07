@@ -32,7 +32,8 @@ export const API_STATUS_DETAILS: Record<ApiStatus, string> = {
     "The API answered, but not with a healthy status. Treat what this screen shows as possibly stale.",
   fixtures:
     "Serving labelled sample data. Nothing on this screen came from a real API, so no action taken here is real either.",
-  offline: "The console could not reach the CrydenSync API. Nothing was attempted and nothing changed.",
+  offline:
+    "The console could not reach the CrydenSync API. Nothing was attempted and nothing changed.",
 };
 
 export function apiStatusClass(status: ApiStatus): string {

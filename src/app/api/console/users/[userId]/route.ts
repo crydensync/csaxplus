@@ -30,7 +30,11 @@ export async function GET(
   const { userId } = await context.params;
   if (!isUserIdSegment(userId)) {
     return authorized.respond(
-      jsonError(400, ERROR_CODES.invalidRequest, "That is not an account id the console can look up."),
+      jsonError(
+        400,
+        ERROR_CODES.invalidRequest,
+        "That is not an account id the console can look up.",
+      ),
     );
   }
 

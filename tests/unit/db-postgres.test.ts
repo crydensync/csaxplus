@@ -236,10 +236,7 @@ describe("the schema the migrations create on Postgres", () => {
     for (const [key, expected] of Object.entries(pgShape())) {
       const actual = await readTable(store, expected.name);
 
-      expect(
-        actual.columns,
-        `${key}: ${expected.name} columns`,
-      ).toEqual(
+      expect(actual.columns, `${key}: ${expected.name} columns`).toEqual(
         expected.columns.map(({ name, kind, notNull, primaryKey, hasDefault }) => ({
           name,
           kind,
