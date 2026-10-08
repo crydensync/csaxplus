@@ -689,3 +689,49 @@ trap's lifecycle effect runs with a null container, focuses nothing, and never r
 its dependency array has not changed. The first draft of this component used
 `useState`/`useEffect` and focus never entered the panel. `tests/unit/users-view.test.tsx` holds
 focus-in and the focus return on close, so that failure cannot come back quietly.
+
+## D21. Step-up is the console's own, and three things about it are deliberate
+
+**Date:** 2026-10-08
+**Status:** accepted
+
+The API has no step-up check. `POST /v1/login` returns a token and every `/v1/admin/*` route accepts
+it, so there is nothing in the engine that can say "this request needs the person, not just their
+cookie" (BUILD_NOTE section 11.2). The console therefore keeps its own: WebAuthn credentials in the
+console store, a ceremony in `src/server/stepup/`, and a short-lived grant that a gated route
+spends. Three decisions inside that are worth recording, because each has a plausible alternative
+that is worse.
+
+**The session is not the only thing the grant is bound to.** A grant is bound to the operator, to
+the session id, to the purpose, and it is single-use and lives twenty seconds. The session binding
+is the one that could look redundant, since the operator id already scopes it, and it is not: a
+session that has been stolen can be used from anywhere, so a grant that outlived the session it was
+earned in would turn one stolen ceremony into a permanent capability. The purpose binding stops the
+wider permission riding along with the narrower: a grant earned to remove a passkey is refused by
+the route that registers one. Consumption is a single conditional `UPDATE ... RETURNING id` with
+every one of those conditions in the `WHERE`, so two simultaneous requests are decided by the
+database rather than by a lock the console would have to hold.
+
+**The first passkey is not gated, and that is not a hole.** Requiring a grant to register the first
+one would mean the second factor could never be turned on at all, since there is nothing to step up
+with. What the first registration is exempt from is the *grant*, not the permission to change
+something. The route runs the role and CSRF checks either way, and the distinction is load-bearing:
+the first draft put the whole guard behind `held > 0`, which let a `viewer` enrol a passkey, because
+a viewer holds none and so never reached the gate. `tests/unit/stepup-gate.test.ts` holds both
+halves now, and `tests/e2e/step-up.spec.ts` drives the viewer case through the real screen.
+
+**The grant is spent when the options are handed out, not when the authenticator answers.** A
+ceremony is allowed a minute to complete and the grant lives twenty seconds, so a grant held until
+the answer arrived would usually have expired before it was needed. Spending it at the start is
+sound because the challenge that ties the two requests together is only ever issued from inside the
+gated route: an answer cannot exist without having come through the gate.
+
+Two smaller things follow from the same reasoning. The ceremony's options are refused to an operator
+who holds no passkey at all, with `step_up_unavailable` rather than a generic failure, because "you
+have nothing to confirm with yet" is a different situation from "that did not work" and the screen
+says so. And `InvalidStateError` is reported as its own message rather than folded in with a
+cancellation: a platform authenticator refuses to enrol the same account twice, so the fix is
+another device or removing the key that is already there, and telling the operator they cancelled
+would send them round again to fail identically. The end-to-end test found that one, by trying to
+register two passkeys on one authenticator and getting a sentence that did not describe what
+happened.

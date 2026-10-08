@@ -150,6 +150,20 @@ test.describe("guide screenshots", () => {
       animations: "disabled",
     });
 
+    // The operator's own screen, and the only one in the console reached from
+    // something other than the sidebar's list of screens: the chip at its foot.
+    // Its list is read after hydration like the two above, so it gets the same
+    // wait. Shot with a minted cookie it shows the empty state, which is the
+    // state a deployment is in until somebody enrols their first passkey.
+    await page.goto("/account");
+    await settle(page);
+    await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
+    await expect(page.locator(".skeleton")).toHaveCount(0, { timeout: 60_000 });
+    await page.screenshot({
+      path: `${OUTPUT}/console-account.png`,
+      animations: "disabled",
+    });
+
     // A screen the sidebar links to but no tier has built. The image is of the
     // gap, stated plainly, which is what a reader of the guide should see.
     await page.goto("/mfa");

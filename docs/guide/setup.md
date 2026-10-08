@@ -83,6 +83,10 @@ get.
    handlers refuse a request whose `Origin` is not the configured one. Browsing to the other name
    is a refused sign-in rather than a convenience, because that is what WebAuthn requires.
 5. `pnpm dev`, then sign in with that operator's address and password.
+6. **Enrol a passkey.** Click the operator chip at the foot of the sidebar, which is the way to your
+   account, and add one there. The first passkey needs no confirmation; every one after it, and
+   every removal, asks you to confirm with a passkey you already hold. Enrol a second one from a
+   second device while you still can: see [losing a passkey](secrets-and-passkeys.md#losing-a-passkey).
 
 ## The console's own store
 

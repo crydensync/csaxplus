@@ -17,6 +17,14 @@ test.describe("sign-in", () => {
     // Two of the routes under the console group, one of them added after the
     // guard was: the check lives in the group's layout, so every screen in it is
     // behind the gate rather than each screen remembering to be.
+    //
+    // Signed out, neither route renders anything: the layout redirects before a
+    // screen is reached. What this test still pays for is each route's first
+    // compile in the development server, and a screen's worth of modules has
+    // taken over thirty seconds here. The same allowance the landing page's
+    // redirect test takes, for the same reason.
+    test.slow();
+
     for (const route of ["/dashboard", "/users"]) {
       await page.goto(route);
       await expect(page).toHaveURL(/\/login$/);
@@ -80,6 +88,13 @@ test.describe("sign-in", () => {
 
   test("every control is reachable by keyboard and shows a focus ring", async ({ page }) => {
     await page.goto("/login");
+
+    // Where this test starts tabbing depends on the screen having focused its
+    // first field, which it does in an effect once it is interactive. Tabbing
+    // before that starts from the document body, and the first Tab lands on the
+    // email field rather than on the password, so the order is asserted first
+    // rather than assumed. The test above pins the same behaviour on its own.
+    await expect(page.getByLabel("Email")).toBeFocused();
 
     // Tab order follows the reading order: email, password, submit.
     await page.keyboard.press("Tab");

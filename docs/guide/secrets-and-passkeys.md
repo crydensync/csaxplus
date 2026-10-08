@@ -1,8 +1,10 @@
 # Secrets, biometric unlock, and the read-only guarantee
 
-> **Status: designed, not built.** The vault, the step-up ceremony and the AI layer arrive in tiers 4
-> and 5. This page is the design, written down before the code so it can be argued with cheaply.
-> The parts that exist today are marked as such.
+> **Status: mostly designed, not built.** The vault and the AI layer arrive in tiers 4 and 5. The
+> step-up ceremony itself exists as of step 1.2b, where it gates enrolling and removing an
+> operator's own passkeys; what is still design rather than code is the vault behind it and the
+> reveal it protects. This page is the design, written down before the code so it can be argued with
+> cheaply. The parts that exist today are marked as such.
 
 Two things are true of everything below:
 

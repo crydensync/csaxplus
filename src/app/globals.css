@@ -235,12 +235,34 @@ nav.primary {
   border-top: 1px solid var(--border-soft);
   flex-shrink: 0;
 }
+/* A link, not a label: this is the way to the Account screen. It keeps the look
+   of a chip so it still reads as "who is signed in", and picks up the same hover
+   and current-page treatment as the nav items, so the operator can tell it is
+   somewhere to go and can see when they are there. */
 .operator-chip {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 8px 10px;
   border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.operator-chip:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.operator-chip.active {
+  background: var(--surface-2);
+  border-color: var(--violet);
+}
+.operator-chip:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
 }
 .avatar {
   width: 26px;
@@ -2841,4 +2863,45 @@ textarea.text-input {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 14px;
+}
+
+/* ---------- the Account screen ---------- */
+
+.passkey-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.passkey-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.passkey-list > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.passkey-list b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.passkey-list .hint {
+  display: block;
+  margin-top: 2px;
+}
+
+.passkey-add {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.passkey-add .field-group {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
 }

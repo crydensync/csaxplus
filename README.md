@@ -137,7 +137,7 @@ Three statuses, and they mean exactly this:
 | Admin reports | done | the four `/v1/admin` reads the dashboard needs, each parsed with zod before it is used |
 | Design system | done | the prototype's tokens and components, ported to React |
 | Landing page | done | static, and its claims are generated from the console's own navigation |
-| Operator passkeys and step-up unlock | planned | tier 5, step 5.1 |
+| Operator passkeys and step-up unlock | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the first passkey needs no step-up, every one after and every removal does |
 | Secrets vault | planned | tier 5, step 5.2 |
 | Hardening and deployment | planned | tier 5, steps 5.5 and 5.6 |
 
@@ -174,6 +174,12 @@ Several of those need endpoints the API does not have yet. Every one is listed i
 whose endpoint is missing shows a specific "not available in this deployment" state rather than an
 empty table.
 
+One screen is not in the table, because it is not in the sidebar's groups. **Account** (`/account`)
+manages the operator's own step-up passkeys, and it is reached by clicking the operator chip at the
+foot of the sidebar, the one already showing their address and role. It is left out of the
+navigation on purpose: this page's console map is generated from that same list, so a screen added
+to the sidebar would change what the landing page claims the console is.
+
 **No endpoint is faked.** Where the API cannot answer, the console says so. Where a screen cannot
 be built at all yet, its route renders the "not built yet" page shown below.
 
@@ -193,8 +199,8 @@ never rewrites a committed image.
 | Operator sign-in. A second factor, when the account has one, is asked for on the next step. | The dashboard against a real API: the tag reads `api-client`, the numbers are that deployment's own, and the digest says plainly that no schedule is configured. |
 | ![The Users screen](docs/guide/screenshots/console-users.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
 | Users, against the same deployment, photographed through its own search: one exact address, the row that matched, and the API's own match mode named below the table. | Every screen that is still planned says so, and names its own route. |
-| ![The design system gallery](docs/guide/screenshots/design-system.png) | |
-| `/design`, the dev-only component gallery. It 404s in a production build. | |
+| ![The design system gallery](docs/guide/screenshots/design-system.png) | ![The Account screen](docs/guide/screenshots/console-account.png) |
+| `/design`, the dev-only component gallery. It 404s in a production build. | The operator's own screen, reached from the chip at the foot of the sidebar: the passkeys that confirm it is them. |
 
 The console screenshots are taken from a real sign-in: `pnpm screenshots` signs in with
 `CSAX_SCREENSHOT_EMAIL` and `CSAX_SCREENSHOT_PASSWORD`, read from the environment or the gitignored
@@ -202,6 +208,11 @@ The console screenshots are taken from a real sign-in: `pnpm screenshots` signs 
 written into a script. Without those variables it falls back to a session minted in the console's
 own cookie format, whose API tokens are placeholders: that still photographs a signed-in shell, with
 every API-backed report showing the state an unreachable API produces.
+
+**Run it with the credentials or not at all.** The fallback rewrites the same files as the real
+sign-in, so running it without them replaces the dashboard and Users images with those failure
+states and commits a worse picture of a working console. `git diff` on
+`docs/guide/screenshots/` before committing a run is the cheap check.
 
 The Users shot is narrowed with the screen's own search to the account the run signed in as. The
 list is every account the deployment holds, and a guide image should not publish the addresses of

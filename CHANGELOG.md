@@ -49,9 +49,56 @@ at `v0.1.0` (BUILD_NOTE section 6).
 - **An honest search.** The API's `email` parameter is an exact, case-sensitive match, so the pager
   names the mode the API reported and a miss is worded as a search that found nothing rather than as
   an account that is gone.
+- **Step-up passkeys, and the Account screen that manages them.** The API has no step-up check, so
+  the console keeps its own: WebAuthn credentials in the console store, a ceremony, and a
+  short-lived single-use grant that a gated route spends. `/account` lists the operator's passkeys
+  and registers and removes them; the first passkey needs no step-up, because there would be nothing
+  to step up with, and every one after that and every removal does. The screen is reached from the
+  operator chip at the foot of the sidebar rather than from a nav item, so the sidebar keeps the 21
+  screens the landing page reports. See DECISIONS.md D21.
+- **Five console routes behind it**: `POST /api/console/passkeys/options` and `GET`/`POST
+  /api/console/passkeys`, `DELETE /api/console/passkeys/{id}`, and `POST
+  /api/console/step-up/options` and `/verify`. A removal that would leave the operator with none is
+  refused with a conflict rather than a 404, and the screen disables the control that would ask for
+  it.
+- **The console store's first repositories.** Passkeys, challenges and grants, written once and run
+  on both engines, with `tests/unit/store-repositories.test.ts` executing the same suite against
+  SQLite and against Postgres through PGlite. Nothing had queried the console store before this
+  step.
+- **An end-to-end test that drives a real ceremony.** `tests/e2e/step-up.spec.ts` attaches
+  Chromium's virtual authenticator over CDP, so the WebAuthn calls are real: the test registers two
+  passkeys on two devices, asserts that the second one really did go through a step-up request
+  rather than quietly succeeding, removes one, and checks the last-one refusal. It signs in by
+  minting the console's own sealed cookie from `.env`, since the sign-in screen needs an API that
+  cannot be reached from a test.
+
+### Fixed
+
+- **Every call the Account screen makes now carries the session's CSRF token.** `src/lib/stepup.ts`
+  reached the four routes that run the mutation guard without the `x-csrf-token` header, so every
+  gated call would have been refused with "your session token is missing or stale" and the feature
+  would not have worked at all. The unit tests call the route handlers directly with hand-built
+  requests and passed throughout; the end-to-end test is what found it. The header name now lives in
+  `src/lib/csrf-header.ts`, imported by both halves, rather than being spelled out in each.
+
+- **Registering a passkey no longer lets a viewer through.** The role and CSRF checks sat behind
+  `held > 0`, on the reasoning that the first passkey has nothing to step up with. The grant is what
+  the first passkey is exempt from, not the permission: a viewer holds no passkey, so a viewer never
+  reached the checks and could enrol one. The guard is now split, and
+  `tests/unit/stepup-gate.test.ts` holds both the ungated role check and the ungated origin check.
+
+- **A passkey registration that the authenticator refuses to duplicate says so.** A platform
+  authenticator holds one credential per account and raises `InvalidStateError` rather than
+  enrolling the same account twice. The client counted that as a cancellation and told the operator
+  "that was cancelled, so no passkey was added", which is the opposite of what happened and would
+  have sent them round again to fail identically.
 
 ### Changed
 
+- **The way to the Account screen is the sidebar's operator chip, not a topbar button.** The chip
+  already shows the address and the role; making it the link to the screen that manages the session
+  puts the two facts and the place they are acted on together, and leaves the topbar's actions for
+  things that act on the screen in front of you.
 - **The whole tree is formatted with Prettier.** `pnpm format:check` had been failing on 21 files,
   and nothing noticed because the verification gate is lint, typecheck and test: `format:check` was
   never in the loop, and the step 5.6 CI would have been the first thing to run it. The drift is old

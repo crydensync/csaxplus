@@ -3,6 +3,8 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { getConfig } from "../config";
+import { getConsoleStore } from "../db/index";
+import { consumeGrant, type StepUpPurpose } from "../store/grants";
 import { checkOrigin, csrfTokensMatch, CSRF_HEADER } from "./csrf";
 import { clearCookie, parseCookieHeader, serializeCookie } from "./cookies";
 import { responseForFailure } from "./failures";
@@ -185,6 +187,37 @@ async function csrfOn(authorized: Extract<Authorized, { ok: true }>, request: Re
 }
 
 /**
+ * The role and CSRF checks, on a session already in hand.
+ *
+ * Split out from `requireSession` because `requireStepUp` needs the same checks
+ * on a session the caller has already opened. Opening it twice is not merely
+ * wasteful: renewal rotates the API's refresh token, and two renewals from the
+ * same presented cookie would have the second present a token the first had
+ * already spent.
+ *
+ * Exported as `requireMutationOn` because a route can need these checks without
+ * a grant. Registering a *first* passkey is the one that does: the grant is what
+ * it is exempt from, not the permission to change something, and a viewer must
+ * be refused whether or not they hold a key already.
+ */
+async function mutationOn(
+  authorized: Extract<Authorized, { ok: true }>,
+  request: Request,
+): Promise<Authorized> {
+  if (!mayMutate(authorized.role)) {
+    return {
+      ok: false,
+      response: authorized.respond(
+        jsonError(403, ERROR_CODES.forbidden, "Your role can read, not change."),
+      ),
+    };
+  }
+  return csrfOn(authorized, request);
+}
+
+export { mutationOn as requireMutationOn };
+
+/**
  * Requires a signed-in operator whose role may change something.
  *
  * The order matters: the session first, so an anonymous request is told to sign
@@ -194,17 +227,7 @@ async function csrfOn(authorized: Extract<Authorized, { ok: true }>, request: Re
 export async function requireMutation(request: Request): Promise<Authorized> {
   const authorized = await requireSession(request);
   if (!authorized.ok) return authorized;
-
-  if (!mayMutate(authorized.role)) {
-    return {
-      ok: false,
-      response: authorized.respond(
-        jsonError(403, ERROR_CODES.forbidden, "Your role can read, not change."),
-      ),
-    };
-  }
-
-  return csrfOn(authorized, request);
+  return mutationOn(authorized, request);
 }
 
 /**
@@ -250,4 +273,63 @@ export async function requireAdmin(request: Request): Promise<Authorized> {
     };
   }
   return authorized;
+}
+
+/**
+ * Where a step-up grant travels. A header rather than a body field, because the
+ * delete that removes a passkey has no body to put it in.
+ *
+ * It doubles as a CSRF defence, and not by accident: a browser will not let a
+ * page add a header to a cross-origin request without asking this console first,
+ * so a request carrying one has already been somewhere the console agreed to.
+ * The origin and CSRF checks below run anyway rather than resting on that.
+ */
+export const STEP_UP_HEADER = "x-csax-stepup";
+
+/**
+ * Requires a live step-up grant for one named purpose, and spends it.
+ *
+ * A session says who signed in; it does not say that the person is still there.
+ * Removing a second factor, or adding another one, is the kind of change worth
+ * asking a key for, so those routes come through here rather than through
+ * `requireMutation` alone.
+ *
+ * The grant is spent on the attempt rather than on its success. A ceremony that
+ * turned out to be for the wrong thing has still been used, and letting a failed
+ * attempt be retried on the same grant would mean the grant outlives the single
+ * use it was issued for.
+ *
+ * The whole chain runs in order: a role that may change something, then the
+ * origin and CSRF pair, and only then the grant. The caller has already opened
+ * the session and passes it in, for the reason `mutationOn` gives.
+ */
+export async function requireStepUp(
+  authorized: Extract<Authorized, { ok: true }>,
+  request: Request,
+  purpose: StepUpPurpose,
+): Promise<Authorized> {
+  const gated = await mutationOn(authorized, request);
+  if (!gated.ok) return gated;
+
+  const grantId = request.headers.get(STEP_UP_HEADER);
+  const spent =
+    grantId !== null &&
+    (await consumeGrant(getConsoleStore().driver, {
+      id: grantId,
+      operatorId: gated.session.operator.id,
+      sessionId: gated.session.sid,
+      purpose,
+      now: new Date(),
+    }));
+
+  if (!spent) {
+    return {
+      ok: false,
+      response: gated.respond(
+        jsonError(403, ERROR_CODES.stepUpRequired, "Confirm it is you before doing this."),
+      ),
+    };
+  }
+
+  return gated;
 }

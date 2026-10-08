@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/Button";
+import { CSRF_HEADER } from "@/lib/csrf-header";
 
 /**
  * Ends the session.
@@ -31,7 +32,7 @@ export function SignOutButton({ csrf }: { csrf: string }) {
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-csrf-token": csrf },
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
         body: JSON.stringify({}),
         credentials: "same-origin",
       });

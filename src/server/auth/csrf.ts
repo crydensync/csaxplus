@@ -1,5 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { CSRF_HEADER } from "@/lib/csrf-header";
+
 /**
  * CSRF defence for the console's own mutation endpoints.
  *
@@ -16,8 +18,14 @@ import { timingSafeEqual } from "node:crypto";
  * from being the only defence, and this is cheap.
  */
 
-/** Header the browser must echo the session's CSRF value in. */
-export const CSRF_HEADER = "x-csrf-token";
+/**
+ * Header the browser must echo the session's CSRF value in.
+ *
+ * Defined in `src/lib/csrf-header.ts`, which the browser half of the console
+ * imports too, so the name the server reads and the name the client writes are
+ * the same string rather than two that agree by convention.
+ */
+export { CSRF_HEADER };
 
 const TOKEN_BYTES = 32;
 

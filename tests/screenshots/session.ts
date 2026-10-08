@@ -1,19 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { EncryptJWT } from "jose";
+import { sealConsoleSession, sessionSecret, SESSION_COOKIE } from "../support/console-cookie";
 
 /**
  * Mints a session cookie for the screenshot run, so the console can be
  * photographed without a CrydenSync API to sign in against.
  *
- * This is the console's own cookie format, reproduced: `sealed.ts` writes an
- * `EncryptJWT` with `alg: dir`, `enc: A256GCM`, issuer `csaxplus`, audience
- * `csaxplus.console`, keyed by `CSAX_SESSION_SECRET`. The key is read from the
- * checkout's gitignored `.env.local`, never written down here and never
- * printed.
+ * The cookie format lives in `tests/support/console-cookie.ts`, which the e2e
+ * session helper uses too, so the console's own sealing is reproduced in exactly
+ * one place for tests. Read that file's header before changing anything about
+ * it.
  *
- * What it produces is a *signed-in shell* and nothing more. The API tokens it
+ * What this produces is a *signed-in shell* and nothing more. The API tokens it
  * carries are placeholders, so any screen whose data comes from the API shows
  * the state it would show a real operator when the API is unreachable. With the
  * live adapter selected that is a coherent picture: the topbar tag reads
@@ -24,13 +23,13 @@ import { EncryptJWT } from "jose";
  * while the dashboard still reported the API as unreachable, which is two
  * answers to one question.
  *
- * When `.env.local` has no `CSAX_SESSION_SECRET`, the console shots are skipped
+ * When there is no usable `CSAX_SESSION_SECRET`, the console shots are skipped
  * with a printed reason rather than failing the run: a fresh clone has no
  * secret, and a documentation script should not be the thing that stops
- * somebody reading the guide.
+ * somebody reading the guide. That is the one way this differs from the e2e
+ * helper, which throws instead, because an end-to-end test that silently did not
+ * run would be worse than one that failed.
  */
-
-export const SESSION_COOKIE = "csax_session";
 
 /** The operator the screenshots show. A reserved domain, so it reads as sample data. */
 export const SAMPLE_OPERATOR = {
@@ -39,76 +38,51 @@ export const SAMPLE_OPERATOR = {
   role: "admin",
 } as const;
 
-function parseEnvFile(text: string): Map<string, string> {
-  const values = new Map<string, string>();
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed === "" || trimmed.startsWith("#")) continue;
-
-    const separator = trimmed.indexOf("=");
-    if (separator === -1) continue;
-
-    const name = trimmed.slice(0, separator).trim();
-    let value = trimmed.slice(separator + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (name !== "") values.set(name, value);
-  }
-  return values;
-}
-
 /** A name from the environment, then from `.env.local`. Undefined when neither has it. */
 export function localSetting(name: string): string | undefined {
   const fromEnvironment = process.env[name];
   if (fromEnvironment !== undefined && fromEnvironment !== "") return fromEnvironment;
 
   try {
-    const file = readFileSync(path.join(process.cwd(), ".env.local"), "utf8");
-    const value = parseEnvFile(file).get(name);
-    return value === undefined || value === "" ? undefined : value;
+    const contents = readFileSync(path.join(process.cwd(), ".env.local"), "utf8");
+    for (const line of contents.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed === "" || trimmed.startsWith("#")) continue;
+
+      const separator = trimmed.indexOf("=");
+      if (separator === -1) continue;
+
+      if (trimmed.slice(0, separator).trim() !== name) continue;
+
+      let value = trimmed.slice(separator + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      return value === "" ? undefined : value;
+    }
   } catch {
     return undefined;
   }
+  return undefined;
 }
 
 /** The cookie the browser context should present, or null when it cannot be minted. */
 export async function mintSessionCookie(): Promise<{ name: string; value: string } | null> {
-  const secret = localSetting("CSAX_SESSION_SECRET");
-  if (secret === undefined) return null;
+  if (sessionSecret() === null) return null;
 
-  let key: Buffer;
-  try {
-    key = Buffer.from(secret, "base64");
-  } catch {
-    return null;
-  }
-  if (key.length !== 32) return null;
-
-  const session = {
+  const value = await sealConsoleSession({
     sid: "screenshot-session",
-    // `POST /v1/login` does not return the session it created, so the console
-    // records null when it could not read the list. See BACKEND_GAPS 4.1.
-    apiSessionId: null,
     operator: SAMPLE_OPERATOR,
-    api: {
-      accessToken: "placeholder-not-a-token",
-      refreshToken: "placeholder-not-a-token",
-      expiresAt: Date.now() + 60 * 60 * 1000,
-    },
+    // Fixed rather than random: a screenshot makes no mutation, and a constant
+    // here means a regenerated image differs only where the console differs.
     csrf: "screenshot-csrf-value",
-  };
-
-  const value = await new EncryptJWT({ value: session })
-    .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
-    .setIssuer("csaxplus")
-    .setAudience("csaxplus.console")
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .encrypt(key);
+    // An hour, not the console's eight: a capture run is minutes, and a shorter
+    // life is one less thing to wonder about if an old cookie is ever reused.
+    ttlSeconds: 60 * 60,
+  });
 
   return { name: SESSION_COOKIE, value };
 }

@@ -79,7 +79,19 @@ export function Sidebar({ open, onNavigate, badges, operator }: SidebarProps) {
       </div>
 
       <div className="sidebar-footer">
-        <div className="operator-chip">
+        {/* The way to the Account screen. It is the chip rather than a nav item
+            because it is already the answer to "who is signed in, and as what",
+            and the Account screen is where those two facts are acted on. It is
+            not in `NAV_GROUPS` for the reason the Account page gives: the
+            sidebar's length is what the landing page reports as the console's
+            screen count, and this is not one of the deployment's screens. */}
+        <Link
+          className={isActivePath(pathname, "/account") ? "operator-chip active" : "operator-chip"}
+          href="/account"
+          aria-current={isActivePath(pathname, "/account") ? "page" : undefined}
+          title="Your account and passkeys"
+          onClick={onNavigate}
+        >
           <div className="avatar" aria-hidden="true">
             {operator.initials}
           </div>
@@ -87,7 +99,7 @@ export function Sidebar({ open, onNavigate, badges, operator }: SidebarProps) {
             <b title={operator.name}>{operator.name}</b>
             <span>{operator.roleLabel}</span>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );
