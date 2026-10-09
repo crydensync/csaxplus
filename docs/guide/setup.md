@@ -84,15 +84,17 @@ get.
    is a refused sign-in rather than a convenience, because that is what WebAuthn requires.
 5. `pnpm dev`, then sign in with that operator's address and password.
 6. **Enrol a passkey.** Click the operator chip at the foot of the sidebar, which is the way to your
-   account, and add one there. The first passkey needs no confirmation; every one after it, and
-   every removal, asks you to confirm with a passkey you already hold. Enrol a second one from a
-   second device while you still can: see [losing a passkey](secrets-and-passkeys.md#losing-a-passkey).
+   account, and add one there. It is registered on your account at the API, so it is the same
+   passkey that account uses to sign in anywhere else, not only here. Add a second one from a
+   second device while you still can: see
+   [losing a passkey](secrets-and-passkeys.md#losing-a-passkey). Removing one asks for your
+   password, which is the API re-confirming it is you.
 
 ## The console's own store
 
-The console keeps a small database of its own: step-up passkeys, vault secrets, console audit
-entries and UI preferences. It is **not** the engine's database and must not share credentials with
-it.
+The console keeps a small database of its own: vault secrets, console audit entries and UI
+preferences. It is **not** the engine's database and must not share credentials with it. Operator
+passkeys are not in it: they belong to the operator's account at the API.
 
 Pick one:
 
@@ -195,6 +197,8 @@ They are two answers to the same question and the console will not guess which y
   its own database is not. Sign-in will fail until that is fixed.
 - **The sign-in is refused with an origin error.** You are browsing a different name for the same
   server than `WEBAUTHN_ORIGIN` says. Use the configured one.
-- **A passkey prompt never appears.** The ceremony needs a secure context: HTTPS, or `localhost`
+- **A passkey prompt never appears.** WebAuthn needs a secure context: HTTPS, or `localhost`
   exactly. `127.0.0.1` counts as a secure context in browsers, but here it is a different origin
-  from the configured one, so the first bullet applies instead.
+  from the configured one, so the first bullet applies instead. If the origin is right, check the
+  API's own relying-party settings: it decides `WEBAUTHN_RP_ID` and which origins it accepts, and a
+  passkey ceremony cannot run on an origin the API does not list.

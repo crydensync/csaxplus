@@ -95,6 +95,19 @@ at `v0.1.0` (BUILD_NOTE section 6).
 
 ### Changed
 
+- **Operator passkeys are the account's at the API, not the console's.** The step-up machinery the
+  step above built (its own credential store, its own ceremony, its own short-lived grants) is gone.
+  `/account` now reads `/v1/passkeys` and relays the API's own registration ceremony:
+  `POST /api/console/passkeys/options` hands back the API's creation options and its ceremony token,
+  `POST /api/console/passkeys` forwards what the authenticator produced, and
+  `DELETE /api/console/passkeys/{credentialId}` removes one. A passkey here is therefore the same
+  credential that account signs in with everywhere else, rather than one that dies with this console.
+  Removal asks for the operator's current password, because that is what the API requires as
+  re-confirmation, so the "confirm with a passkey you already hold" copy and the last-one refusal are
+  both gone. The API wraps its creation options in `publicKey`, which the console unwraps before
+  handing them to the browser, and a credential id is base64 with padding, so its `=` is escaped as a
+  path segment. See DECISIONS.md D21.
+
 - **The way to the Account screen is the sidebar's operator chip, not a topbar button.** The chip
   already shows the address and the role; making it the link to the screen that manages the session
   puts the two facts and the place they are acted on together, and leaves the topbar's actions for
@@ -114,6 +127,18 @@ at `v0.1.0` (BUILD_NOTE section 6).
   so the assertion's own timeout was unreachable and a slow recompile lost the race instead of being
   waited out. The test is now marked slow, which gives it 90 seconds, and was seen passing at 24
   seconds on a cold server.
+
+### Removed
+
+- **The console's own step-up, and the store tables behind it.** `src/server/stepup/*`,
+  `src/server/store/{challenges,grants,passkeys,support}.ts`, `src/lib/stepup.ts`, the
+  `/api/console/step-up/*` routes and the third e2e test that drove the ceremony are deleted, and
+  migration `0002` drops `webauthn_challenges`, `operator_passkeys` and `step_up_grants` from both
+  engines. `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_NAME` are no longer configuration: the relying party is
+  the API's, and the console keeps `WEBAUTHN_ORIGIN` for its own mutation check. A local `.env` may
+  still list the two removed keys; they are ignored rather than a boot error, so the value has to be
+  removed by hand when convenient. Any passkey enrolled through the console during step 1.2b testing
+  is dropped with the table; it was already unusable, because the screen stopped reading it.
 
 ## [0.0.2] - 2026-10-04
 

@@ -1,38 +1,28 @@
 import { z } from "zod";
 
-import { requireSession } from "@/server/auth/guard";
-import { ERROR_CODES, jsonError, jsonOk } from "@/server/auth/response";
+import { responseForFailure } from "@/server/auth/failures";
+import { requireMutation, requireSession } from "@/server/auth/guard";
+import { jsonOk } from "@/server/auth/response";
 import { readJsonBody } from "@/server/auth/routes";
-import { getConsoleStore } from "@/server/db/index";
-import { listPasskeys } from "@/server/store/passkeys";
-import { registrationResponseSchema, toRegistrationResponse } from "@/server/stepup/bodies";
-import { finishRegistration } from "@/server/stepup/ceremonies";
-import { responseForCeremony } from "@/server/stepup/failures";
-import { passkeySummary } from "@/server/stepup/summary";
+import { fetchPasskeys, finishRegistration } from "@/server/cryden/passkeys";
 
 /**
- * `GET /api/console/passkeys`: the step-up passkeys the signed-in operator has
- * registered with this console.
+ * `GET /api/console/passkeys`: the passkeys the signed-in operator holds at the
+ * API.
  *
- * Scoped to the session's own operator and to nothing else. There is no route
- * that lists another operator's passkeys, because there is nothing the console
- * would do with them: these are a second factor for one person's own session.
+ * The credential belongs to the operator's API account, not to this console. The
+ * API's token says whose list this is, so nothing here names an account and there
+ * is no way to ask for anyone else's. Every other console screen that reads the
+ * API does the same thing for the same reason.
  *
- * `POST /api/console/passkeys`: the authenticator's answer to a registration,
- * stored.
+ * `POST /api/console/passkeys`: the authenticator's answer to an enrolment, sent
+ * on to the API to be verified.
  *
- * No step-up of its own, and none is needed: the challenge this spends is only
- * ever issued by `passkeys/options`, which is where the gate is. The role check
- * is there too, and for the same reason: an operator who may not change anything
- * is refused before they are ever handed a challenge, so there is none for this
- * route to have to re-check.
- *
- * Both answers come through `requireSession` rather than `requireMutation`. The
- * read is a read. The write completes a ceremony that was already authorised,
- * and its body is the authenticator's rather than a form's: a challenge issued
- * to one session cannot be answered from another, and an authenticator signs
- * over the origin it was invoked on, so the checks the mutation guard would add
- * are ones the ceremony already makes.
+ * The write goes through `requireMutation`, so it is refused for a viewer and for
+ * a request without the session's CSRF token, exactly as every other change the
+ * console makes is. The enrolment is no longer the console's own ceremony, so
+ * there is no longer a reason to exempt it: the ceremony token that ties the two
+ * halves together is the API's, and the console only carries it.
  */
 
 export const dynamic = "force-dynamic";
@@ -41,39 +31,53 @@ export async function GET(request: Request): Promise<Response> {
   const authorized = await requireSession(request);
   if (!authorized.ok) return authorized.response;
 
-  const held = await listPasskeys(getConsoleStore().driver, authorized.session.operator.id);
-
-  return authorized.respond(jsonOk({ passkeys: held.map(passkeySummary) }));
+  try {
+    const passkeys = await fetchPasskeys({ token: authorized.session.api.accessToken });
+    return authorized.respond(jsonOk({ passkeys }));
+  } catch (error) {
+    // The API's own code and wording, passed through. The screen switches on the
+    // code, so a deployment with no passkey store configured reads differently
+    // from one that refused the token.
+    return authorized.respond(responseForFailure(error));
+  }
 }
 
 const bodySchema = z.object({
-  challengeId: z.uuid(),
+  /**
+   * Opaque to the console. It is the API's own ceremony token, carried back
+   * unread, which is what the API requires of it. Only its presence matters here.
+   */
+  ceremonyToken: z.string().min(1).max(4096),
   /** What the operator called this key. Shown back to them, so it is bounded. */
-  deviceName: z.string().trim().min(1).max(64),
-  response: registrationResponseSchema,
+  nickname: z.string().trim().min(1).max(64),
+  /**
+   * The browser's `RegistrationResponseJSON`, forwarded as produced. Checked only
+   * for being an object: the engine verifies it against the ceremony, and that
+   * verification is the only check that decides anything.
+   */
+  credential: z.record(z.string(), z.unknown()),
 });
 
 export async function POST(request: Request): Promise<Response> {
-  const authorized = await requireSession(request);
+  const authorized = await requireMutation(request);
   if (!authorized.ok) return authorized.response;
 
   const body = await readJsonBody(request, bodySchema);
   if (!body.ok) return authorized.respond(body.response);
 
   try {
-    const passkey = await finishRegistration(getConsoleStore().driver, {
-      operatorId: authorized.session.operator.id,
-      challengeId: body.value.challengeId,
-      response: toRegistrationResponse(body.value.response),
-      deviceName: body.value.deviceName,
-      at: new Date(),
+    await finishRegistration({
+      token: authorized.session.api.accessToken,
+      ceremonyToken: body.value.ceremonyToken,
+      credential: body.value.credential,
+      nickname: body.value.nickname,
     });
-    return authorized.respond(jsonOk({ passkey: passkeySummary(passkey) }));
   } catch (error) {
-    const refusal = responseForCeremony(error);
-    if (refusal !== null) return authorized.respond(refusal);
-    return authorized.respond(
-      jsonError(500, ERROR_CODES.internal, "The console could not store that passkey."),
-    );
+    return authorized.respond(responseForFailure(error));
   }
+
+  // The API's own answer is `{"status": "passkey registered"}`, which is not
+  // relayed: the screen re-reads the list afterwards, so what it shows is what the
+  // API holds rather than what one response claimed.
+  return authorized.respond(jsonOk({ enrolled: true }));
 }

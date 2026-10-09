@@ -693,7 +693,7 @@ focus-in and the focus return on close, so that failure cannot come back quietly
 ## D21. Step-up is the console's own, and three things about it are deliberate
 
 **Date:** 2026-10-08
-**Status:** accepted
+**Status:** superseded by [D22](#d22-operator-passkeys-move-to-the-account-at-the-api)
 
 The API has no step-up check. `POST /v1/login` returns a token and every `/v1/admin/*` route accepts
 it, so there is nothing in the engine that can say "this request needs the person, not just their
@@ -735,3 +735,45 @@ another device or removing the key that is already there, and telling the operat
 would send them round again to fail identically. The end-to-end test found that one, by trying to
 register two passkeys on one authenticator and getting a sentence that did not describe what
 happened.
+
+## D22. Operator passkeys move to the account at the API
+
+**Date:** 2026-10-09
+**Status:** accepted, supersedes [D21](#d21-step-up-is-the-consoles-own-and-three-things-about-it-are-deliberate)
+
+The API has `/v1/passkeys`, `/v1/passkeys/register/begin` and `/v1/passkeys/register/finish`, all of
+them caller-scoped rather than admin-scoped. A credential enrolled there belongs to the operator's
+account, so it is the same passkey that account signs in with everywhere else. D21's store gave the
+console a second, private set of credentials that existed only for this deployment and died with
+it, which is a worse answer to the same question, so it is gone: `src/server/stepup/`,
+`src/server/store/{challenges,grants,passkeys,support}.ts`, `src/lib/stepup.ts`, the
+`/api/console/step-up/*` routes and the `tests/e2e/step-up.spec.ts` that drove them are deleted, and
+migration `0002` drops the three tables on both engines.
+
+What survives is the reading of the API that the console relays, and two details in it are the
+whole risk surface:
+
+**The API wraps its creation options in `publicKey`, and the browser must not see the wrapper.**
+cryden marshals a `*protocol.CredentialCreation`, whose single field is `publicKey`; SimpleWebAuthn's
+`startRegistration` wants the object *inside* it. Handing it the wrapper does not fail at a type or
+at a route, it fails in the browser with an error that names neither the console nor the API, which
+is exactly the class of defect worth an explicit unwrap and a test that asserts the inner object.
+
+**A credential id is base64url with padding, so `=` is part of the value.** cryden encodes with
+`base64.URLEncoding`, and a path segment that lost its padding names a different credential. The id
+is escaped on the way out and validated against a segment grammar before it is used, so a value that
+would change the path's shape is refused with `invalid_request` rather than reaching the API.
+
+The rest of the design follows from the API being the authority. Removal requires the operator's
+current password because that is what the API requires as re-confirmation, so the removal modal asks
+for one and the last-one refusal is gone, since the API does not enforce a floor. Registration is not
+gated by a grant, because there is no grant: the API's own authentication is the gate, and the console
+adds only the role and CSRF checks it already runs on every mutation. And the relying party is the
+API's `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGINS`, so `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_NAME` are removed
+from the console's configuration; `WEBAUTHN_ORIGIN` stays, under its existing name, because it is
+still the value its mutation origin check compares against and renaming it would break a working
+`.env` for no gain.
+
+Two consequences to state plainly. Migration `0002` drops any passkey enrolled through the console
+during step 1.2b testing, and a local `.env` may still carry the two removed keys, which are ignored
+rather than fatal. Both are one-time and neither affects the API's own data.

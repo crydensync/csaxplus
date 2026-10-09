@@ -44,15 +44,6 @@ export const ERROR_CODES = {
   notFound: "not_found",
   /** The request was well formed and the console still will not do it. */
   conflict: "conflict",
-  /**
-   * The operation needs a fresh step-up and there was no live grant for it. The
-   * UI answers this by running the ceremony and trying again.
-   */
-  stepUpRequired: "step_up_required",
-  /** A step-up ceremony did not check out. Running it again may work. */
-  stepUpFailed: "step_up_failed",
-  /** There is no passkey to step up with, so the ceremony cannot be run at all. */
-  stepUpUnavailable: "step_up_unavailable",
   /** A paused sign-in whose pending cookie is gone or expired; start over. */
   loginExpired: "login_expired",
   /** The console could not reach the API at all: nothing was attempted. */

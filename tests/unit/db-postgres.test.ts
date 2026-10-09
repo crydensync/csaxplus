@@ -311,17 +311,16 @@ describe("the store through the typed handle on Postgres", () => {
     if (store.dialect !== "postgres") throw new Error("expected the Postgres store");
 
     const at = new Date("2026-10-04T09:30:00.000Z");
-    await store.orm.insert(pgSchema.webauthnChallenges).values({
+    await store.orm.insert(pgSchema.preferences).values({
       id: "44444444-4444-4444-8444-444444444444",
       operatorId: "operator-1",
-      kind: "step-up",
-      challenge: "not-a-real-challenge",
-      createdAt: at,
-      expiresAt: at,
+      key: "round-trip",
+      value: { at: at.toISOString() },
+      updatedAt: at,
     });
 
-    const rows = await store.orm.select().from(pgSchema.webauthnChallenges);
-    expect(rows[0]?.createdAt).toBeInstanceOf(Date);
-    expect((rows[0]?.createdAt as Date).toISOString()).toBe("2026-10-04T09:30:00.000Z");
+    const rows = await store.orm.select().from(pgSchema.preferences);
+    expect(rows[0]?.updatedAt).toBeInstanceOf(Date);
+    expect((rows[0]?.updatedAt as Date).toISOString()).toBe("2026-10-04T09:30:00.000Z");
   }, 60_000);
 });

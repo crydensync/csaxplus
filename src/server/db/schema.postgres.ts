@@ -1,20 +1,11 @@
-import {
-  boolean,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
  * The console's own store, Postgres dialect. It holds only what the engine does
- * not: console-owned step-up passkeys, short-lived step-up grants, the encrypted
- * secret vault, console audit entries and per-operator preferences. Operator
- * identity itself lives in the engine and is reached over the API.
+ * not: the encrypted secret vault, console audit entries and per-operator
+ * preferences. Operator identity itself lives in the engine and is reached over
+ * the API, and so do the operator's passkeys: those are the account's credentials
+ * at the API rather than this console's, so nothing here stores one.
  *
  * `schema.sqlite.ts` is the same schema for SQLite. The two files are written
  * out rather than generated from one specification, because the differences
@@ -22,56 +13,6 @@ import {
  * ones a reader wants to see spelled out. `shape.ts` projects both dialects onto
  * one neutral description and `tests/unit/db-store.test.ts` fails if they drift.
  */
-
-export const webauthnChallenges = pgTable(
-  "webauthn_challenges",
-  {
-    id: uuid("id").primaryKey(),
-    operatorId: text("operator_id").notNull(),
-    kind: text("kind").notNull(),
-    challenge: text("challenge").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  },
-  (table) => [
-    index("webauthn_challenges_operator_idx").on(table.operatorId),
-    index("webauthn_challenges_expires_idx").on(table.expiresAt),
-  ],
-);
-
-export const operatorPasskeys = pgTable(
-  "operator_passkeys",
-  {
-    id: uuid("id").primaryKey(),
-    operatorId: text("operator_id").notNull(),
-    credentialId: text("credential_id").notNull().unique(),
-    publicKey: text("public_key").notNull(),
-    counter: integer("counter").notNull().default(0),
-    transports: jsonb("transports").notNull().default([]),
-    deviceName: text("device_name").notNull(),
-    backedUp: boolean("backed_up").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-  },
-  (table) => [index("operator_passkeys_operator_idx").on(table.operatorId)],
-);
-
-export const stepUpGrants = pgTable(
-  "step_up_grants",
-  {
-    id: uuid("id").primaryKey(),
-    operatorId: text("operator_id").notNull(),
-    sessionId: text("session_id").notNull(),
-    purpose: text("purpose").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("step_up_grants_session_idx").on(table.sessionId),
-    index("step_up_grants_expires_idx").on(table.expiresAt),
-  ],
-);
 
 export const vaultSecrets = pgTable(
   "vault_secrets",
@@ -122,9 +63,6 @@ export const preferences = pgTable(
 );
 
 export const consoleSchema = {
-  webauthnChallenges,
-  operatorPasskeys,
-  stepUpGrants,
   vaultSecrets,
   consoleAudit,
   preferences,

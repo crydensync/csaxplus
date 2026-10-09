@@ -1,10 +1,12 @@
 # Secrets, biometric unlock, and the read-only guarantee
 
-> **Status: mostly designed, not built.** The vault and the AI layer arrive in tiers 4 and 5. The
-> step-up ceremony itself exists as of step 1.2b, where it gates enrolling and removing an
-> operator's own passkeys; what is still design rather than code is the vault behind it and the
-> reveal it protects. This page is the design, written down before the code so it can be argued with
-> cheaply. The parts that exist today are marked as such.
+> **Status: mostly designed, not built.** The vault and the AI layer arrive in tiers 4 and 5.
+> Registering, listing and removing an operator's own passkeys exists as of step 1.2b, and they are
+> credentials on the operator's account at the API (`/v1/passkeys`) rather than in the console's own
+> store, so they are the same passkeys that account uses anywhere else. What is still design rather
+> than code is the vault behind the step-up and the reveal it protects. This page is the design,
+> written down before the code so it can be argued with cheaply. The parts that exist today are
+> marked as such.
 
 Two things are true of everything below:
 
@@ -70,7 +72,7 @@ short enough that a shoulder, a screen share, or a screen recorder gets a bounde
 "Fingerprint or Face ID to reveal a secret" means a real WebAuthn assertion, not a password field
 with a fingerprint icon beside it. The operator completes a ceremony with their platform
 authenticator (Face ID, Touch ID, Windows Hello) or a roaming security key, the assertion is
-verified **server-side** against the credential registered in the console's own store, and only a
+verified **server-side** by the API against the credential on the operator's account, and only a
 verified assertion releases the value.
 
 The challenge is issued per attempt, single-use, and expires. Nothing about the ceremony is
@@ -78,15 +80,20 @@ satisfied by a value the browser can present twice.
 
 ### Relying party settings
 
-| Setting | Development | Production |
-|---|---|---|
-| `WEBAUTHN_RP_ID` | `localhost` | the registrable domain, for example `console.example.com` |
-| `WEBAUTHN_ORIGIN` | `http://localhost:3000` | the full HTTPS origin |
+| Setting | Where | Development | Production |
+|---|---|---|---|
+| `WEBAUTHN_RP_ID` | the API | `localhost` | the registrable domain, for example `console.example.com` |
+| `WEBAUTHN_RP_ORIGINS` | the API | `http://localhost:3000` | the full HTTPS origin |
+| `WEBAUTHN_ORIGIN` | this console | `http://localhost:3000` | the full HTTPS origin |
 
 - **The RP ID must be stable.** A passkey registered under one cannot be used under another, so
   changing it orphans every enrolled authenticator. Decide it before the first enrolment.
-- **The origin must match what the browser sends.** The route handlers refuse anything else. This is
-  what stops a lookalike hostname from completing a ceremony against your console.
+- **The origin must match what the browser sends.** The console's route handlers refuse anything
+  else, which is what stops a lookalike hostname from completing a ceremony against it.
+- **The relying party is the API's, not the console's.** A passkey is a credential on the account at
+  the API, so the API decides the RP ID and which origins it accepts; the console's `WEBAUTHN_ORIGIN`
+  is only its own mutation check. The two have to agree on the origin operators browse to, or the
+  prompt will not appear.
 - **HTTPS is required** by browsers, with `localhost` as the one exception. A reverse proxy must
   forward the original `Host` and scheme, or the ceremony fails with an error that looks like a
   browser problem and is a proxy configuration problem.
@@ -102,8 +109,8 @@ bought.
 
 Two real routes, both of which work without the console being reachable:
 
-**Enrol a second passkey.** Encouraged in the enrolment flow, and the console says why: losing one
-device should not be a lockout. A second authenticator is the answer to almost every case.
+**Enrol a second passkey.** Add another from a second device while you still have the first: losing
+one device should not be a lockout. The Account screen lists what you hold and removes one.
 
 **Break glass with the CLI.** Against the API's database, from a shell you already have:
 

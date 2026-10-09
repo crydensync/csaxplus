@@ -180,6 +180,35 @@ export const MIGRATIONS: readonly Migration[] = [
       ],
     },
   },
+  {
+    id: "0002",
+    name: "drop the console's own passkey tables",
+    statements: {
+      // 0001 gave the console its own WebAuthn store: a passkey per operator,
+      // the challenges a ceremony issued, and the grants a completed ceremony
+      // earned. That was the console running a second factor of its own. It no
+      // longer does: the operator's passkeys are their account's credentials at
+      // the API, reached over `/v1/passkeys`, so the console has nothing to
+      // verify an assertion against and nothing to hold.
+      //
+      // Dropped rather than left standing because a table nothing reads is a
+      // claim about what this store is for, and it would be a false one. Both
+      // engines drop a table's indexes with it, so this is the whole change.
+      // Any passkey enrolled here during step 1.2b goes with it; those
+      // credentials were unreachable from the moment the Account screen started
+      // talking to the API.
+      postgres: [
+        `drop table if exists webauthn_challenges`,
+        `drop table if exists operator_passkeys`,
+        `drop table if exists step_up_grants`,
+      ],
+      sqlite: [
+        `drop table if exists webauthn_challenges`,
+        `drop table if exists operator_passkeys`,
+        `drop table if exists step_up_grants`,
+      ],
+    },
+  },
 ];
 
 /** The bookkeeping table the runner keeps for itself. Not one of the migrations. */

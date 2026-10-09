@@ -42,8 +42,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       from `/digest/history`. The prototype's "Recent activity" and "Active sessions" have no
       endpoint (BACKEND_GAPS 2.13) and were replaced rather than faked
 - [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit.
-      Split into three commits: **(a) the read-only screen (done)**, **(b) WebAuthn step-up (done)**,
-      then (c) the six Go endpoints and the actions that need them
+      Split into three commits: **(a) the read-only screen (done)**, **(b) operator passkeys (done,
+      and since moved to the API: see D22)**, then (c) the six Go endpoints and the actions that
+      need them
 - [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
@@ -172,21 +173,24 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   from `.env`, in Next's own precedence order, so the cookie matches the server whether Playwright
   started it or reused one. A reused server started with a *different* secret cannot be detected, only
   its effect, and `signInToConsole` says so rather than letting the test fail on a missing heading.
-- **The virtual authenticator is how a ceremony is tested without hardware.** `tests/e2e/step-up.spec.ts`
-  attaches Chromium's, over CDP, with resident keys and user verification on. Two details cost time
-  and are worth writing down. A platform authenticator holds **one credential per account** and
-  raises `InvalidStateError` rather than enrolling the same one twice, so a second passkey means a
-  second authenticator: the test adds one with `transport: "usb"`, which is what "add my phone as
-  well" looks like to a browser. And the ceremony has no client-side timeout, so an authenticator
-  that was never attached does not fail, it hangs, and the screen sits on "Waiting for your key"
-  forever.
+- **The virtual authenticator is how a ceremony is tested without hardware (step 1.2b, and the
+  spec is now deleted).** `tests/e2e/step-up.spec.ts` attached Chromium's, over CDP, with resident
+  keys and user verification on. It drove the console's own ceremony, which D22 replaced with the
+  API's, so it went with the code it tested: the console now relays a ceremony that the API verifies,
+  and the console-side test could not reach a real API to verify against. The two lessons outlive
+  it, and the vault step-up in 5.2 is where the next one will need them. A platform authenticator
+  holds **one credential per account** and raises `InvalidStateError` rather than enrolling the same
+  one twice, so a second passkey means a second authenticator: the test added one with
+  `transport: "usb"`, which is what "add my phone as well" looks like to a browser. And a ceremony
+  has no client-side timeout, so an authenticator that was never attached does not fail, it hangs,
+  and the screen sits on "Waiting for your key" forever.
 - **The cold-compile trap has now caught four tests.** The first request to a route in `next dev`
   pays for that route's compile, measured at over twenty seconds for an API route and over thirty for
   `/users`. `test.slow()` triples the 30 s default and is the treatment for any test whose first
   action touches an uncompiled route; three login and landing tests now take it. The related trap is
   a test that interacts with a screen before it has finished its first load, which is a race rather
-  than a timeout: `tests/e2e/step-up.spec.ts` waits for the empty state, and the keyboard-order test
-  waits for the field the screen focuses on load, because where Tab starts depends on it.
+  than a timeout: the keyboard-order test waits for the field the screen focuses on load, because
+  where Tab starts depends on it.
 - **The client and the tag (step 0.6).** `src/server/cryden/client.ts` is the interface;
   `fixtures.ts` and `health.ts` are the two adapters, chosen by `CRYDEN_MODE` alone. Fixtures are
   never a fallback for a failed live call: the failure stays a failure. `FixtureHealth` cannot be

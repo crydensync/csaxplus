@@ -49,8 +49,6 @@ const schema = z.object({
   CSAX_SESSION_SECRET: keyOf32Bytes("session cookie signing"),
   CSAX_VAULT_KEY: keyOf32Bytes("vault encryption"),
 
-  WEBAUTHN_RP_ID: z.string().min(1),
-  WEBAUTHN_RP_NAME: z.string().min(1).default("csax+ console"),
   WEBAUTHN_ORIGIN: z.url(),
 
   RESEND_API_KEY: z.string().min(1).optional(),
@@ -82,7 +80,7 @@ export type ConsoleConfig = {
   readonlyDatabaseUrl: string | undefined;
   session: { secret: Uint8Array };
   vault: { key: Uint8Array };
-  webauthn: { rpId: string; rpName: string; origin: string };
+  webauthn: { origin: string };
   email: { resendApiKey: string | undefined };
   llm: {
     provider: (typeof LLM_PROVIDERS)[number] | undefined;
@@ -146,8 +144,6 @@ function toConfig(parsed: z.infer<typeof schema>): ConsoleConfig {
     session: { secret: new Uint8Array(Buffer.from(parsed.CSAX_SESSION_SECRET, "base64")) },
     vault: { key: new Uint8Array(Buffer.from(parsed.CSAX_VAULT_KEY, "base64")) },
     webauthn: {
-      rpId: parsed.WEBAUTHN_RP_ID,
-      rpName: parsed.WEBAUTHN_RP_NAME,
       origin: parsed.WEBAUTHN_ORIGIN,
     },
     email: { resendApiKey: parsed.RESEND_API_KEY },

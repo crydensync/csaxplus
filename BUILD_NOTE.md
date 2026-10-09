@@ -53,7 +53,6 @@ src/
   server/
     config/               # env + file config loader (see §3)
     secrets/              # secret providers + vault (see §4)
-    webauthn/             # operator passkeys + step-up (see §5)
     cryden/               # typed client for /v1/admin + fixtures adapter
     ai/                   # read-only AI layer
     db/                   # console store, migrations
@@ -139,12 +138,12 @@ The prototype's biometric modal is theatre. Make it real.
 **Step-up unlock for secrets** (this is the "unlock with fingerprint/Face ID" feature)
 - `POST /api/secrets/unlock/options` → challenge with `userVerification: "required"`, bound to the operator session, single-use, 60 s TTL.
 - Browser calls `startAuthentication` (the real OS prompt: Touch ID / Face ID / Windows Hello / Android biometrics).
-- `POST /api/secrets/unlock/verify` → verify with `@simplewebauthn/server`, check origin + RP ID + UV flag + counter, then issue a **short-lived, server-held grant** (20 s, tied to session id and the operator). Store grants server-side; do not trust the client about expiry.
+- `POST /api/secrets/unlock/verify` → verify against the passkeys on the operator's account at the API, check origin + RP ID + UV flag + counter, then issue a **short-lived, server-held grant** (20 s, tied to session id and the operator). Store grants server-side; do not trust the client about expiry.
 - Mutations (edit/delete/add) require a grant that was minted for that action, and consume it.
 - Keep the existing modal UI (pulsing rings, "Verify it's you", success state), but drive it from the real promise: show success only on verified server response, show a clear error on failure or cancel. No `setTimeout` fake success.
 - Fallback when the device has no platform authenticator: allow a roaming security key; if none works, deny. Do **not** add a password fallback for secrets.
 
-Dev note: WebAuthn requires HTTPS or `localhost`. Document `WEBAUTHN_RP_ID` (bare domain) and `WEBAUTHN_ORIGIN` (full origin) for local, staging and prod. Add a Playwright test using Chromium's virtual authenticator.
+Dev note: WebAuthn requires HTTPS or `localhost`. The relying party (`WEBAUTHN_RP_ID`, bare domain) and the origins it accepts (`WEBAUTHN_RP_ORIGINS`, full origins) belong to the **API**, not to this console: a passkey is a credential on the operator's account there. The console keeps only `WEBAUTHN_ORIGIN`, its own full origin, for the mutation check. See §11.2. Add a Playwright test using Chromium's virtual authenticator.
 
 ---
 
@@ -277,7 +276,8 @@ This section overrides anything earlier in this file that conflicts with it.
 
 - The console talks to the API only. It never holds the engine's main `DATABASE_URL`. This mirrors the CLI's API-client mode (`CSAX_API_URL`).
 - Only exception: `READONLY_DATABASE_URL`, the SELECT-only role used by the allowlisted AI query templates.
-- The console keeps its own small store (step-up passkeys, vault secrets, console audit entries, UI preferences). Use `CSAX_STORE_URL` for it, with its own schema and role, never the engine's primary credentials.
+- The console keeps its own small store (vault secrets, console audit entries, UI preferences). Use `CSAX_STORE_URL` for it, with its own schema and role, never the engine's primary credentials.
+- Operator passkeys do not go in the console's store. The API issues them (`/v1/passkeys`, `/v1/passkeys/register/begin|finish`), and the BFF relays the ceremony, so a credential belongs to the operator's account and works wherever that account signs in. Implemented in step 1.2b; see §11.2.
 - Config keys: use `CSAX_API_URL` (same name as the CLI) and `CSAX_STORE_URL`. These replace `CRYDEN_API_URL` and `DATABASE_URL` in section 3. Keep `CRYDEN_MODE=fixtures` for offline demos only.
 - The topbar tag must show the real mode and health: `api-client`, `degraded`, `fixtures`, `offline`.
 
@@ -285,7 +285,7 @@ This section overrides anything earlier in this file that conflicts with it.
 
 - Operator login uses the API: `POST /v1/login`, including the paused-login completions (`/v1/login/totp`, `/v1/login/passkey/begin|finish`, `/v1/login/recovery-code`) and `/v1/refresh`. Tokens stay server-side in an encrypted session cookie, refreshed transparently, like the CLI's cached session. Admin access comes from the API ("admin required"). Read the api repo to see how admin is decided.
 - Console roles `owner`, `admin`, `viewer`: if the API has no viewer concept, enforce read-only for viewers in the BFF (block every non-GET route, hide secrets).
-- The API has no step-up check, so the console builds its own WebAuthn step-up (section 5) for secrets and destructive actions: reveal/add/edit/delete secrets, suspend user, force-disable MFA, change operator roles, change database provider.
+- The API has no step-up check, so the console builds its own WebAuthn step-up (section 5) for secrets and destructive actions: reveal/add/edit/delete secrets, suspend user, force-disable MFA, change operator roles, change database provider. As of step 1.2b the console does **not** keep a credential store of its own: the assertion is verified against the passkeys on the operator's account at the API, and the console only relays the ceremony. The console's own `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_NAME` are gone; the relying party is the API's.
 - Face ID, fingerprint and PIN: require `userVerification: "required"`. The OS prompt uses biometrics or falls back to the device PIN. Do NOT build a separate in-app PIN.
 - Section 5 "Login" and the bootstrap-token flow are superseded: the first operator is whoever the API already recognises as admin (`csax users create` plus the existing admin grant). Keep the step-up registration screen (register a passkey after login).
 

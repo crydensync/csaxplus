@@ -40,8 +40,7 @@ before the first request is served. A misconfigured deployment stops with a read
 than failing on whichever screen touches the missing setting. Every problem is reported at once,
 and no value is ever printed.
 
-Required at boot: `CSAX_API_URL`, `CSAX_SESSION_SECRET`, `CSAX_VAULT_KEY`, `WEBAUTHN_RP_ID` and
-`WEBAUTHN_ORIGIN`.
+Required at boot: `CSAX_API_URL`, `CSAX_SESSION_SECRET`, `CSAX_VAULT_KEY` and `WEBAUTHN_ORIGIN`.
 
 **`/` is the only static route.** Everything under `(console)` reads the session, so it is dynamic
 and differs per operator. The landing page can be cached hard by a CDN; the console cannot.
@@ -100,9 +99,10 @@ baked into the image.
 ### A reverse proxy
 
 Terminate TLS, forward `Host` and `X-Forwarded-Proto` unchanged, and do not rewrite the origin. Set
-`WEBAUTHN_ORIGIN` to the public origin and `WEBAUTHN_RP_ID` to its registrable domain. If the
-console is behind a path prefix rather than a hostname, it needs `basePath` in `next.config.ts`,
-which is not configured today.
+`WEBAUTHN_ORIGIN` to the public origin. The API's `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_ORIGINS` are the
+deployment's relying party, and they must cover the origin operators actually browse to or the
+passkey prompt will not appear. If the console is behind a path prefix rather than a hostname, it
+needs `basePath` in `next.config.ts`, which is not configured today.
 
 ## Hardening, in step 5.5
 
@@ -118,8 +118,8 @@ Arrives with the deployment files, and includes:
 
 For when the files above exist. Everything here is checkable by hand today.
 
-- [ ] `WEBAUTHN_RP_ID` is a bare domain, and it is the one you will still want in a year.
-- [ ] `WEBAUTHN_ORIGIN` is the exact origin operators browse to, including the port if there is one.
+- [ ] `WEBAUTHN_ORIGIN` is the exact origin operators browse to, including the port if there is one,
+      and the API's own relying-party settings cover that origin.
 - [ ] The console answers on exactly one name.
 - [ ] `CSAX_SESSION_SECRET` and `CSAX_VAULT_KEY` are 32 random bytes each, from a secret store and
       not from the image.

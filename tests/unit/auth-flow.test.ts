@@ -47,7 +47,6 @@ function useEnvironment() {
   process.env.CSAX_API_URL = "http://127.0.0.1:8080";
   process.env.CSAX_SESSION_SECRET = SESSION_SECRET;
   process.env.CSAX_VAULT_KEY = VAULT_KEY;
-  process.env.WEBAUTHN_RP_ID = "localhost";
   process.env.WEBAUTHN_ORIGIN = ORIGIN;
   resetConfigCache();
 }

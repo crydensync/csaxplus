@@ -7,8 +7,9 @@ import type { ConsoleStore } from "./store";
 
 /**
  * The console store: the console's own database, separate from the engine. It
- * holds console-owned step-up passkeys, step-up grants, the encrypted secret
- * vault, console audit entries and operator preferences.
+ * holds what the engine does not: the encrypted secret vault, console audit
+ * entries and operator preferences. Operator identity and the operator's passkeys
+ * are not here, because both belong to the account at the API.
  *
  * Which engine it runs on is the configuration's decision, not this module's:
  * `CSAX_STORE_URL` selects Postgres, otherwise a SQLite file.

@@ -75,7 +75,7 @@ flowchart TB
 
   subgraph console["csax+ (Next.js server, the BFF)"]
     RH["route handlers<br/>zod validation, CSRF"]
-    STORE[("console store<br/>passkeys, vault, console audit")]
+    STORE[("console store<br/>vault, console audit")]
     AI["read-only AI layer<br/>allowlisted query templates"]
   end
 
@@ -104,9 +104,11 @@ Four things about that picture are load-bearing:
 1. **The browser never sees a token.** The operator's API tokens live inside an encrypted,
    `httpOnly` cookie. The BFF decrypts it, calls the API, and returns rendered HTML. A page script
    cannot read the cookie and there is no JavaScript-readable copy.
-2. **The console has its own small store.** Passkeys for step-up, vault secrets, console audit
-   entries and UI preferences go in `CSAX_STORE_URL`, with its own schema and its own database
-   role. It is never the engine's primary database.
+2. **The console has its own small store.** Vault secrets, console audit entries and UI preferences
+   go in `CSAX_STORE_URL`, with its own schema and its own database role. It is never the engine's
+   primary database. Operator passkeys are deliberately *not* here: they are the account's
+   credentials at the API, reachable over `/v1/passkeys`, so they outlive this console and work for
+   anything else built on the same API.
 3. **The AI layer is separated by a credential, not by a promise.** When it lands in tier 4 it will
    reach the data through a SELECT-only role, and it will have no client for the API's mutation
    routes at all. Today the arrow is drawn and the module does not exist; the guarantee is in
@@ -137,7 +139,7 @@ Three statuses, and they mean exactly this:
 | Admin reports | done | the four `/v1/admin` reads the dashboard needs, each parsed with zod before it is used |
 | Design system | done | the prototype's tokens and components, ported to React |
 | Landing page | done | static, and its claims are generated from the console's own navigation |
-| Operator passkeys and step-up unlock | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the first passkey needs no step-up, every one after and every removal does |
+| Operator passkeys | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the credential belongs to the operator's account at the API (`/v1/passkeys`), so it works wherever that account signs in, and removing one asks for the current password |
 | Secrets vault | planned | tier 5, step 5.2 |
 | Hardening and deployment | planned | tier 5, steps 5.5 and 5.6 |
 
@@ -175,7 +177,9 @@ whose endpoint is missing shows a specific "not available in this deployment" st
 empty table.
 
 One screen is not in the table, because it is not in the sidebar's groups. **Account** (`/account`)
-manages the operator's own step-up passkeys, and it is reached by clicking the operator chip at the
+manages the operator's own passkeys. They live on their account at the API rather than in the
+console's store, so the same credential signs them in wherever that account is used. It is reached
+by clicking the operator chip at the
 foot of the sidebar, the one already showing their address and role. It is left out of the
 navigation on purpose: this page's console map is generated from that same list, so a screen added
 to the sidebar would change what the landing page claims the console is.
@@ -200,7 +204,7 @@ never rewrites a committed image.
 | ![The Users screen](docs/guide/screenshots/console-users.png) | ![A screen that is not built yet](docs/guide/screenshots/console-screen-not-built-yet.png) |
 | Users, against the same deployment, photographed through its own search: one exact address, the row that matched, and the API's own match mode named below the table. | Every screen that is still planned says so, and names its own route. |
 | ![The design system gallery](docs/guide/screenshots/design-system.png) | ![The Account screen](docs/guide/screenshots/console-account.png) |
-| `/design`, the dev-only component gallery. It 404s in a production build. | The operator's own screen, reached from the chip at the foot of the sidebar: the passkeys that confirm it is them. |
+| `/design`, the dev-only component gallery. It 404s in a production build. | The operator's own screen, reached from the chip at the foot of the sidebar: the passkeys on their account at the API. |
 
 The console screenshots are taken from a real sign-in: `pnpm screenshots` signs in with
 `CSAX_SCREENSHOT_EMAIL` and `CSAX_SCREENSHOT_PASSWORD`, read from the environment or the gitignored
@@ -292,8 +296,6 @@ naming the key and the reason and never the value.
 | `READONLY_DATABASE_URL` | yes | `READONLY_DATABASE_URL` | none | **yes** |
 | `CSAX_SESSION_SECRET` | yes | `CSAX_SESSION_SECRET` | none, required | **yes** |
 | `CSAX_VAULT_KEY` | yes | `CSAX_VAULT_KEY` | none, required | **yes** |
-| `WEBAUTHN_RP_ID` | yes | `WEBAUTHN_RP_ID` | none, required | no |
-| `WEBAUTHN_RP_NAME` | yes | `WEBAUTHN_RP_NAME` | `csax+ console` | no |
 | `WEBAUTHN_ORIGIN` | yes | `WEBAUTHN_ORIGIN` | none, required | no |
 | `RESEND_API_KEY` | yes | `RESEND_API_KEY` | none | **yes** |
 | `LLM_PROVIDER` | yes | `LLM_PROVIDER` | none | no |
@@ -320,10 +322,11 @@ is.
 - **`CSAX_SESSION_SECRET`.** Signs and encrypts the operator session cookie. 32 random bytes,
   base64. `openssl rand -base64 32`.
 - **`CSAX_VAULT_KEY`.** AES-256-GCM key for secrets at rest. 32 random bytes, base64.
-- **`WEBAUTHN_RP_ID`**, **`WEBAUTHN_RP_NAME`**, **`WEBAUTHN_ORIGIN`.** The relying party. `RP_ID` is
-  a bare domain with no scheme and no port; `ORIGIN` is the full origin the browser sends. The
-  console's route handlers refuse a request whose `Origin` is not this value, so a deployment
-  reachable at two names must pick one.
+- **`WEBAUTHN_ORIGIN`.** The console's own full origin, scheme and port included. Every mutation
+  the browser makes must carry this `Origin`, so a deployment reachable at two names must pick one.
+  The relying party for passkeys is not here: it belongs to the API, whose own `WEBAUTHN_RP_ID` and
+  `WEBAUTHN_RP_ORIGINS` decide it, because a passkey is a credential on the operator's account
+  there rather than on this console.
 - **`RESEND_API_KEY`.** For the Email screen's delivery stats and test send. Optional; the Email
   screen reports the key as absent rather than pretending.
 - **`LLM_PROVIDER`.** `anthropic`, `openai`, `azure-openai` or `openai-compatible`.
@@ -352,14 +355,16 @@ re-masked server-side after 20 seconds, and the reveal is written to the console
 who did it and when.
 
 **Step-up before a reveal.** Revealing a secret is a WebAuthn user-verification, not a password
-prompt. The console asks the operator to complete a passkey ceremony in the OS prompt, verifies
-the assertion server-side against the credential registered in the console's own store, and only
-then returns the value. This is genuine WebAuthn: a real Face ID, Touch ID, Windows Hello or
+prompt. The console asks the operator to complete a passkey ceremony in the OS prompt, the API
+verifies the assertion against the credential held on the operator's account, and only then does the
+console return the value. This is genuine WebAuthn: a real Face ID, Touch ID, Windows Hello or
 hardware-key assertion, not a password field wearing a fingerprint icon.
 
-**Relying party settings per environment.** `WEBAUTHN_RP_ID` is the registrable domain, and it
-must be stable: a passkey registered under one RP ID cannot be used under another. `localhost` is
-allowed over plain HTTP for development; anything else needs HTTPS, and browsers enforce that.
+**Relying party settings per environment.** The relying party belongs to the API, not to this
+console: `WEBAUTHN_RP_ID` there is the registrable domain, and it must be stable, because a passkey
+registered under one RP ID cannot be used under another. `localhost` is allowed over plain HTTP for
+development; anything else needs HTTPS, and browsers enforce that. The console holds only
+`WEBAUTHN_ORIGIN`, which is the origin its own mutation check compares against.
 
 **Authenticators supported.** Any platform authenticator (Face ID, Touch ID, Windows Hello) and
 any roaming security key, through the platform's own WebAuthn implementation. The console does not
@@ -367,8 +372,8 @@ maintain an allowlist of devices.
 
 **Recovery for a lost passkey.** Two routes, both real:
 
-1. **A second passkey.** Enrolling two is encouraged and the console says so in the enrolment flow.
-   Losing one device is then not a lockout.
+1. **A second passkey.** Enrol more than one, on a second device, while you still have the first.
+   Losing one device is then not a lockout. The Account screen lists what you hold and removes one.
 2. **`go run ./cmd/grant-operator`** against the API's database, which is the break-glass path and
    deliberately not reachable from the console. It is the same command that creates the first
    operator, so the recovery procedure is a procedure you have already practised.
@@ -444,10 +449,11 @@ The console is deployed inside your perimeter, reached by your operators, and tr
 nothing that the API does not already trust them with: it holds no signing key, verifies no token
 itself, and makes no authorisation decision of its own. The API is the authority on every call.
 The console's job is to not leak what passes through it and to not let an AI feature do anything a
-person could not. The interesting attackers are therefore an operator who has been phished (which
-step-up and a short session lifetime limit), a stolen session cookie (which encryption,
-`httpOnly`, and revocation limit), and a prompt that tries to make the assistant act outside its
-scope (which the absence of a write path makes impossible rather than unlikely).
+person could not. The interesting attackers are therefore an operator who has been phished (which the
+passkey step-up planned for the vault, and a short session lifetime, are meant to limit), a stolen
+session cookie (which encryption, `httpOnly`, and revocation limit), and a prompt that tries to make
+the assistant act outside its scope (which the absence of a write path makes impossible rather than
+unlikely).
 
 ### 8.5 Reporting a vulnerability
 

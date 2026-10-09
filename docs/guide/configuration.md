@@ -46,8 +46,6 @@ deliberately contains no secrets: this file is meant to be committed.
 {
   "CSAX_API_URL": "http://127.0.0.1:8080",
   "CRYDEN_MODE": "fixtures",
-  "WEBAUTHN_RP_ID": "localhost",
-  "WEBAUTHN_RP_NAME": "csax+ console",
   "WEBAUTHN_ORIGIN": "http://localhost:3000",
   "LOG_LEVEL": "info"
 }
@@ -82,8 +80,10 @@ notes describe both.
 | `CSAX_STORE_URL` | one of the two | none | **yes** |
 | `CSAX_STORE_SQLITE_PATH` | one of the two | `.csaxplus/console.sqlite` | no |
 
-The console keeps a small database of its own: step-up passkeys, vault secrets, console audit
-entries and UI preferences. It is not the engine's database and must not share credentials with it.
+The console keeps a small database of its own: vault secrets, console audit entries and UI
+preferences. It is not the engine's database and must not share credentials with it. Operator
+passkeys are not here either: they belong to the operator's account at the API, over
+`/v1/passkeys`, so they are not tied to this console's store.
 
 Exactly one of the two may be set. Setting both is a boot error rather than a coin toss. Setting
 neither uses the default SQLite path under the working directory, which is what lets a fresh
@@ -119,21 +119,22 @@ generates one.
 
 Neither is ever logged, and neither decodes into anything an error message would print.
 
-### WebAuthn
+### The console's own origin
 
 | Key | Required | Default | Secret |
 |---|---|---|---|
-| `WEBAUTHN_RP_ID` | yes | none | no |
-| `WEBAUTHN_RP_NAME` | no | `csax+ console` | no |
 | `WEBAUTHN_ORIGIN` | yes | none | no |
 
-- `WEBAUTHN_RP_ID` is the relying party: a bare registrable domain, no scheme and no port. It must
-  be stable, because a passkey registered under one RP ID cannot be used under another.
-- `WEBAUTHN_RP_NAME` is what the operating system shows in its passkey prompt.
-- `WEBAUTHN_ORIGIN` is the full origin including scheme and port. The console's route handlers
-  refuse any request whose `Origin` header is not this value, which means a deployment reachable at
-  two names must pick one. `http://localhost:3000` and `http://127.0.0.1:3000` are different
-  origins: browsing the other one is a refused sign-in, not a convenience.
+`WEBAUTHN_ORIGIN` is the full origin including scheme and port. The console's route handlers
+refuse any request whose `Origin` header is not this value, which means a deployment reachable at
+two names must pick one. `http://localhost:3000` and `http://127.0.0.1:3000` are different
+origins: browsing the other one is a refused sign-in, not a convenience.
+
+The name is a leftover from when the console ran its own WebAuthn ceremonies, and it is kept so
+existing deployments do not have to move a value that still means the same thing. The relying party
+itself is not configured here: passkeys are credentials on the operator's account at the API, so
+the API's own `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_ORIGINS` decide them and must cover the origin the
+browser is actually on.
 
 ### Email
 

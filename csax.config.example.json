@@ -2,8 +2,6 @@
   "$comment": "Local fallback configuration, loaded when an env var is not set. Never put secrets here. Path is overridable with CSAX_CONFIG_FILE.",
   "CSAX_API_URL": "http://127.0.0.1:8080",
   "CRYDEN_MODE": "fixtures",
-  "WEBAUTHN_RP_ID": "localhost",
-  "WEBAUTHN_RP_NAME": "csax+ console",
   "WEBAUTHN_ORIGIN": "http://localhost:3000",
   "LLM_PROVIDER": "anthropic",
   "LOG_LEVEL": "info"

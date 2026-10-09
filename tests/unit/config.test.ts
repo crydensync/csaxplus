@@ -22,7 +22,6 @@ function baseEnv(overrides: Record<string, string | undefined> = {}) {
     CSAX_API_URL: "http://127.0.0.1:8080",
     CSAX_SESSION_SECRET: SESSION_SECRET,
     CSAX_VAULT_KEY: VAULT_KEY,
-    WEBAUTHN_RP_ID: "localhost",
     WEBAUTHN_ORIGIN: "http://localhost:3000",
     ...overrides,
   };
@@ -89,7 +88,6 @@ describe("loadConfig", () => {
     const { config } = loadConfig(baseEnv(), emptyDir());
 
     expect(config.api).toEqual({ url: "http://127.0.0.1:8080", mode: "live" });
-    expect(config.webauthn.rpName).toBe("csax+ console");
     expect(config.logLevel).toBe("info");
     expect(config.skipAutoMigrate).toBe(false);
     expect(config.session.secret).toHaveLength(32);
@@ -199,7 +197,6 @@ describe("describeConfig", () => {
     process.env.CSAX_API_URL = "http://127.0.0.1:8080";
     process.env.CSAX_SESSION_SECRET = SESSION_SECRET;
     process.env.CSAX_VAULT_KEY = VAULT_KEY;
-    process.env.WEBAUTHN_RP_ID = "localhost";
     process.env.WEBAUTHN_ORIGIN = "http://localhost:3000";
   });
 
