@@ -78,6 +78,13 @@ test.describe("guide screenshots", () => {
     const password = localSetting("CSAX_SCREENSHOT_PASSWORD");
 
     if (email !== undefined && password !== undefined) {
+      // The credentials name an operator account on the API. If that account has
+      // a passkey enrolled, the API pauses the sign-in at the second factor and
+      // a headless run cannot finish it: the enrolled credential's private key
+      // never left the authenticator that made it (the API stores only the
+      // public half), so no virtual authenticator can answer for it. A correct
+      // password on an account without a passkey is a complete sign-in, which
+      // is the account these credentials should name.
       await page.goto("/login");
       await settle(page);
       await page.getByLabel("Email").fill(email);
@@ -153,8 +160,9 @@ test.describe("guide screenshots", () => {
     // The operator's own screen, and the only one in the console reached from
     // something other than the sidebar's list of screens: the chip at its foot.
     // Its list is read after hydration like the two above, so it gets the same
-    // wait. Shot with a minted cookie it shows the empty state, which is the
-    // state a deployment is in until somebody enrols their first passkey.
+    // wait. The list comes from the operator's account at the API, so a minted
+    // cookie (whose API tokens are placeholders) lands on the screen's own
+    // refusal state, which is still a state the console really reaches.
     await page.goto("/account");
     await settle(page);
     await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
