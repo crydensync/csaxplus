@@ -44,7 +44,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit.
       Split into three commits: **(a) the read-only screen (done)**, **(b) operator passkeys (done,
       and since moved to the API: see D22)**, then (c) the six Go endpoints and the actions that
-      need them
+      need them. **(c) API half done**: the six user-action endpoints are built on the api repo's
+      `feat/console-admin-endpoints` branch (commit d0afb8f: create, unlock, suspend, unsuspend,
+      revoke-sessions, mfa/disable, oauth unlink; each audited with the operator id, each tested
+      against a real engine on memory stores, OpenAPI updated). Remaining: the console side,
+      actions with confirm + audit in the Users screen, then merge/deploy the api branch.
 - [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test

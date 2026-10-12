@@ -35,7 +35,7 @@ Missing, grouped by the tier that first needs them:
 
 | Tier | Needed for | Endpoints |
 |---|---|---|
-| 1 | Users actions | `POST /v1/admin/users`, `POST /v1/admin/users/{id}/unlock`, `/suspend`, `/unsuspend`, `/mfa/disable`, `DELETE /v1/admin/users/{id}/oauth/{provider}` |
+| 1 | Users actions | BUILT on the api branch `feat/console-admin-endpoints` (commit d0afb8f, not yet merged or deployed): `POST /v1/admin/users` (create), `POST /v1/admin/users/{id}/unlock`, `/suspend`, `/unsuspend`, `/revoke-sessions`, `/mfa/disable`, `DELETE /v1/admin/users/{id}/oauth/{provider}`. The console half (step 1.2c) wires these into the Users screen |
 | 1 | OAuth config | `GET /v1/admin/oauth/providers`, `POST /v1/admin/oauth/{provider}/test` |
 | 1 | Email | `GET /v1/admin/email/stats`, `POST /v1/admin/email/test`, `GET|PUT /v1/admin/settings/email-templates` |
 | 1 | Password policy | `GET|PUT /v1/admin/settings/password-policy` |
