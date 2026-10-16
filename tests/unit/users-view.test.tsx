@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UsersView } from "@/app/(console)/users/users-view";
 import { SQLITE_ADMIN_DETAIL } from "@/lib/dashboard";
-import { EXACT_EMAIL_MISS_DETAIL, NO_SUCH_ACCOUNT_DETAIL } from "@/lib/users";
+import {
+  ACCOUNT_EXISTS_DETAIL,
+  EXACT_EMAIL_MISS_DETAIL,
+  NO_SUCH_ACCOUNT_DETAIL,
+} from "@/lib/users";
 
 /**
  * What the Users screen puts on the screen, for each state it can be in.
@@ -98,13 +102,17 @@ const A_METADATA = {
  * The Users screen makes two different calls, so a single reply cannot describe
  * it: the drawer's read has to be able to succeed while the list's is refused.
  */
-function stubRoutes(routes: Record<string, (url: URL) => Response | Promise<Response>>) {
+function stubRoutes(
+  routes: Record<string, (url: URL, init?: RequestInit) => Response | Promise<Response>>,
+) {
   const seen: string[] = [];
 
-  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://localhost:3000");
-    seen.push(url.pathname + url.search);
-    const handler = routes[url.pathname];
+    seen.push(`${init?.method ?? "GET"} ${url.pathname}${url.search}`);
+    // A path may carry different answers per verb, the way the console's own
+    // routes do (GET lists, POST creates), so the key is both.
+    const handler = routes[`${init?.method ?? "GET"} ${url.pathname}`] ?? routes[url.pathname];
     if (handler === undefined) throw new Error(`no stub for ${url.pathname}`);
     return handler(url);
   });
@@ -144,7 +152,7 @@ async function renderUsers(
   });
 
   await act(async () => {
-    root.render(<UsersView />);
+    root.render(<UsersView csrf="the-csrf-value" />);
   });
 
   return seen;
@@ -268,7 +276,7 @@ describe("searching", () => {
       submit();
     });
 
-    expect(seen.at(-1)).toBe(`${LIST_ROUTE}?q=someone%40example.invalid`);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}?q=someone%40example.invalid`);
     // A new question is a new first page: answering with offset 25 of a
     // different query would show a slice of an answer nobody asked for.
     expect(seen.at(-1)).not.toContain("offset");
@@ -284,7 +292,7 @@ describe("searching", () => {
       submit();
     });
 
-    expect(seen.at(-1)).toBe(`${LIST_ROUTE}?q=operator%40example.invalid`);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}?q=operator%40example.invalid`);
   });
 
   it("asks nothing of the API when the box is emptied by submitting", async () => {
@@ -298,7 +306,7 @@ describe("searching", () => {
     });
 
     // The address already on the screen, read again. Not a search for a space.
-    expect(seen.at(-1)).toBe(LIST_ROUTE);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}`);
   });
 
   it("explains a miss as an exact match rather than an account that is gone", async () => {
@@ -333,7 +341,7 @@ describe("searching", () => {
       button("Clear the search")?.click();
     });
 
-    expect(seen.at(-1)).toBe(LIST_ROUTE);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}`);
     expect((container.querySelector("input") as HTMLInputElement).value).toBe("");
     expect(text()).toContain("operator@example.invalid");
   });
@@ -356,7 +364,7 @@ describe("paging", () => {
       button("Next")?.click();
     });
 
-    expect(seen.at(-1)).toBe(`${LIST_ROUTE}?offset=25`);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}?offset=25`);
   });
 
   it("stops at the last page instead of asking for an empty one", async () => {
@@ -424,7 +432,7 @@ describe("the account drawer", () => {
       rows()[0]?.click();
     });
 
-    expect(seen.at(-1)).toBe(`${LIST_ROUTE}/${FIRST_ID}`);
+    expect(seen.at(-1)).toBe(`GET ${LIST_ROUTE}/${FIRST_ID}`);
     const drawer = document.querySelector('[role="dialog"]');
     expect(drawer).not.toBeNull();
     expect(drawer?.getAttribute("aria-modal")).toBe("true");
@@ -542,5 +550,101 @@ describe("the account drawer", () => {
     expect(text()).toContain("operator@example.invalid");
     expect(text()).toContain("no metadata store");
     expect(text()).toContain("internal_error");
+  });
+});
+
+describe("creating an account", () => {
+  const CREATED = account({
+    id: "01J0000000000000000000000D",
+    email: "newbie@example.invalid",
+  });
+  const WITH_CREATE = {
+    [`GET ${LIST_ROUTE}`]: () => jsonResponse({ data: ok(A_PAGE) }),
+    [`${LIST_ROUTE}/${FIRST_ID}`]: () =>
+      jsonResponse({ data: { detail: ok(A_DETAIL), metadata: ok(A_METADATA) } }),
+    [`${LIST_ROUTE}/${CREATED.id}`]: () =>
+      jsonResponse({
+        data: {
+          detail: ok({ ...A_DETAIL, user: CREATED }),
+          metadata: ok({ ...A_METADATA, user_id: CREATED.id }),
+        },
+      }),
+    [`POST ${LIST_ROUTE}`]: () => jsonResponse({ data: { user: CREATED } }, 201),
+  };
+
+  it("opens the form from the toolbar and sends the email and password", async () => {
+    const seen = await renderUsers(WITH_CREATE);
+
+    await act(async () => {
+      button("New account")?.click();
+    });
+
+    const form = document.querySelector('[role="dialog"] form');
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      type(
+        document.getElementById("create-account-email") as HTMLInputElement,
+        "newbie@example.invalid",
+      );
+      type(
+        document.getElementById("create-account-password") as HTMLInputElement,
+        "a first password",
+      );
+      type(
+        document.getElementById("create-account-password-2") as HTMLInputElement,
+        "a first password",
+      );
+    });
+    await act(async () => {
+      (form as HTMLFormElement).dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+
+    expect(seen).toContain(`POST ${LIST_ROUTE}`);
+    // The drawer opened on the account the API answered with, which is a row
+    // click's journey, so the operator sees the account they made.
+    expect(text()).toContain("newbie@example.invalid");
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it("says a duplicate address is an existing account, not a console fault", async () => {
+    await renderUsers({
+      ...WITH_CREATE,
+      [`POST ${LIST_ROUTE}`]: () =>
+        jsonResponse(
+          { error: { code: "user_exists", message: "an account with this email already exists" } },
+          409,
+        ),
+    });
+
+    await act(async () => {
+      button("New account")?.click();
+    });
+
+    await act(async () => {
+      type(
+        document.getElementById("create-account-email") as HTMLInputElement,
+        "operator@example.invalid",
+      );
+      type(
+        document.getElementById("create-account-password") as HTMLInputElement,
+        "a first password",
+      );
+      type(
+        document.getElementById("create-account-password-2") as HTMLInputElement,
+        "a first password",
+      );
+      document
+        .querySelector('[role="dialog"] form')!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(text()).toContain(ACCOUNT_EXISTS_DETAIL);
+    // The form stays open with the failure in it, and the failure is not the
+    // API's generic sentence but the one that says what to do instead.
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(text()).not.toContain("an account with this email already exists");
   });
 });

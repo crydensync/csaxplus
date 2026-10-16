@@ -1,9 +1,11 @@
 import { z } from "zod";
 
-import { requireSession } from "@/server/auth/guard";
+import { requireMutation, requireSession } from "@/server/auth/guard";
 import { ERROR_CODES, jsonError, jsonOk } from "@/server/auth/response";
+import { readJsonBody } from "@/server/auth/routes";
 import { USERS_PAGE_SIZE } from "@/server/cryden/admin";
 import { browseUsers } from "@/server/users/browse";
+import { createUserAccount } from "@/server/users/actions";
 
 /**
  * `GET /api/console/users`: one page of accounts, for the operator whose session
@@ -71,4 +73,48 @@ export async function GET(request: Request): Promise<Response> {
   });
 
   return authorized.respond(jsonOk(page));
+}
+
+/**
+ * The body an account creation accepts. The password's only bound is the API's
+ * own policy, which is checked there where the breach check runs alongside it;
+ * bounding it here at all would mean guessing at a rule the engine owns. The
+ * email's bound is the address limit, the same one the query parameter uses.
+ */
+const createSchema = z.object({
+  email: z.string().trim().min(1).max(254),
+  password: z.string().min(1),
+});
+
+/**
+ * `POST /api/console/users`: register an account on the deployment.
+ *
+ * `requireMutation`, not `requireSession`: the console's viewer role is
+ * read-only by the console's own rule, the same line the action route holds,
+ * and the API runs its own admin gate behind the create path as well.
+ *
+ * The password travels in the request body only and is forwarded to the API's
+ * `cryden.SignUp` path, where the engine's password policy, breach check and
+ * rate limiter all run as they would at `POST /v1/signup`. The console adds
+ * none of its own opinions about what makes a password acceptable, so a
+ * violation arrives with the API's own stable rule names.
+ */
+export async function POST(request: Request): Promise<Response> {
+  const authorized = await requireMutation(request);
+  if (!authorized.ok) return authorized.response;
+
+  const body = await readJsonBody(request, createSchema);
+  if (!body.ok) return authorized.respond(body.response);
+
+  const result = await createUserAccount({
+    token: authorized.session.api.accessToken,
+    email: body.value.email,
+    password: body.value.password,
+  });
+
+  if (result.state !== "ok") {
+    const code = result.state === "empty" ? ERROR_CODES.notFound : result.code;
+    return authorized.respond(jsonError(502, code ?? ERROR_CODES.conflict, result.detail));
+  }
+  return authorized.respond(jsonOk(result.data, { status: 201 }));
 }

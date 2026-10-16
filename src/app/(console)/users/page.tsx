@@ -35,7 +35,7 @@ export default async function UsersPage() {
         actions={<SignOutButton csrf={session.csrf} />}
       />
 
-      <UsersView />
+      <UsersView csrf={session.csrf} />
     </>
   );
 }

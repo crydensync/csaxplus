@@ -56,3 +56,28 @@ export function describeMatch(match: string): string {
   if (match === MATCH_BROWSE) return "The API listed every account, newest first.";
   return `The API answered with a match mode this console does not know: ${match}.`;
 }
+
+/**
+ * What creating an account is, said where the form opens.
+ *
+ * Created accounts are ordinary sign-ups the operator performed, not a special
+ * kind of account: the API runs them through `cryden.SignUp`, so the password
+ * policy, the breach check and the rate limiter all apply as they would if the
+ * person had signed up themselves. Saying so keeps a password refusal from
+ * reading as the console's opinion.
+ */
+export const CREATE_ACCOUNT_DETAIL =
+  "The account is created as a normal sign-up: the engine's password policy and breach check apply to the password exactly as they would if the person registered themselves.";
+
+/**
+ * What a `user_exists` refusal means, for the field it names.
+ *
+ * The API's sentence is generic about whose account it is; this says which
+ * address and what to do instead, which is the answer the operator can act on.
+ */
+export const ACCOUNT_EXISTS_DETAIL =
+  "An account with that address already exists on this deployment. Search for it in the list above rather than creating a second one.";
+
+/** What a password the engine's policy refused means for the field it names. */
+export const PASSWORD_POLICY_DETAIL =
+  "The engine refused that password under its configured policy. The rules live at the API, not here, so a longer passphrase is the reliable fix.";

@@ -220,6 +220,120 @@ export async function fetchUserDetail(options: {
 }
 
 // ---------------------------------------------------------------------------
+// The admin user actions
+// ---------------------------------------------------------------------------
+
+/**
+ * The answer every admin user action returns: the account as it stands after the
+ * action, so the drawer re-renders from the answer rather than issuing a second
+ * GET. `detail` is present only when the action has something worth reporting
+ * (how many sessions were revoked, which provider was unlinked). Mirrors
+ * `adminActionDTO` in the API.
+ */
+const adminActionSchema = z.object({
+  user: adminUserSchema,
+  detail: z.string().optional(),
+});
+
+export type AdminActionResult = z.infer<typeof adminActionSchema>;
+
+/** The account actions the console relays. Each is one API endpoint. */
+export type UserAction = "unlock" | "suspend" | "unsuspend" | "revoke-sessions" | "mfa-disable";
+
+/**
+ * An action's path, or null when the caller passed something that cannot be one.
+ *
+ * The id is a path segment the browser chose and the same check the detail read
+ * makes applies: a value carrying a slash is not a bad account id, it is a
+ * different URL. The action names come from this module's own union, so an
+ * unknown one is a programming error and is refused rather than mapped to
+ * something that looks plausible.
+ */
+export function userActionPath(userId: string, action: UserAction): string | null {
+  if (!isUserIdSegment(userId)) return null;
+  const verbs: Record<UserAction, string> = {
+    unlock: "unlock",
+    suspend: "suspend",
+    unsuspend: "unsuspend",
+    "revoke-sessions": "revoke-sessions",
+    "mfa-disable": "mfa/disable",
+  };
+  const verb = verbs[action];
+  return verb === undefined ? null : `${userPath(userId)}/${verb}`;
+}
+
+/** An OAuth unlink's path, under the same segment rule as the user id itself. */
+export function userOAuthPath(userId: string, provider: string): string | null {
+  if (!isUserIdSegment(userId)) return null;
+  // A provider name is lowercase letters, digits and a dash in the engine's
+  // configuration (google, github, microsoft, discord, gitlab, apple). Anything
+  // else is refused before it becomes path syntax.
+  if (!/^[a-z0-9-]{1,32}$/.test(provider)) return null;
+  return `${userPath(userId)}/oauth/${provider}`;
+}
+
+/**
+ * One admin action on an account: unlock, suspend, unsuspend, revoke its
+ * sessions, remove its second factor, or unlink one OAuth provider.
+ *
+ * Every one is a POST or DELETE the API gates behind its own admin check and
+ * audits with the operator's id, so the console adds no permission of its own
+ * here: a token the API would refuse for these paths fails here exactly as it
+ * would anywhere else. The answer is the account as it stands afterwards, which
+ * is what the drawer re-renders from.
+ */
+export async function performUserAction(options: {
+  token: string;
+  userId: string;
+  action: UserAction;
+}): Promise<AdminActionResult> {
+  const path = userActionPath(options.userId, options.action);
+  if (path === null)
+    throw new CrydenError("malformed", "that is not an account id the console can act on");
+  const data = await apiRequest<unknown>({ method: "POST", path, token: options.token });
+
+  const parsed = adminActionSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account after the action", path);
+  return parsed.data;
+}
+
+/** Removes one OAuth identity from an account. Admin token required. */
+export async function unlinkUserOAuth(options: {
+  token: string;
+  userId: string;
+  provider: string;
+}): Promise<AdminActionResult> {
+  const path = userOAuthPath(options.userId, options.provider);
+  if (path === null)
+    throw new CrydenError("malformed", "that is not a provider name the console can send");
+  const data = await apiRequest<unknown>({ method: "DELETE", path, token: options.token });
+
+  const parsed = adminActionSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account after the unlink", path);
+  return parsed.data;
+}
+
+/** Registers a new account on this deployment: POST /v1/admin/users. */
+export async function createUser(options: {
+  token: string;
+  email: string;
+  password: string;
+}): Promise<AdminUser> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: USERS_PATH,
+    token: options.token,
+    body: { email: options.email, password: options.password },
+  });
+
+  // The action answer carries the account; the create path answers 201 with
+  // the same envelope, so one schema reads both.
+  const parsed = adminActionSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the created account", USERS_PATH);
+  return parsed.data.user;
+}
+
+// ---------------------------------------------------------------------------
 // GET /v1/admin/users/{userID}/metadata
 // ---------------------------------------------------------------------------
 

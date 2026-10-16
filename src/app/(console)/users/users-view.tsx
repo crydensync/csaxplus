@@ -20,6 +20,7 @@ import type { AdminUser, AdminUserList } from "@/server/cryden/admin";
 import type { UserPage } from "@/server/users/browse";
 
 import { UserDrawer } from "./user-drawer";
+import { CreateAccount } from "./create-account";
 
 /**
  * The Users screen's data, rendered.
@@ -56,7 +57,7 @@ const CONSOLE_MALFORMED: ConsoleFailure = {
   code: "console_malformed",
 };
 
-export function UsersView() {
+export function UsersView({ csrf }: { csrf: string }) {
   const [asked, setAsked] = useState<Request>(FIRST_PAGE);
   const [draft, setDraft] = useState("");
   const [load, setLoad] = useState<Load>({ kind: "loading" });
@@ -232,11 +233,25 @@ export function UsersView() {
             </Button>
           ) : null}
         </form>
+
+        {/* The toolbar is `space-between`, so the create affordance sits at its
+            far edge, away from the search it must not be mistaken for. */}
+        <CreateAccount
+          csrf={csrf}
+          onCreated={(user) => {
+            // The created account goes straight into the drawer, the same
+            // path a row click takes, so the operator sees what they made
+            // rather than a list they must find it in. The list re-reads on
+            // the drawer's close through `ask`, so the new row is there too.
+            setOpen(user);
+            void read(asked);
+          }}
+        />
       </div>
 
       {body}
 
-      <UserDrawer user={open} onClose={() => setOpen(null)} />
+      <UserDrawer user={open} csrf={csrf} onClose={() => setOpen(null)} />
     </div>
   );
 }

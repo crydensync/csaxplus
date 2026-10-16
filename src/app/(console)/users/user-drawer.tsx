@@ -11,6 +11,8 @@ import { METADATA_CLAIMS_DETAIL } from "@/lib/users";
 import type { AdminUser, AuditEvent } from "@/server/cryden/admin";
 import type { UserDetail } from "@/server/users/browse";
 
+import { AccountActions } from "./account-actions";
+
 /**
  * One account's detail, in the panel a list row opens.
  *
@@ -19,22 +21,43 @@ import type { UserDetail } from "@/server/users/browse";
  * account even when the metadata table was never wired on the deployment it is
  * reading.
  *
- * Nothing here writes. The actions that change an account (suspend, unlock,
- * force-disable MFA, revoke sessions) need API endpoints that do not exist yet,
- * and each will arrive behind a step-up grant; until then this panel is a read,
- * which is what the screen says it is.
+ * The actions live in `account-actions.tsx` and write through the console's own
+ * routes; this panel re-renders from the account each answer carries rather
+ * than re-reading, so an action's result and the screen agree without a second
+ * round trip.
  */
-export function UserDrawer({ user, onClose }: { user: AdminUser | null; onClose: () => void }) {
+export function UserDrawer({
+  user,
+  csrf,
+  onClose,
+}: {
+  user: AdminUser | null;
+  csrf: string;
+  onClose: () => void;
+}) {
+  // The drawer's own copy of the account. It starts as the row that was
+  // clicked and is replaced by the answer whenever an action lands, so a
+  // suspend re-renders the status pill without a second GET. Keyed by account
+  // id in the parent, so opening a second row starts from that row's state.
+  const [shown, setShown] = useState<AdminUser | null>(user);
+  useEffect(() => setShown(user), [user]);
+
   return (
     <Drawer
       open={user !== null}
       onClose={onClose}
-      title={user === null ? "" : user.email}
-      subtitle={user === null ? undefined : <span className="mono">{user.id}</span>}
+      title={shown === null ? "" : shown.email}
+      subtitle={shown === null ? undefined : <span className="mono">{shown.id}</span>}
     >
-      {/* Keyed by account, so opening a second row starts from that account's
-          own state rather than showing the first one's while it loads. */}
-      {user === null ? null : <AccountDetail key={user.id} userId={user.id} />}
+      {shown === null ? null : (
+        <AccountDetail
+          key={shown.id}
+          userId={shown.id}
+          account={shown}
+          csrf={csrf}
+          onAction={setShown}
+        />
+      )}
     </Drawer>
   );
 }
@@ -54,7 +77,17 @@ const CONSOLE_MALFORMED: ConsoleFailure = {
   code: "console_malformed",
 };
 
-function AccountDetail({ userId }: { userId: string }) {
+function AccountDetail({
+  userId,
+  account,
+  csrf,
+  onAction,
+}: {
+  userId: string;
+  account: AdminUser;
+  csrf: string;
+  onAction: (user: AdminUser) => void;
+}) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
   const inFlight = useRef<AbortController | null>(null);
 
@@ -131,28 +164,35 @@ function AccountDetail({ userId }: { userId: string }) {
     return <SectionState section={detail} onRetry={retry} />;
   }
 
-  const { user, active_sessions: sessions, recent_activity: activity } = detail.data;
+  // The identity block renders from the drawer's copy of the account, which an
+  // action's answer replaces; the detail read's own user field is the account
+  // as the GET saw it and is not rendered again after that. The session count
+  // and the activity are the read's, because an action's answer carries neither.
+  const { active_sessions: sessions, recent_activity: activity } = detail.data;
   const keys = metadata.state === "ok" ? Object.keys(metadata.data.metadata) : [];
 
   return (
     <>
+      <div className="drawer-title">Actions</div>
+      <AccountActions user={account} csrf={csrf} onAction={onAction} />
+
       <div className="drawer-title">Identity</div>
       <dl className="detail-list">
         <Row label="Account id">
-          <span className="mono">{user.id}</span>
+          <span className="mono">{account.id}</span>
         </Row>
-        <Row label="Email">{user.email}</Row>
+        <Row label="Email">{account.email}</Row>
         <Row label="Created">
-          <span className="dim">{formatInstant(user.created_at)}</span>
+          <span className="dim">{formatInstant(account.created_at)}</span>
         </Row>
         <Row label="Last change">
-          <span className="dim">{formatInstant(user.updated_at)}</span>
+          <span className="dim">{formatInstant(account.updated_at)}</span>
         </Row>
-        <Row label="Status">{user.locked ? "Locked" : "Active"}</Row>
-        <Row label="Failed attempts">{formatCount(user.failed_attempts)}</Row>
-        {user.locked_until === null ? null : (
+        <Row label="Status">{account.locked ? "Locked" : "Active"}</Row>
+        <Row label="Failed attempts">{formatCount(account.failed_attempts)}</Row>
+        {account.locked_until === null ? null : (
           <Row label="Locked until">
-            <span className="dim">{formatInstant(user.locked_until)}</span>
+            <span className="dim">{formatInstant(account.locked_until)}</span>
           </Row>
         )}
       </dl>
