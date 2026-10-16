@@ -41,14 +41,17 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       `GET /v1/admin/users`, `/security/mfa-adoption` and `/security/hash-migration`; the digest
       from `/digest/history`. The prototype's "Recent activity" and "Active sessions" have no
       endpoint (BACKEND_GAPS 2.13) and were replaced rather than faked
-- [ ] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit.
+- [x] 1.2 Users: server-side search, pagination, detail drawer, actions with confirm + audit.
       Split into three commits: **(a) the read-only screen (done)**, **(b) operator passkeys (done,
       and since moved to the API: see D22)**, then (c) the six Go endpoints and the actions that
-      need them. **(c) API half done**: the six user-action endpoints are built on the api repo's
-      `feat/console-admin-endpoints` branch (commit d0afb8f: create, unlock, suspend, unsuspend,
-      revoke-sessions, mfa/disable, oauth unlink; each audited with the operator id, each tested
-      against a real engine on memory stores, OpenAPI updated). Remaining: the console side,
-      actions with confirm + audit in the Users screen, then merge/deploy the api branch.
+      need them. **(c) done** (commit 0b157cf): the six endpoints are on the api repo's
+      `feat/console-admin-endpoints` branch (commit d0afb8f) and the console relays all of them
+      through the Users screen, each behind a confirm modal and each audited with the operator id.
+      Create sits in the toolbar. Verified against a real engine over real HTTP. Remaining for the
+      step: the api branch is still unmerged and undeployed (a console that calls these endpoints
+      against a deployment without them gets honest 502s), and the oauth unlink has a route and
+      tests but no UI, because the API exposes no way to list an account's linked providers
+      (BACKEND_GAPS 6.x) and a screen that offers actions that will 404 offers none.
 - [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
@@ -403,6 +406,33 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   while 21 files were being reformatted at once, and passed before and after. The test is marked slow
   now (90 s). Every other test that raises an assertion timeout above its test timeout has the same
   bug, so check both numbers, not just the one in the assertion.
+- **The actions, and what writing changes about a screen (step 1.2c).** The read-only screen's
+  components each held one job; the write half cut across them. `account-actions.tsx` owns the five
+  action buttons and their confirm modals; `user-drawer.tsx` owns the account shown, so an action's
+  answer can replace the drawer's copy of the account without a second GET (the identity block
+  renders from that copy, and the session count and activity stay the read's, because an action's
+  answer carries neither). `create-account.tsx` owns the form, and sits in the toolbar, not the
+  drawer: the drawer is for accounts that exist. The two refusals an operator can act on name their
+  field (`user_exists` points at the search, `password_policy_violation` at the API's policy, which
+  the console deliberately does not reproduce); every other failure stays the API's sentence.
+- **The password is asked for twice and only one copy is sent.** The repeat exists because nothing
+  else on the screen can recover a mistyped initial password; the mismatch is checked client-side
+  and never travels. The password's only validation is the engine's own policy at `cryden.SignUp`,
+  where the breach check and rate limiter run as they would at `POST /v1/signup`: a console-side
+  bound on the password would be a second opinion about a rule the API owns.
+- **The drawer's actions re-render from the answer, and that is why the confirm modal closes when
+  it does.** An action's answer is the account as it stands, so `setShown` replaces the drawer's
+  copy and the status pill flips without a second GET. Closing the modal on the same answer keeps
+  the modal's promise ("this did what it said") and the drawer's display in one state.
+- **Verifying writes needs an engine that can be broken and restored, which the unit stubs cannot
+  express.** The manual check ran csag from the api branch against the local Postgres, drove every
+  action through the console's own routes with curl (sign in, read the CSRF from the session
+  route, POST with the header), and confirmed the engine-side effects: a suspended account's next
+  sign-in is refused by the engine's own lockout path (`account_locked`), an unsuspended one signs
+  in again, revoke-sessions names the count, and every action lands in `audit_events` with
+  `metadata.by` naming the operator. The disposable account was deleted afterwards. The API branch
+  still is not merged; against a deployment without it these routes answer 502 with the API's code,
+  which the drawer words rather than hides.
 
 ## Tier summaries
 
