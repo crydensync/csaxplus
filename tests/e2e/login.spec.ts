@@ -25,7 +25,7 @@ test.describe("sign-in", () => {
     // redirect test takes, for the same reason.
     test.slow();
 
-    for (const route of ["/dashboard", "/users"]) {
+    for (const route of ["/dashboard", "/users", "/oauth"]) {
       await page.goto(route);
       await expect(page).toHaveURL(/\/login$/);
     }

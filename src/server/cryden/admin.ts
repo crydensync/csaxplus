@@ -371,6 +371,87 @@ export async function fetchUserMetadata(options: {
 }
 
 // ---------------------------------------------------------------------------
+// GET /v1/admin/oauth/providers and POST /v1/admin/oauth/{provider}/test
+// ---------------------------------------------------------------------------
+
+export const OAUTH_PROVIDERS_PATH = "/v1/admin/oauth/providers";
+
+/**
+ * One row of the configured-provider list. Configuration only: `configured`
+ * says whether this deployment holds credentials, and nothing here says
+ * whether the provider is reachable today, because answering that costs a
+ probe and this list deliberately makes none. The reachability answer is
+ * the test endpoint's, on demand.
+ */
+const oauthProviderSummarySchema = z.object({
+  provider: z.string().min(1),
+  configured: z.boolean(),
+});
+
+const oauthProviderListSchema = z.object({
+  providers: z.array(oauthProviderSummarySchema),
+});
+
+export type OAuthProviderSummary = z.infer<typeof oauthProviderSummarySchema>;
+
+/** Which providers this deployment can speak to, without probing. Admin token required. */
+export async function fetchOAuthProviders(options: {
+  token: string;
+}): Promise<OAuthProviderSummary[]> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: OAUTH_PROVIDERS_PATH,
+    token: options.token,
+  });
+
+  const parsed = oauthProviderListSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the provider list", OAUTH_PROVIDERS_PATH);
+  return parsed.data.providers;
+}
+
+/**
+ * The answer the API already publishes for a probe: the same shape
+ * `/v1/admin/oauth/health` reports per provider, so the list's "Test" button
+ * and the health report cannot word a verdict two ways. `status` is one of
+ * ok, degraded, unreachable, not_configured; the last cannot arrive here,
+ * because a provider without credentials is a 404 before anything is probed.
+ */
+const oauthProviderHealthSchema = z.object({
+  provider: z.string().min(1),
+  configured: z.boolean(),
+  status: z.string().min(1),
+  http_status: z.number().int().optional(),
+  latency_ms: z.number().int().optional(),
+  error: z.string().optional(),
+});
+
+export type OAuthProviderHealth = z.infer<typeof oauthProviderHealthSchema>;
+
+/**
+ * Tests one provider's authorize endpoint. Admin token required.
+ *
+ * The name is checked against the provider-name grammar before it is sent,
+ * the same rule the OAuth unlink path uses: the value comes from the
+ * console's own list, but it arrives at this function through a route
+ * segment the browser chose, so the check is made where the URL is built
+ * rather than trusted from the caller.
+ */
+export async function testOAuthProvider(options: {
+  token: string;
+  provider: string;
+}): Promise<OAuthProviderHealth> {
+  if (!/^[a-z0-9-]{1,32}$/.test(options.provider)) {
+    throw new CrydenError("malformed", "that is not a provider name the console can send");
+  }
+  const path = `/v1/admin/oauth/${options.provider}/test`;
+  const data = await apiRequest<unknown>({ method: "POST", path, token: options.token });
+
+  const parsed = oauthProviderHealthSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the provider's reachability", path);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
 // GET /v1/admin/security/hash-migration
 // ---------------------------------------------------------------------------
 

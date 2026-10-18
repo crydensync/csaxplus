@@ -6,13 +6,16 @@ import {
   DIGEST_HISTORY_PATH,
   HASH_MIGRATION_PATH,
   MFA_ADOPTION_PATH,
+  OAUTH_PROVIDERS_PATH,
   USERS_PATH,
   fetchDigestHistory,
   fetchHashMigration,
   fetchMfaAdoption,
+  fetchOAuthProviders,
   fetchUserDetail,
   fetchUserMetadata,
   fetchUsers,
+  testOAuthProvider,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
 import { resetConfigCache } from "@/server/config/index";
@@ -52,7 +55,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-type Seen = { path: string; search: string; authorization: string | null };
+type Seen = { path: string; search: string; method?: string; authorization: string | null };
 
 /** Records the requests the console made, and answers each with `handler`'s reply. */
 function stubApi(handler: () => Response): Seen[] {
@@ -63,6 +66,7 @@ function stubApi(handler: () => Response): Seen[] {
     seen.push({
       path: url.pathname,
       search: url.search,
+      method: init?.method,
       authorization: new Headers(init?.headers).get("authorization"),
     });
     return handler();
@@ -126,6 +130,21 @@ const A_DIGEST_RUN = {
   window_end: "2026-10-05T00:00:00Z",
   generated_at: "2026-10-05T00:00:03Z",
   text: "Security digest\n\nNothing needs attention.",
+};
+
+const A_PROVIDER_LIST = {
+  providers: [
+    { provider: "google", configured: true },
+    { provider: "github", configured: false },
+  ],
+};
+
+const A_PROVIDER_VERDICT = {
+  provider: "google",
+  configured: true,
+  status: "ok",
+  http_status: 400,
+  latency_ms: 42,
 };
 
 describe("reading accounts", () => {
@@ -473,5 +492,91 @@ describe("reading the digest history", () => {
     stubApi(() => jsonResponse({ data: { runs: [withoutText], count: 1, limit: 1 } }));
 
     await expect(fetchDigestHistory({ token: TOKEN })).rejects.toThrow(DIGEST_HISTORY_PATH);
+  });
+});
+
+describe("reading the OAuth provider list", () => {
+  it("asks for the provider list without probing anything, and sends the operator's token", async () => {
+    const seen = stubApi(() => jsonResponse({ data: A_PROVIDER_LIST }));
+
+    await expect(fetchOAuthProviders({ token: TOKEN })).resolves.toEqual(A_PROVIDER_LIST.providers);
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.path).toBe(OAUTH_PROVIDERS_PATH);
+    // No body is sent, and the method is the transport's default GET.
+    expect(seen[0]?.method === undefined || seen[0]?.method === "GET").toBe(true);
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("refuses a list whose rows carry no configured field", async () => {
+    stubApi(() => jsonResponse({ data: { providers: [{ provider: "google" }] } }));
+
+    await expect(fetchOAuthProviders({ token: TOKEN })).rejects.toThrow(OAUTH_PROVIDERS_PATH);
+  });
+
+  it("refuses an answer whose providers member is not an array", async () => {
+    stubApi(() => jsonResponse({ data: { providers: "google" } }));
+
+    await expect(fetchOAuthProviders({ token: TOKEN })).rejects.toThrow(OAUTH_PROVIDERS_PATH);
+  });
+});
+
+describe("testing one OAuth provider", () => {
+  it("sends the probe as a POST on the provider's own path, with the operator's token", async () => {
+    const seen = stubApi(() => jsonResponse({ data: A_PROVIDER_VERDICT }));
+
+    await expect(testOAuthProvider({ token: TOKEN, provider: "google" })).resolves.toEqual(
+      A_PROVIDER_VERDICT,
+    );
+
+    expect(seen).toHaveLength(1);
+    // Not under /providers: the API registers the probe on
+    // /v1/admin/oauth/{provider}/test, and the list path is its own resource.
+    expect(seen[0]?.path).toBe("/v1/admin/oauth/google/test");
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("refuses a name that is not a provider-name before anything is sent", async () => {
+    const seen = stubApi(() => jsonResponse({ data: A_PROVIDER_VERDICT }));
+
+    for (const name of ["../etc", "google/something", "", "Google", "a".repeat(33)]) {
+      await expect(testOAuthProvider({ token: TOKEN, provider: name })).rejects.toMatchObject({
+        kind: "malformed",
+      });
+    }
+
+    // Nothing reached the API: the check happens where the URL is built.
+    expect(seen).toHaveLength(0);
+  });
+
+  it("lets the API's not-configured refusal through with its own code", async () => {
+    stubApi(() =>
+      jsonResponse(
+        {
+          error: {
+            code: "oauth_provider_not_configured",
+            message: "this OAuth provider is not configured on this deployment",
+          },
+        },
+        404,
+      ),
+    );
+
+    // The wording of that refusal is the server layer's decision, covered where
+    // the sections are composed; here the client's job is to carry the code.
+    await expect(testOAuthProvider({ token: TOKEN, provider: "github" })).rejects.toMatchObject({
+      kind: "http",
+      status: 404,
+      code: "oauth_provider_not_configured",
+    });
+  });
+
+  it("refuses a verdict with no status", async () => {
+    const { status: _dropped, ...withoutStatus } = A_PROVIDER_VERDICT;
+    stubApi(() => jsonResponse({ data: withoutStatus }));
+
+    await expect(testOAuthProvider({ token: TOKEN, provider: "google" })).rejects.toThrow(
+      "/v1/admin/oauth/google/test",
+    );
   });
 });

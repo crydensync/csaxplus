@@ -52,7 +52,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       against a deployment without them gets honest 502s), and the oauth unlink has a route and
       tests but no UI, because the API exposes no way to list an account's linked providers
       (BACKEND_GAPS 6.x) and a screen that offers actions that will 404 offers none.
-- [ ] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
+- [x] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
 - [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
@@ -433,6 +433,36 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `metadata.by` naming the operator. The disposable account was deleted afterwards. The API branch
   still is not merged; against a deployment without it these routes answer 502 with the API's code,
   which the drawer words rather than hides.
+
+- **The OAuth Providers screen (step 1.3).** The list answers from configuration alone, so the
+  screen renders the moment it opens; reachability is behind each row's Test button, one probe
+  per click, never a list-wide sweep. The API's four-state verdict vocabulary (ok, degraded,
+  unreachable, not_configured) is shared between the button and the health report by using the
+  same shape for both, and `describeOAuthStatus` in `src/lib/oauth.ts` is the screen's only
+  opinion about what each state means.
+- **The API's `oauth_provider_not_configured` refusal is intercepted, not passed through.** It
+  arrives as a 404 that `sectionFailure` would leave an `error`, because for every other section
+  a 404 means a missing record. Here the missing thing is the deployment's own credentials, so
+  `notConfiguredOrFailed` in `src/server/oauth/providers.ts` turns it into `empty` with the
+  configuration sentence, the way `missingOrAnswered` intercepts `not_found` for the Users
+  screen. The screen's TestCell words the route's `not_found` code with the same sentence, so
+  the refusal reads as configuration on both paths.
+- **The probe's path was wrong once, and only a live check could see it.** The first draft built
+  `/v1/admin/oauth/providers/{provider}/test`; the API registers
+  `/v1/admin/oauth/{provider}/test`. The engine 404s an unknown path with a plain `404 page not
+  found`, no envelope, which the transport words "the API answered 404" and the route turns into
+  a bare `conflict`: every unit test passed because the stub agreed with the same wrong URL, and
+  the live engine was the only thing that disagreed. The lesson is the same one step 1.2c wrote
+  down: the stub tests the console's agreement with itself, and only real HTTP tests the path.
+- **Verified against the live engine with real provider credentials** (google and github
+  configured on the deployment): the list answers all six providers with the two configured,
+  both probes return real `ok` verdicts with latency (1.1 to 1.3 s), an unconfigured provider's
+  test returns the worded configuration refusal, a malformed name is refused 400 before the API
+  is asked, and a missing CSRF header is refused 403 with nothing spent. Drove through the
+  console's own routes with curl, as 1.2c did. The list screen's states are covered by
+  `tests/unit/oauth-providers-view.test.tsx` (12 cases, real render in jsdom) and the routes and
+  section composition by `tests/unit/oauth-providers.test.ts` (8 cases); the client reads grew
+  `tests/unit/cryden-admin.test.ts` to 36. `/oauth` joined the e2e signed-out redirect loop.
 
 ## Tier summaries
 
