@@ -53,6 +53,8 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       tests but no UI, because the API exposes no way to list an account's linked providers
       (BACKEND_GAPS 6.x) and a screen that offers actions that will 404 offers none.
 - [x] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
+      plus a follow-up commit (b3d5e81): the table's provider cells carry the prototype's
+      brand marks, which had been ported into `brand-icons.tsx` but never wired in
 - [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
 - [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
@@ -463,6 +465,13 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `tests/unit/oauth-providers-view.test.tsx` (12 cases, real render in jsdom) and the routes and
   section composition by `tests/unit/oauth-providers.test.ts` (8 cases); the client reads grew
   `tests/unit/cryden-admin.test.ts` to 36. `/oauth` joined the e2e signed-out redirect loop.
+- **The brand marks (step 1.3 follow-up).** The prototype's OAuth view drew each provider's
+  mark in an `.oauth-icon` chip; the table that replaced the card grid had dropped them, and
+  the marks sat ported into `src/components/brand-icons.tsx` with nothing importing them. The
+  table's provider cell now draws the mark beside the name, at row size (26 px chip, 14 px
+  art, under the same `.oauth-icon` class so the prototype's rule stays the one rule), and a
+  provider the console has no artwork for keeps the plain name, because the API could report
+  one outside the six and an empty chip would read as a broken image rather than as unknown.
 
 ## Tier summaries
 
