@@ -759,6 +759,22 @@ tr.clickable:hover td {
   border-top: 1px solid var(--border-soft);
 }
 
+/* The providers table's provider cell: the prototype's mark, sized for a row. */
+.oauth-provider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.oauth-provider .oauth-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+.oauth-provider .oauth-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ---------- secrets ---------- */
 
 .secrets-banner {

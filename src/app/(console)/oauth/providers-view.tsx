@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/Button";
+import { BrandIcon, isKnownBrand } from "@/components/brand-icons";
 import { Card } from "@/components/Card";
 import { DataTable, type Column } from "@/components/DataTable";
 import { IconLink } from "@/components/icons";
@@ -273,7 +274,19 @@ function columns(
     {
       key: "provider",
       header: "Provider",
-      cell: (row) => <span className="mono">{row.provider}</span>,
+      // The mark is how an operator recognises the row, which is what the
+      // prototype's card grid was doing with it; a provider the console has
+      // no artwork for keeps the plain name rather than an empty chip.
+      cell: (row) => (
+        <div className="oauth-provider">
+          {isKnownBrand(row.provider) ? (
+            <span className="oauth-icon">
+              <BrandIcon provider={row.provider} />
+            </span>
+          ) : null}
+          <span className="mono">{row.provider}</span>
+        </div>
+      ),
     },
     {
       key: "credentials",

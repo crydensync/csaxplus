@@ -171,6 +171,28 @@ describe("when the provider list arrives", () => {
     expect(text()).toContain(OAUTH_TEST_COST_DETAIL);
   });
 
+  it("draws the prototype's brand mark beside a provider it has artwork for", async () => {
+    await renderProviders();
+
+    const googleRow = [...container.querySelectorAll("tbody tr")].find((candidate) =>
+      candidate.textContent?.includes("google"),
+    );
+    expect(googleRow?.querySelector(".oauth-icon svg")).not.toBeNull();
+  });
+
+  it("keeps the plain name for a provider the console has no artwork for", async () => {
+    // A provider outside the brand set: no empty chip where a mark would be.
+    await renderProviders({
+      [LIST_ROUTE]: () => jsonResponse({ data: ok([{ provider: "slack", configured: false }]) }),
+    });
+
+    const row = [...container.querySelectorAll("tbody tr")].find((candidate) =>
+      candidate.textContent?.includes("slack"),
+    );
+    expect(row?.querySelector(".oauth-icon")).toBeNull();
+    expect(row?.textContent).toContain("slack");
+  });
+
   it("offers a test only to a provider with credentials, and says why for the rest", async () => {
     await renderProviders();
 
