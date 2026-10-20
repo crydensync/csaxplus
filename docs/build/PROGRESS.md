@@ -55,7 +55,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 1.3 OAuth Providers: real configured list, reachability checks (5 s timeout, cached)
       plus a follow-up commit (b3d5e81): the table's provider cells carry the prototype's
       brand marks, which had been ported into `brand-icons.tsx` but never wired in
-- [ ] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
+- [x] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
 - [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
 - [ ] 1.7 Tag v0.1.0 and write the tier summary below
@@ -471,7 +471,32 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   table's provider cell now draws the mark beside the name, at row size (26 px chip, 14 px
   art, under the same `.oauth-icon` class so the prototype's rule stays the one rule), and a
   provider the console has no artwork for keeps the plain name, because the API could report
-  one outside the six and an empty chip would read as a broken image rather than as unknown.
+  one outside the six and an empty chip would read as a broken image rather than unknown.
+
+- **The MFA & Passkeys screen (step 1.4).** The step's two asks resolve to one read and one
+  pointer. The report is the API's `GET /v1/admin/security/mfa-adoption` (api branch commit
+  8282958), which counts enrolment and removal **events** from the engine's audit trail,
+  all-time and in the API's own default window, against the account total. The prototype's
+  "adoption percentage" is not derivable from that and the screen says so instead of deriving
+  it: `MFA_ADOPTION_NOTE` in `src/lib/mfa.ts` is the sentence both this screen and the
+  dashboard read (BACKEND_GAPS 2.13). The report has no per-account rows (BACKEND_GAPS 5.2),
+  so there is no table and no per-row action here; force-disable points at the Users screen,
+  where `POST /v1/admin/users/{id}/mfa/disable` has been wired since 1.2c behind its confirm
+  modal, admin gate and audit record (BACKEND_GAPS 2.9 now records that endpoint as shipped).
+  The screen quotes `window_days` from the answer rather than passing one, so the number and
+  the sentence cannot drift; the dashboard, whose copy names its own window, still passes an
+  explicit one. A factor absent from the report renders "Not reported" rather than zero,
+  because the API omits a type that did not occur and zero would claim a count.
+- **The screen's states, and the window between them.** The read is the same console-route
+  pattern as the dashboard's and OAuth's (D18: the renewal cookie needs a route handler). The
+  client read is zod-checked in `fetchMfaAdoption`, a factor missing its counts is a named
+  malformed answer that names the path, and a factor the report does not cover is a worded
+  tile, not a blank. Covered by `tests/unit/mfa-route.test.ts` (5 cases: the route boundary
+  and the section composition), `tests/unit/mfa-view.test.tsx` (12 cases, real render in
+  jsdom) and `tests/unit/cryden-admin.test.ts`, which grew to 36 with the three new reads.
+  `/mfa` joined the e2e signed-out redirect loop. Verified against the live engine on 8080
+  with the real endpoints on the api branch, and the screen measured at 375 px through the
+  manual harness in `tests/e2e/mfa-manual.spec.ts`, which is deleted when the step commits.
 
 ## Tier summaries
 

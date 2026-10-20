@@ -159,8 +159,13 @@ The engine has no admin override. `DisableTOTP` and `DeletePasskey` both require
 current password (`cryden/auth/mfa.go:106-128`, `cryden/cryden.go:339`). There is no `force`
 path in non-test code.
 
-Action: "force-disable MFA" is a new API endpoint plus an engine capability. Until both exist,
-the console must not offer it.
+Done at the API layer (step 1.2c, on the api branch): `POST /v1/admin/users/{userID}/mfa/disable`
+deletes the TOTP enrolment without the account holder's password, revokes the account's sessions
+with it, and records the operator's id in the audit trail. The compromise is deliberate and narrow
+(the handler's comment has the reasoning): an operator acting on somebody else's account has no
+password to give, so the checks the engine would have had are the admin gate, the confirm modal,
+the audit record and the session revocation. The console offers it from the account's row on the
+Users screen, and the MFA screen points there rather than duplicating it.
 
 ### 2.10 User metadata
 
