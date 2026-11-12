@@ -98,8 +98,12 @@ export async function sessionFromTokens(tokens: ApiTokens, label: string): Promi
 }
 
 /** `POST /v1/login`, and whatever the API's answer turns into. */
-export async function signIn(email: string, password: string): Promise<SignInOutcome> {
-  const result = await signInWithPassword(email, password);
+export async function signIn(
+  email: string,
+  password: string,
+  userAgent?: string,
+): Promise<SignInOutcome> {
+  const result = await signInWithPassword(email, password, userAgent);
   if (result.kind === "second-factor") {
     return { kind: "second-factor", paused: result.paused };
   }
@@ -107,14 +111,20 @@ export async function signIn(email: string, password: string): Promise<SignInOut
 }
 
 export async function sessionFromTotp(pending: PendingLogin, code: string): Promise<Session> {
-  return sessionFromTokens(await completeTotp(pending.pendingToken, code), pending.email);
+  return sessionFromTokens(
+    await completeTotp(pending.pendingToken, code, pending.userAgent),
+    pending.email,
+  );
 }
 
 export async function sessionFromRecoveryCode(
   pending: PendingLogin,
   code: string,
 ): Promise<Session> {
-  return sessionFromTokens(await completeRecoveryCode(pending.pendingToken, code), pending.email);
+  return sessionFromTokens(
+    await completeRecoveryCode(pending.pendingToken, code, pending.userAgent),
+    pending.email,
+  );
 }
 
 /**

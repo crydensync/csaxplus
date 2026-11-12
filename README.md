@@ -150,28 +150,28 @@ The six sidebar groups, and all 21 screens in them.
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
 | Overview | Dashboard | done | tier 1, step 1.1 |
-| Identity | Users | partial | tier 1, step 1.2. The list, the exact-address search, the pager and the detail drawer read the API for real; the account actions need six endpoints the API does not have yet |
-| Identity | OAuth Providers | planned | tier 1, step 1.3 |
-| Identity | MFA & Passkeys | planned | tier 1, step 1.4 |
-| Identity | Email & Magic Link | planned | tier 1, step 1.5 |
-| Identity | Password Policy | planned | tier 1, step 1.6 |
-| Security | Sessions | planned | tier 2, step 2.1 |
-| Security | Anomalies | planned | tier 2, step 2.2 |
-| Security | Audit Log | planned | tier 2, step 2.3 |
-| Security | AI Assistant (read-only) | planned | tier 4, step 4.2 |
-| Developer | API Keys | planned | tier 3, step 3.1 |
-| Developer | Webhooks | planned | tier 3, step 3.2 |
-| Developer | JWT Claims | planned | tier 3, step 3.3 |
-| Developer | Cloud Logging | planned | tier 3, step 3.4 |
-| AI Admin | Weekly Digest | planned | tier 4, step 4.3 |
-| AI Admin | Support Assistant (read-only) | planned | tier 4, step 4.4 |
-| AI Admin | Config Advisor (read-only) | planned | tier 4, step 4.5 |
-| AI Admin | Ask-AI Widget (read-only) | planned | tier 4, step 4.6 |
-| Configuration | LLM Provider | planned | tier 4, step 4.7 |
-| Configuration | Database Provider | planned | tier 4, step 4.7 |
+| Identity | Users | partial | tier 1, step 1.2. The detail drawer edits per-user JWT metadata; linked-provider actions need a linked-identity list endpoint |
+| Identity | OAuth Providers | done | tier 1, step 1.3 |
+| Identity | MFA & Passkeys | done | tier 1, step 1.4 |
+| Identity | Email & Magic Link | partial | tier 1, step 1.5; CSAG event counts and API template samples only. Actual delivery belongs to the host product |
+| Identity | Password Policy | done | tier 1, step 1.6; active policy is persisted and enforced by CSAG |
+| Security | Sessions | built locally | tier 2, step 2.1; all-account session admin endpoints are on the local CSAG feature branch |
+| Security | Anomalies | done | tier 2, step 2.2; flagged events and saved review notes come from CSAG |
+| Security | Audit Log | built locally | tier 2, step 2.3; cursor API is on the local CSAG feature branch |
+| Security | AI Assistant (read-only) | partial | tier 4, step 4.2; self-scoped Ask-AI is live, but admin query/log/anomaly/audit modes need API support |
+| Developer | API Keys | done | tier 3, step 3.1; user-owned keys are created, listed and revoked through CSAG |
+| Developer | Webhooks | partial | tier 3, step 3.2; one runtime destination, encrypted secret, test delivery, and history are managed in CSAG; multi-endpoint support remains |
+| Developer | JWT Claims | built locally | tier 3, step 3.3; global source mappings and account-specific claim preview are backed by CSAG |
+| Developer | Cloud Logging | partial | tier 3, step 3.4; recent redacted shipped events are live, but provider and credential settings need API support |
+| AI Admin | Weekly Digest | partial | tier 4, step 4.3; stored CSAG reports are live, but schedules, recipients and delivery settings need API support |
+| AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis is live, while escalation and ticketing integrations need their APIs |
+| AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose suggestions are live, but structured field prefill needs a response contract |
+| AI Admin | Ask-AI Widget (read-only) | partial | tier 4, step 4.6; configured scopes are live, but the embeddable script and install snippet remain |
+| Configuration | LLM Provider | partial | tier 4, step 4.7; redacted Anthropic settings are live, while provider writes stay disabled by the read-only AI policy |
+| Configuration | Database Provider | partial | tier 4, step 4.7; redacted settings are live, but changing them needs the missing step-up flow |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
-Several of those need endpoints the API does not have yet. Every one is listed in
+Several of those still need endpoints the API does not have yet. Every one is listed in
 [docs/build/BACKEND_GAPS.md](docs/build/BACKEND_GAPS.md) with the evidence for it, and a screen
 whose endpoint is missing shows a specific "not available in this deployment" state rather than an
 empty table.
@@ -297,7 +297,6 @@ naming the key and the reason and never the value.
 | `CSAX_SESSION_SECRET` | yes | `CSAX_SESSION_SECRET` | none, required | **yes** |
 | `CSAX_VAULT_KEY` | yes | `CSAX_VAULT_KEY` | none, required | **yes** |
 | `WEBAUTHN_ORIGIN` | yes | `WEBAUTHN_ORIGIN` | none, required | no |
-| `RESEND_API_KEY` | yes | `RESEND_API_KEY` | none | **yes** |
 | `LLM_PROVIDER` | yes | `LLM_PROVIDER` | none | no |
 | `ANTHROPIC_API_KEY` | yes | `ANTHROPIC_API_KEY` | none | **yes** |
 | `OPENAI_API_KEY` | yes | `OPENAI_API_KEY` | none | **yes** |
@@ -327,9 +326,12 @@ is.
   The relying party for passkeys is not here: it belongs to the API, whose own `WEBAUTHN_RP_ID` and
   `WEBAUTHN_RP_ORIGINS` decide it, because a passkey is a credential on the operator's account
   there rather than on this console.
-- **`RESEND_API_KEY`.** For the Email screen's delivery stats and test send. Optional; the Email
-  screen reports the key as absent rather than pretending.
 - **`LLM_PROVIDER`.** `anthropic`, `openai`, `azure-openai` or `openai-compatible`.
+- **`ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.** Reserved for console-owned AI features and not
+  currently used by the Ask-AI page. That page calls CSAG's `/v1/ask-ai`; configure its provider
+  separately through the CSAG admin settings API with `SETTINGS_ENCRYPTION_KEY` set in CSAG. The
+  console's LLM Provider screen only reads the redacted status. The same CSAG key encrypts webhook
+  signing secrets configured from the Webhooks screen.
 - **`LOG_LEVEL`.** `error`, `warn`, `info` or `debug`. Validated and carried today; the logger that
   consumes it arrives in step 5.5.
 - **`SKIP_AUTO_MIGRATE`.** Stops the console applying its own store migrations on boot.

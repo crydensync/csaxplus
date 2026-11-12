@@ -386,6 +386,11 @@ nav.primary {
   padding: 28px 36px 60px;
   max-width: 1180px;
 }
+.view.ai-assistant-view {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
 .view.anim {
   animation: fadeUp 0.35s ease both;
 }
@@ -1006,6 +1011,18 @@ tr.clickable:hover td {
 }
 .audit-dot.bad {
   background: var(--red);
+}
+.audit-dot.warn {
+  background: var(--amber);
+}
+.audit-dot.neutral {
+  background: var(--text-muted);
+}
+.audit-event-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 .audit-time {
   font-family: var(--font-mono);

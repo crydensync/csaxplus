@@ -136,16 +136,6 @@ itself is not configured here: passkeys are credentials on the operator's accoun
 the API's own `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_ORIGINS` decide them and must cover the origin the
 browser is actually on.
 
-### Email
-
-| Key | Required | Default | Secret |
-|---|---|---|---|
-| `RESEND_API_KEY` | no | none | **yes** |
-
-Used by the Email screen for delivery stats and its test send. Optional: with no key the screen
-reports it as absent rather than pretending delivery works. The engine itself sends no email at
-all, so what this key drives is the console's own integration and not something the engine provides.
-
 ### AI provider
 
 | Key | Required | Default | Secret |
@@ -154,8 +144,13 @@ all, so what this key drives is the console's own integration and not something 
 | `ANTHROPIC_API_KEY` | no | none | **yes** |
 | `OPENAI_API_KEY` | no | none | **yes** |
 
-`LLM_PROVIDER` is `anthropic`, `openai`, `azure-openai` or `openai-compatible`. Keys are read
-through the secrets layer and are never sent to the browser.
+`LLM_PROVIDER` accepts `anthropic`, `openai`, `azure-openai` or `openai-compatible`. These values
+are reserved for console-owned AI features and are not currently used by the Ask-AI page, which
+calls CSAG's `/v1/ask-ai` endpoint. CSAG keeps its provider settings separately in its encrypted
+settings store; configure `SETTINGS_ENCRYPTION_KEY` in the CSAG process before saving a provider
+through CSAG's admin settings API. The same CSAG key protects webhook signing secrets saved from
+the Webhooks screen. Runtime webhook URLs must use HTTPS, except loopback URLs for development.
+The console's LLM Provider page is read-only.
 
 Every AI feature is read-only, always. See
 [the guarantee](secrets-and-passkeys.md#the-read-only-guarantee) and

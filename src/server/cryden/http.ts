@@ -55,6 +55,8 @@ export type ApiRequest = {
   body?: unknown;
   /** Bearer token for the API. Never logged, never returned to a browser. */
   token?: string | undefined;
+  /** Browser User-Agent forwarded by the sign-in BFF when CSAG creates a session. */
+  userAgent?: string | undefined;
   signal?: AbortSignal;
   timeoutMs?: number;
 };
@@ -80,6 +82,7 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (request.body !== undefined) headers["content-type"] = "application/json";
   if (request.token !== undefined) headers.authorization = `Bearer ${request.token}`;
+  if (request.userAgent !== undefined) headers["user-agent"] = request.userAgent;
 
   const timeout = AbortSignal.timeout(request.timeoutMs ?? API_TIMEOUT_MS);
   const signal =

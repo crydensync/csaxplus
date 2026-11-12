@@ -33,6 +33,8 @@ const pendingSchema = z.object({
   methods: z.array(z.enum(SECOND_FACTOR_METHODS)),
   /** The address the operator signed in with, echoed on the second step. */
   email: z.string().min(1),
+  /** Browser device hint, kept only in this short-lived encrypted cookie. */
+  userAgent: z.string().max(512).optional(),
   /**
    * Set once a passkey ceremony has started, and read back by the finish step.
    * The API issues it with the challenge and requires it with the answer; like
@@ -44,8 +46,8 @@ const pendingSchema = z.object({
 export type PendingLogin = z.infer<typeof pendingSchema>;
 
 /** Begins a pause. The ceremony token is set later, if a passkey is used. */
-export function startPending(paused: PausedLogin, email: string): PendingLogin {
-  return { ...paused, email, ceremonyToken: null };
+export function startPending(paused: PausedLogin, email: string, userAgent?: string): PendingLogin {
+  return { ...paused, email, userAgent, ceremonyToken: null };
 }
 
 export function withCeremonyToken(pending: PendingLogin, ceremonyToken: string): PendingLogin {

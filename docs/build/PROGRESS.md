@@ -56,35 +56,52 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       plus a follow-up commit (b3d5e81): the table's provider cells carry the prototype's
       brand marks, which had been ported into `brand-icons.tsx` but never wired in
 - [x] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
-- [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
-- [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
+- [x] 1.5 Email & Magic Link: the console reads CSAG's email-event stats and server-rendered
+      template samples. The host product provides the `EmailSender` and `MagicLinkSender` that
+      deliver real messages; CSAG's standalone sender is a development stand-in. Delivery
+      reporting and product-sender testing stay with the host integration (see BACKEND_GAPS 1 and
+      2.7). No provider key belongs in this console.
+- [x] 1.6 Password Policy: the console shows hash migration and reads/updates the active policy
+      through CSAG's persistent admin endpoints. Signup, account password changes and
+      admin-created accounts enforce the live policy. The API implementation is on the local
+      `feat/console-admin-endpoints` branch; see BACKEND_GAPS 1 and 2.4 for the updated contract.
 - [ ] 1.7 Tag v0.1.0 and write the tier summary below
 
 ## Tier 2 - Security (tag v0.2.0)
 
-- [ ] 2.1 Sessions: real list, named devices, revoke one / revoke all, sidebar badge from real count
-- [ ] 2.2 Anomalies: six signal codes + credential stuffing, "Mark reviewed" persists a note
-- [ ] 2.3 Audit Log: filters (event, user, range), cursor pagination, CSV export (admin+)
+- [x] 2.1 Sessions: paginated all-account list with named devices, revoke one / revoke all, and
+      sidebar badge from the live count. CSAG routes are on the local feature branch; global revoke
+      also clears the acting operator's console cookie.
+- [x] 2.2 Anomalies: real flagged login and credential-stuffing events, signal codes, status filters,
+      and persisted review decisions with an optional note. Reviews do not trigger account actions.
+- [x] 2.3 Audit Log: server-side event, user and date filters, cursor pagination, and filtered CSV export. The API route is on the local CSAG feature branch.
 - [ ] 2.4 Tag v0.2.0 and write the tier summary below
 
 ## Tier 3 - Developer (tag v0.3.0)
 
-- [ ] 3.1 API Keys: create (shown once, hash stored), list with prefix + last used, revoke
-- [ ] 3.2 Webhooks: CRUD, signing secret shown once, test delivery, delivery log
-- [ ] 3.3 JWT Claims: editor refusing the seven registered claims, real preview token
-- [ ] 3.4 Cloud Logging: provider toggles, vault-held credentials, real shipped events
+- [x] 3.1 API Keys: create a user-owned key shown once, list its prefix, expiry and last-used time, and revoke with confirmation. Creation sends no invented scopes.
+- [ ] 3.2 Webhooks: one runtime destination, encrypted signing secret, queued test delivery, and history are managed through CSAG. Multi-endpoint CRUD remains.
+- [x] 3.3 JWT Claims: global source mappings, reserved-name validation, and CSAG-computed per-user claim preview. Preview shows additional claims and is intentionally unsigned.
+- [ ] 3.4 Cloud Logging: recent redacted shipped events are wired to CSAG; provider toggles and
+      vault-held credentials still need API settings support
 - [ ] 3.5 Tag v0.3.0 and write the tier summary below
 
 ## Tier 4 - AI admin, read-only (tag v0.4.0)
 
 - [ ] 4.1 `src/server/ai/`: allowlisted read-only query templates on `READONLY_DATABASE_URL` + test
-- [ ] 4.2 AI Assistant modes (query, logs, anomalies scan, audit, ask) with citation chips
-- [ ] 4.3 Weekly Digest: schedule, recipients, delivery, history
-- [ ] 4.4 Support Assistant: scoped lookup, escalation, ticketing interface
-- [ ] 4.5 Config Advisor: 30-day evidence, suggestions pre-fill a field, human saves
-- [ ] 4.6 Ask-AI Widget: embeddable script, verified token, unconditional identity substitution,
-      adversarial test suite
-- [ ] 4.7 LLM Provider + Database Provider: real abstraction, usage counters, connection test
+- [ ] 4.2 The self-scoped Ask-AI endpoint is wired with verified identity and row counts; admin
+      query/log/anomaly/audit modes and citation chips need API support
+- [ ] 4.3 Weekly Digest: stored run history is wired to CSAG; schedule, recipients and delivery
+      settings still need API support
+- [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG; escalation and
+      ticketing integrations remain
+- [ ] 4.5 Config Advisor: evidence-backed suggestions are wired to CSAG; its response has no
+      structured setting/value for prefill, so the console presents recommendations only
+- [ ] 4.6 Ask-AI Widget: read-only configuration is wired to CSAG; embeddable script, verified
+      token, unconditional identity substitution, and adversarial test suite remain
+- [ ] 4.7 LLM Provider + Database Provider: both settings screens read CSAG's redacted responses.
+      LLM provider writes stay disabled by the read-only AI policy. Usage counters and an LLM
+      connection test are absent; changing the database provider needs the missing step-up flow
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
@@ -212,6 +229,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   topbar, so the tag cannot be forgotten and cannot be a constant: it is a server component that
   asks the API on every render, with a 3 s timeout rather than the transport's 10 s. There is
   deliberately no cache, because a cached tag describes a connection that may already be gone.
+- **Per-user claim metadata (step 1.2).** The Users drawer now reads and edits one account's
+  metadata through CSAG's existing per-key routes, displays the API's reserved claim names, and
+  previews an unsigned sample built from that account's current subject, email and metadata. It is
+  not the global JWT source-mapping/settings editor in step 3.3; that editor now maps user fields and
+  metadata through CSAG's runtime claims provider.
 - `/v1/health` answers `{"status": "ok"}` or 503 `db_unreachable`, and nothing else. So the tag
   can say `api-client` and cannot repeat the prototype's "connected, production db". BACKEND_GAPS
   4.5 and 4.6 (the handler's documented nil-DB behaviour is not implemented: it panics).

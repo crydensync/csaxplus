@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,6 +35,36 @@ export type SidebarProps = {
  */
 export function Sidebar({ open, onNavigate, badges, operator }: SidebarProps) {
   const pathname = usePathname();
+  const [sessionCount, setSessionCount] = useState<number | null>(badges.sessions);
+
+  useEffect(() => {
+    let active = true;
+    const readCount = async () => {
+      try {
+        const response = await fetch("/api/console/sessions?limit=1&offset=0", {
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+        });
+        if (!response.ok) return;
+        const payload: unknown = await response.json();
+        if (typeof payload !== "object" || payload === null || !("data" in payload)) return;
+        const data = (payload as { data?: unknown }).data;
+        if (typeof data !== "object" || data === null || !("total" in data)) return;
+        const total = (data as { total?: unknown }).total;
+        if (active && typeof total === "number" && Number.isInteger(total) && total >= 0) {
+          setSessionCount(total);
+        }
+      } catch {
+        // An unavailable badge stays hidden; the Sessions screen reports the failure itself.
+      }
+    };
+    void readCount();
+    const timer = window.setInterval(() => void readCount(), 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
     <aside className={open ? "sidebar open" : "sidebar"} id="sidebar">
@@ -57,7 +88,12 @@ export function Sidebar({ open, onNavigate, badges, operator }: SidebarProps) {
               <div className="primary">
                 {group.items.map((item) => {
                   const active = isActivePath(pathname, item.href);
-                  const count = item.badge === undefined ? null : badges[item.badge];
+                  const count =
+                    item.badge === undefined
+                      ? null
+                      : item.badge === "sessions"
+                        ? sessionCount
+                        : badges[item.badge];
                   return (
                     <Link
                       key={item.href}

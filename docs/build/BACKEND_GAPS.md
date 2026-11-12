@@ -14,7 +14,7 @@ Evidence comes from a read of `../_reference/api` (Go HTTP layer) and `../_refer
 The router at `api/httpapi/router.go:143-385` registers every route under `/v1`. Everything the
 brief lists in section 11.3 already exists. The section 11.5 additions do not.
 
-Confirmed present and usable today:
+Confirmed present and usable today, including routes on the local `feat/console-admin-endpoints` branch:
 
 - `POST /v1/login`, `/v1/login/totp`, `/v1/login/passkey/begin|finish`, `/v1/login/recovery-code`,
   `POST /v1/refresh`
@@ -26,6 +26,11 @@ Confirmed present and usable today:
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
 - `GET /v1/admin/webhooks/deliveries`, `GET /v1/admin/logging/recent`
 - `GET /v1/admin/digest`, `GET /v1/admin/digest/history`
+- `GET /v1/admin/email/stats`, `GET /v1/admin/settings/email-templates`
+- `GET|PUT /v1/admin/settings/password-policy`
+- `GET /v1/admin/sessions`, `DELETE /v1/admin/sessions/{sessionID}`,
+  `POST /v1/admin/sessions/revoke-all` (local CSAG feature branch)
+- `GET /v1/admin/audit` with event, user, date-range filters and cursor pagination (local CSAG feature branch)
 - `GET /v1/admin/support/diagnose`, `GET /v1/admin/config-tuning`
 - `GET|PUT|DELETE /v1/admin/settings/llm-provider`
 - `GET|PUT|DELETE /v1/admin/settings/database-provider`
@@ -37,15 +42,13 @@ Missing, grouped by the tier that first needs them:
 |---|---|---|
 | 1 | Users actions | BUILT on the api branch `feat/console-admin-endpoints` (commit d0afb8f, not yet merged or deployed): `POST /v1/admin/users` (create), `POST /v1/admin/users/{id}/unlock`, `/suspend`, `/unsuspend`, `/revoke-sessions`, `/mfa/disable`, `DELETE /v1/admin/users/{id}/oauth/{provider}`. The console half (step 1.2c) wires these into the Users screen |
 | 1 | OAuth config | `GET /v1/admin/oauth/providers`, `POST /v1/admin/oauth/{provider}/test` |
-| 1 | Email | `GET /v1/admin/email/stats`, `POST /v1/admin/email/test`, `GET|PUT /v1/admin/settings/email-templates` |
-| 1 | Password policy | `GET|PUT /v1/admin/settings/password-policy` |
-| 2 | Sessions | `GET /v1/admin/sessions`, `DELETE /v1/admin/sessions/{id}`, `POST /v1/admin/users/{id}/revoke-sessions` |
-| 2 | Audit log | `GET /v1/admin/audit` (event, user, since, cursor) |
-| 3 | Webhooks CRUD | `GET|POST /v1/admin/webhooks`, `PUT|DELETE /v1/admin/webhooks/{id}`, `POST /v1/admin/webhooks/{id}/test` |
-| 3 | JWT claims | `GET|PUT /v1/admin/settings/jwt-claims` |
+| 1 | Email | No CSAG endpoint for product-host delivery reporting or test send; CSAG template writes (`PUT /v1/admin/settings/email-templates`) are also absent |
+| 2 | Sessions | Admin listing, one-session revoke, and global revoke are built on the local CSAG feature branch; per-account revoke is also available at `POST /v1/admin/users/{id}/revoke-sessions` |
+| 3 | Webhooks | Runtime single-destination management and queued test delivery are built locally: `GET|PUT|DELETE /v1/admin/webhooks`, `POST /v1/admin/webhooks/test`; multi-endpoint CRUD remains |
 | 3 | Cloud logging | `GET|PUT /v1/admin/settings/logging` |
-| 4 | Digest schedule | `GET|PUT /v1/admin/settings/digest` |
+| 4 | Digest schedule | `GET|PUT /v1/admin/settings/digest`; history is available at `GET /v1/admin/digest/history` |
 | 4 | AI admin | `POST /v1/admin/ai/query`, `/logs`, `/anomalies-scan`, `/audit`, `/ask` |
+| 4 | Config Advisor prefill | Extend `/v1/admin/config-tuning` suggestions with a stable setting path and typed value; current suggestions are prose only |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
 | 5 | Operators | `GET|POST /v1/admin/operators`, `PUT|DELETE /v1/admin/operators/{id}` |
 
@@ -100,13 +103,16 @@ default. Violation codes are `min_length`, `max_length`, `require_uppercase`, `r
 Not in the policy: breached-password checking (a separate injected `BreachedPasswordChecker` with
 zero shipped implementations) and password history. There is no password-reuse concept anywhere.
 
-Action: the prototype's "previous 5 password history" rule has no engine support. Drop it or mark
-it unsupported. Breach checking is an interface with no implementation, so the console can only
-report whether the host wired one.
+The host product supplies the initial policy when it embeds CSAX Auth. CSAG persists an admin
+override and exposes the active value through `GET|PUT /v1/admin/settings/password-policy`; the
+console reads and edits those settings. CSAG enforces the policy on signup, password changes and
+admin-created accounts. The policy cannot weaken the engine's immutable length baseline. Breach
+checking is an interface with no implementation in CSAG; password history is not part of the policy.
 
 Done on the landing page (step 0.7): the card states the real defaults (eight to seventy-two
-characters, composition rules off) and no longer claims NIST 800-63B. The Password Policy screen
-(tier 1, step 1.6) reads and writes the real policy and shows the real violation codes.
+characters, composition rules off) and no longer claims NIST 800-63B. The console can show the
+hash migration report from `GET /v1/admin/security/hash-migration` and manage the active policy
+through CSAG's persisted admin setting. The console does not preview a candidate password.
 
 ### 2.5 Anomaly signal codes
 
@@ -134,15 +140,23 @@ Named sessions are computed on read from IP and User-Agent
 
 ### 2.7 Email
 
-The engine sends no email. `notify.EmailSender` has exactly one method,
-`SendVerification(ctx, to, rawToken)` (`cryden/notify/email_sender.go:5-13`), and
-`MagicLinkSender` mirrors it. There are no templates and no template variables; the host composes
-everything.
+CSAX Auth defines `EmailSender` and `MagicLinkSender` interfaces; the host product provides their
+implementations and owns provider credentials, delivery records, and its actual message templates.
+CSAG's standalone `main.go` wires development senders that log rather than deliver. A host product
+that embeds CSAX Auth can send real mail without CSAG owning the provider.
 
-Action: the prototype's Resend integration and `{{user_email}}` / `{{action_url}}` /
-`{{app_name}}` / `{{expires_in}}` variables are not real. Delivery stats and template editing
-need new API endpoints, and even then the variables are the console's own convention, not the
-engine's.
+The API exposes `GET /v1/admin/email/stats`, which counts auth audit events (magic-link requests,
+email-change requests and confirmations), not deliveries. Unknown-account magic-link requests are
+not recorded. `GET /v1/admin/settings/email-templates` reports the verification and magic-link
+files loaded by the standalone CSAG API from `EMAIL_TEMPLATE_DIR` and returns server-rendered
+samples. These are CSAG's samples; they do not represent a host product's templates. The endpoint
+is read-only and file changes require an API restart.
+
+The console renders those counts and samples without claiming product delivery health or providing
+a test-send action against the wrong sender. Product delivery and test-send checks belong in the
+host integration. The old prototype's `{{user_email}}`, `{{action_url}}`, `{{app_name}}` and
+`{{expires_in}}` variables also do not describe CSAG's Go templates (`{{.To}}`, `{{.Token}}`,
+`{{.URL}}`).
 
 ### 2.8 Cloud logging
 
@@ -173,8 +187,10 @@ The engine's `store.User` has no metadata field (`cryden/store/interfaces.go:10-
 a Postgres-only `user_metadata` table and a `usermeta.ClaimsProvider` that feeds JWT claims
 (`api/main.go:764-769`). So metadata exists, but only at the API layer, and only on Postgres.
 
-Action: the metadata editor maps to the existing `/v1/admin/users/{id}/metadata` routes. It must
-state that it feeds JWT claims, and must be unavailable on SQLite.
+Action: the Users drawer maps to the existing `/v1/admin/users/{id}/metadata` routes. It states
+that metadata feeds JWT claims, reads the API's reserved names, and edits one key at a time. The
+global source-mapping editor is now available at `/v1/admin/settings/jwt-claims`, with an API
+computed per-user claims preview. Both features are unavailable on SQLite.
 
 ---
 
@@ -211,10 +227,9 @@ The prototype's dashboard shows four tiles (Total users, Active sessions, MFA ad
 upgrade bar), a Recent activity panel, and a digest card. Three of those have no honest source on
 this API, and the substitutions are recorded here because each one changes what the screen claims.
 
-**Active sessions.** There is no `GET /v1/admin/sessions` (section 1, tier 2), and the console's
-own session is an operator's, not a count of everyone's. A tile reading zero would be a claim the
-console has not earned, so the tile is not rendered at all. It returns in step 2.1, from the
-endpoint that makes it a count rather than a guess.
+**Active sessions.** The system-wide list and count arrive from `GET /v1/admin/sessions` (section 1,
+tier 2). The dashboard still does not render an active-session tile; the sidebar badge and Sessions
+screen use the live count instead.
 
 **MFA adoption as a percentage.** `mfaFactorDTO` (`api/httpapi/security_handlers.go`) counts
 *events*, and says so in its own comment: an operator who enables TOTP, loses their phone and
@@ -393,10 +408,9 @@ Action: the three columns are not rendered, and the table shows the fields the A
 
 ### 5.3 The detail endpoint counts a user's sessions rather than listing them
 
-`GET /v1/admin/users/{userID}` answers `active_sessions` as a number. There is no per-user session
-list until `GET /v1/admin/sessions` exists in tier 2 (section 1), and the console's own
-`GET /v1/sessions` is the signed-in operator's own sessions, which is a different account's data and
-is not this endpoint's to publish.
+`GET /v1/admin/users/{userID}` answers `active_sessions` as a number. The Sessions screen lists
+system-wide sessions through `GET /v1/admin/sessions`; the console's own `GET /v1/sessions` remains
+limited to the signed-in operator's sessions.
 
 So the drawer says how many sessions are live and says that it cannot say more, naming the reason in
 the copy rather than leaving a bare integer to be read as a list that failed to load. Action: none

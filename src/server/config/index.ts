@@ -51,8 +51,6 @@ const schema = z.object({
 
   WEBAUTHN_ORIGIN: z.url(),
 
-  RESEND_API_KEY: z.string().min(1).optional(),
-
   LLM_PROVIDER: z.enum(LLM_PROVIDERS).optional(),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
@@ -67,7 +65,6 @@ export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   "READONLY_DATABASE_URL",
   "CSAX_SESSION_SECRET",
   "CSAX_VAULT_KEY",
-  "RESEND_API_KEY",
   "ANTHROPIC_API_KEY",
   "OPENAI_API_KEY",
 ]);
@@ -81,7 +78,6 @@ export type ConsoleConfig = {
   session: { secret: Uint8Array };
   vault: { key: Uint8Array };
   webauthn: { origin: string };
-  email: { resendApiKey: string | undefined };
   llm: {
     provider: (typeof LLM_PROVIDERS)[number] | undefined;
     anthropicApiKey: string | undefined;
@@ -146,7 +142,6 @@ function toConfig(parsed: z.infer<typeof schema>): ConsoleConfig {
     webauthn: {
       origin: parsed.WEBAUTHN_ORIGIN,
     },
-    email: { resendApiKey: parsed.RESEND_API_KEY },
     llm: {
       provider: parsed.LLM_PROVIDER,
       anthropicApiKey: parsed.ANTHROPIC_API_KEY,
