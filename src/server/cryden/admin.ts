@@ -43,6 +43,7 @@ export const SUPPORT_DIAGNOSE_PATH = "/v1/admin/support/diagnose";
 export const CONFIG_TUNING_PATH = "/v1/admin/config-tuning";
 export const ASK_AI_WIDGET_PATH = "/v1/admin/settings/ask-ai-widget";
 export const ASK_AI_PATH = "/v1/ask-ai";
+export const ADMIN_AI_QUERY_PATH = "/v1/admin/ai/query";
 
 /**
  * One account's own routes. A function rather than a constant because the id is
@@ -968,17 +969,25 @@ const webhookEndpointSchema = z.object({ url: z.string(), secret_set: z.boolean(
 export type WebhookEndpoint = z.infer<typeof webhookEndpointSchema>;
 
 export async function fetchWebhookEndpoint(options: { token: string }): Promise<WebhookEndpoint> {
-  const data = await apiRequest<unknown>({ method: "GET", path: WEBHOOK_ENDPOINT_PATH, token: options.token });
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
+  });
   const parsed = webhookEndpointSchema.safeParse(data);
   if (!parsed.success) throw malformed("webhook endpoint settings", WEBHOOK_ENDPOINT_PATH);
   return parsed.data;
 }
 
 export async function saveWebhookEndpoint(options: {
-  token: string; url: string; secret?: string;
+  token: string;
+  url: string;
+  secret?: string;
 }): Promise<WebhookEndpoint> {
   const data = await apiRequest<unknown>({
-    method: "PUT", path: WEBHOOK_ENDPOINT_PATH, token: options.token,
+    method: "PUT",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
     body: { url: options.url, secret: options.secret },
   });
   const parsed = webhookEndpointSchema.safeParse(data);
@@ -987,14 +996,24 @@ export async function saveWebhookEndpoint(options: {
 }
 
 export async function clearWebhookEndpoint(options: { token: string }): Promise<WebhookEndpoint> {
-  const data = await apiRequest<unknown>({ method: "DELETE", path: WEBHOOK_ENDPOINT_PATH, token: options.token });
+  const data = await apiRequest<unknown>({
+    method: "DELETE",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
+  });
   const parsed = webhookEndpointSchema.safeParse(data);
   if (!parsed.success) throw malformed("webhook endpoint settings", WEBHOOK_ENDPOINT_PATH);
   return parsed.data;
 }
 
-export async function queueWebhookTest(options: { token: string }): Promise<{ queued: boolean; event_id: string }> {
-  const data = await apiRequest<unknown>({ method: "POST", path: `${WEBHOOK_ENDPOINT_PATH}/test`, token: options.token });
+export async function queueWebhookTest(options: {
+  token: string;
+}): Promise<{ queued: boolean; event_id: string }> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${WEBHOOK_ENDPOINT_PATH}/test`,
+    token: options.token,
+  });
   const parsed = z.object({ queued: z.boolean(), event_id: z.string() }).safeParse(data);
   if (!parsed.success) throw malformed("webhook test delivery", `${WEBHOOK_ENDPOINT_PATH}/test`);
   return parsed.data;
@@ -1009,24 +1028,49 @@ export type JWTClaimMapping = z.infer<typeof jwtClaimMappingSchema>;
 export type JWTClaimsConfig = z.infer<typeof jwtClaimsSchema>;
 
 export async function fetchJWTClaims(options: { token: string }): Promise<JWTClaimsConfig> {
-  const data = await apiRequest<unknown>({ method: "GET", path: JWT_CLAIMS_PATH, token: options.token });
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: JWT_CLAIMS_PATH,
+    token: options.token,
+  });
   const parsed = jwtClaimsSchema.safeParse(data);
   if (!parsed.success) throw malformed("JWT claim mappings", JWT_CLAIMS_PATH);
   return parsed.data;
 }
 
-export async function saveJWTClaims(options: { token: string; mappings: JWTClaimMapping[] }): Promise<JWTClaimsConfig> {
-  const data = await apiRequest<unknown>({ method: "PUT", path: JWT_CLAIMS_PATH, token: options.token, body: { mappings: options.mappings } });
+export async function saveJWTClaims(options: {
+  token: string;
+  mappings: JWTClaimMapping[];
+}): Promise<JWTClaimsConfig> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: JWT_CLAIMS_PATH,
+    token: options.token,
+    body: { mappings: options.mappings },
+  });
   const parsed = jwtClaimsSchema.safeParse(data);
   if (!parsed.success) throw malformed("JWT claim mappings", JWT_CLAIMS_PATH);
   return parsed.data;
 }
 
 export async function previewJWTClaims(options: { token: string; userId: string }): Promise<{
-  user_id: string; email: string; claims: Record<string, unknown>; signed: boolean;
+  user_id: string;
+  email: string;
+  claims: Record<string, unknown>;
+  signed: boolean;
 }> {
-  const data = await apiRequest<unknown>({ method: "POST", path: `${JWT_CLAIMS_PATH}/preview`, token: options.token, body: { user_id: options.userId } });
-  const schema = z.object({ user_id: z.string(), email: z.string(), claims: z.record(z.string(), z.unknown()), signed: z.boolean() });
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${JWT_CLAIMS_PATH}/preview`,
+    token: options.token,
+    body: { user_id: options.userId },
+  });
+  const schema = z.object({
+    user_id: z.string(),
+    email: z.string(),
+    claims: z.record(z.string(), z.unknown()),
+    signed: z.boolean(),
+  });
   const parsed = schema.safeParse(data);
   if (!parsed.success) throw malformed("JWT claim preview", `${JWT_CLAIMS_PATH}/preview`);
   return parsed.data;
@@ -1074,23 +1118,33 @@ export type ShippedLogEvent = z.infer<typeof shippedLogEventSchema>;
 export type ShippedLogs = z.infer<typeof shippedLogsSchema>;
 
 const loggingSettingsSchema = z.object({
-  enabled: z.boolean(), min_level: z.enum(["debug", "info", "warn", "error"]),
-  redaction: z.enum(["mask", "hash"]), hash_key_set: z.boolean(),
+  enabled: z.boolean(),
+  min_level: z.enum(["debug", "info", "warn", "error"]),
+  redaction: z.enum(["mask", "hash"]),
+  hash_key_set: z.boolean(),
 });
 export type LoggingSettings = z.infer<typeof loggingSettingsSchema>;
 
 export async function fetchLoggingSettings(options: { token: string }): Promise<LoggingSettings> {
-  const data = await apiRequest<unknown>({ method: "GET", path: LOGGING_SETTINGS_PATH, token: options.token });
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: LOGGING_SETTINGS_PATH,
+    token: options.token,
+  });
   const parsed = loggingSettingsSchema.safeParse(data);
   if (!parsed.success) throw malformed("cloud logging settings", LOGGING_SETTINGS_PATH);
   return parsed.data;
 }
 
 export async function saveLoggingSettings(options: {
-  token: string; enabled: boolean; minLevel: LoggingSettings["min_level"];
+  token: string;
+  enabled: boolean;
+  minLevel: LoggingSettings["min_level"];
 }): Promise<LoggingSettings> {
   const data = await apiRequest<unknown>({
-    method: "PUT", path: LOGGING_SETTINGS_PATH, token: options.token,
+    method: "PUT",
+    path: LOGGING_SETTINGS_PATH,
+    token: options.token,
     body: { enabled: options.enabled, min_level: options.minLevel },
   });
   const parsed = loggingSettingsSchema.safeParse(data);
@@ -1250,5 +1304,28 @@ export async function askAI(options: { token: string; question: string }): Promi
   });
   const parsed = askAIAnswerSchema.safeParse(data);
   if (!parsed.success) throw malformed("the Ask-AI response", ASK_AI_PATH);
+  return parsed.data;
+}
+
+const adminAIQuerySchema = z.object({
+  entity: z.string(),
+  columns: z.array(z.string()),
+  rows: z.array(z.array(z.string())),
+  row_count: z.number().int(),
+});
+export type AdminAIQuery = z.infer<typeof adminAIQuerySchema>;
+
+export async function queryAdminAI(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIQuery> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: ADMIN_AI_QUERY_PATH,
+    token: options.token,
+    body: { question: options.question },
+  });
+  const parsed = adminAIQuerySchema.safeParse(data);
+  if (!parsed.success) throw malformed("admin AI query result", ADMIN_AI_QUERY_PATH);
   return parsed.data;
 }

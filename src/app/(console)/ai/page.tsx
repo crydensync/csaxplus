@@ -16,7 +16,7 @@ export default async function AssistantPage() {
     <>
       <ConsoleTopbar
         title="AI Assistant"
-        subtitle="Ask about the signed-in operator account's own sessions and audit events."
+        subtitle="Ask about your own account or run a read-only query across admin data."
         actions={<SignOutButton csrf={session.csrf} />}
       />
       <AssistantView csrf={session.csrf} />

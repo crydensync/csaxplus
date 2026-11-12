@@ -158,7 +158,7 @@ The six sidebar groups, and all 21 screens in them.
 | Security | Sessions | built locally | tier 2, step 2.1; all-account session admin endpoints are on the local CSAG feature branch |
 | Security | Anomalies | done | tier 2, step 2.2; flagged events and saved review notes come from CSAG |
 | Security | Audit Log | built locally | tier 2, step 2.3; cursor API is on the local CSAG feature branch |
-| Security | AI Assistant (read-only) | partial | tier 4, step 4.2; self-scoped Ask-AI is live, but admin query/log/anomaly/audit modes need API support |
+| Security | AI Assistant (read-only) | partial | tier 4, step 4.2; self-scoped Ask-AI and admin read-only queries are live; log, anomaly, audit, and composed-answer modes remain |
 | Developer | API Keys | done | tier 3, step 3.1; user-owned keys are created, listed and revoked through CSAG |
 | Developer | Webhooks | partial | tier 3, step 3.2; one runtime destination, encrypted secret, test delivery, and history are managed in CSAG; multi-endpoint support remains |
 | Developer | JWT Claims | built locally | tier 3, step 3.3; global source mappings and account-specific claim preview are backed by CSAG |
