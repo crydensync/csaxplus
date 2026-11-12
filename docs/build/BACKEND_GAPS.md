@@ -45,7 +45,6 @@ Missing, grouped by the tier that first needs them:
 | 1 | Email | No CSAG endpoint for product-host delivery reporting or test send; CSAG template writes (`PUT /v1/admin/settings/email-templates`) are also absent |
 | 2 | Sessions | Admin listing, one-session revoke, and global revoke are built on the local CSAG feature branch; per-account revoke is also available at `POST /v1/admin/users/{id}/revoke-sessions` |
 | 3 | Webhooks | Runtime single-destination management and queued test delivery are built locally: `GET|PUT|DELETE /v1/admin/webhooks`, `POST /v1/admin/webhooks/test`; multi-endpoint CRUD remains |
-| 3 | Cloud logging | `GET|PUT /v1/admin/settings/logging` |
 | 4 | Digest schedule | `GET|PUT /v1/admin/settings/digest`; history is available at `GET /v1/admin/digest/history` |
 | 4 | AI admin | `POST /v1/admin/ai/query`, `/logs`, `/anomalies-scan`, `/audit`, `/ask` |
 | 4 | Config Advisor prefill | Extend `/v1/admin/config-tuning` suggestions with a stable setting path and typed value; current suggestions are prose only |

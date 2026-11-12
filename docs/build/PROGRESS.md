@@ -82,8 +82,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 3.1 API Keys: create a user-owned key shown once, list its prefix, expiry and last-used time, and revoke with confirmation. Creation sends no invented scopes.
 - [ ] 3.2 Webhooks: one runtime destination, encrypted signing secret, queued test delivery, and history are managed through CSAG. Multi-endpoint CRUD remains.
 - [x] 3.3 JWT Claims: global source mappings, reserved-name validation, and CSAG-computed per-user claim preview. Preview shows additional claims and is intentionally unsigned.
-- [ ] 3.4 Cloud Logging: recent redacted shipped events are wired to CSAG; provider toggles and
-      vault-held credentials still need API settings support
+- [x] 3.4 Cloud Logging: redacted local archive, runtime enable/pause, severity threshold, and history are wired to CSAG. External vendor connectors remain outside this API.
 - [ ] 3.5 Tag v0.3.0 and write the tier summary below
 
 ## Tier 4 - AI admin, read-only (tag v0.4.0)

@@ -36,6 +36,7 @@ export const WEBHOOK_DELIVERIES_PATH = "/v1/admin/webhooks/deliveries";
 export const WEBHOOK_ENDPOINT_PATH = "/v1/admin/webhooks";
 export const JWT_CLAIMS_PATH = "/v1/admin/settings/jwt-claims";
 export const SHIPPED_LOGS_PATH = "/v1/admin/logging/recent";
+export const LOGGING_SETTINGS_PATH = "/v1/admin/settings/logging";
 export const LLM_PROVIDER_PATH = "/v1/admin/settings/llm-provider";
 export const DATABASE_PROVIDER_PATH = "/v1/admin/settings/database-provider";
 export const SUPPORT_DIAGNOSE_PATH = "/v1/admin/support/diagnose";
@@ -1071,6 +1072,31 @@ const shippedLogsSchema = z.object({
 
 export type ShippedLogEvent = z.infer<typeof shippedLogEventSchema>;
 export type ShippedLogs = z.infer<typeof shippedLogsSchema>;
+
+const loggingSettingsSchema = z.object({
+  enabled: z.boolean(), min_level: z.enum(["debug", "info", "warn", "error"]),
+  redaction: z.enum(["mask", "hash"]), hash_key_set: z.boolean(),
+});
+export type LoggingSettings = z.infer<typeof loggingSettingsSchema>;
+
+export async function fetchLoggingSettings(options: { token: string }): Promise<LoggingSettings> {
+  const data = await apiRequest<unknown>({ method: "GET", path: LOGGING_SETTINGS_PATH, token: options.token });
+  const parsed = loggingSettingsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("cloud logging settings", LOGGING_SETTINGS_PATH);
+  return parsed.data;
+}
+
+export async function saveLoggingSettings(options: {
+  token: string; enabled: boolean; minLevel: LoggingSettings["min_level"];
+}): Promise<LoggingSettings> {
+  const data = await apiRequest<unknown>({
+    method: "PUT", path: LOGGING_SETTINGS_PATH, token: options.token,
+    body: { enabled: options.enabled, min_level: options.minLevel },
+  });
+  const parsed = loggingSettingsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("cloud logging settings", LOGGING_SETTINGS_PATH);
+  return parsed.data;
+}
 
 /** Read the API's redacted cloud-shipping log. */
 export async function fetchShippedLogs(options: {

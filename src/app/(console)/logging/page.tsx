@@ -16,10 +16,10 @@ export default async function LoggingPage() {
     <>
       <ConsoleTopbar
         title="Cloud Logging"
-        subtitle="Recent redacted events recorded by CSAG's configured shipping sink."
+        subtitle="Configure CSAG's redacted log archive and inspect shipped events."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <LoggingView />
+      <LoggingView csrf={session.csrf} />
     </>
   );
 }

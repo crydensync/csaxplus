@@ -11,14 +11,55 @@ import { ErrorState, LoadingAnnouncement } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { formatCount, formatInstant } from "@/lib/format";
 import type { Section } from "@/server/cryden/section";
-import type { ShippedLogEvent, ShippedLogs } from "@/server/cryden/admin";
+import type { LoggingSettings, ShippedLogEvent, ShippedLogs } from "@/server/cryden/admin";
 import type { LoggingPage } from "@/server/logging/report";
 
-export function LoggingView() {
+export function LoggingView({ csrf }: { csrf: string }) {
   const [level, setLevel] = useState("");
   const [report, setReport] = useState<LoggingPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
+  const [settings, setSettings] = useState<LoggingSettings | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [minLevel, setMinLevel] = useState<LoggingSettings["min_level"]>("info");
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [settingsBusy, setSettingsBusy] = useState(false);
+
+  const readSettings = useCallback(async () => {
+    try {
+      const response = await fetch("/api/console/logging/settings", { credentials: "same-origin" });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+      const value = dataFrom<LoggingSettings>(payload);
+      if (value === null || typeof value.enabled !== "boolean" || typeof value.min_level !== "string")
+        throw new Error("The logging settings response was not recognised.");
+      setSettings(value);
+      setEnabled(value.enabled);
+      setMinLevel(value.min_level);
+    } catch (error) {
+      setSettingsMessage(error instanceof Error ? error.message : "Logging settings could not be loaded.");
+    }
+  }, []);
+
+  const saveSettings = useCallback(async () => {
+    setSettingsBusy(true);
+    setSettingsMessage("");
+    try {
+      const response = await fetch("/api/console/logging/settings", {
+        method: "PUT", credentials: "same-origin",
+        headers: { "content-type": "application/json", "x-csrf-token": csrf },
+        body: JSON.stringify({ enabled, min_level: minLevel }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+      const value = dataFrom<LoggingSettings>(payload);
+      if (value === null) throw new Error("The API did not confirm the logging settings.");
+      setSettings(value);
+      setSettingsMessage("Logging settings saved and applied immediately.");
+    } catch (error) {
+      setSettingsMessage(error instanceof Error ? error.message : "Logging settings could not be saved.");
+    } finally { setSettingsBusy(false); }
+  }, [csrf, enabled, minLevel]);
 
   const read = useCallback(async (filter: string) => {
     setLoading(true);
@@ -56,7 +97,8 @@ export function LoggingView() {
 
   useEffect(() => {
     void read("");
-  }, [read]);
+    void readSettings();
+  }, [read, readSettings]);
 
   const columns: Column<ShippedLogEvent>[] = [
     { key: "when", header: "Shipped", cell: (event) => formatInstant(event.shipped_at) },
@@ -161,12 +203,25 @@ export function LoggingView() {
           </Card>
         }
       />
-      <Card title="Sink configuration" style={{ marginTop: 18 }}>
-        <p className="hint">
-          This API exposes the shipped event history. Provider selection, credentials, redaction
-          policy, and delivery settings are deployment configuration and cannot be changed from this
-          console.
-        </p>
+      <Card title="CSAG log archive" style={{ marginTop: 18 }}>
+        <p className="hint">Enable or pause the redacted archive written to CSAG&apos;s local database. Full-detail JSON logs continue on stdout.</p>
+        <div style={{ display: "grid", gap: 12, marginTop: 14, maxWidth: 620 }}>
+          <label className="field-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+            Archive redacted records
+          </label>
+          <label className="field-label">Minimum level
+            <select className="text-input" value={minLevel} onChange={(event) => setMinLevel(event.target.value as LoggingSettings["min_level"])}>
+              {(["debug", "info", "warn", "error"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <div className="actions-row">
+            <Button variant="primary" onClick={() => void saveSettings()} disabled={settingsBusy || settings === null}>{settingsBusy ? "Saving…" : "Save settings"}</Button>
+            {settings ? <Pill tone={settings.enabled ? "green" : "neutral"}>{settings.enabled ? "Archive enabled" : "Archive paused"}</Pill> : null}
+          </div>
+          {settings ? <p className="hint">Redaction mode: <span className="mono">{settings.redaction}</span>{settings.redaction === "hash" ? ` · hash key ${settings.hash_key_set ? "configured" : "missing"}` : ""}. Redaction policy is set by the CSAG deployment.</p> : null}
+          {settingsMessage ? <p className="hint" role="status">{settingsMessage}</p> : null}
+        </div>
       </Card>
     </div>
   );
