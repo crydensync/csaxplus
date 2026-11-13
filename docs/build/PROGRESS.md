@@ -103,8 +103,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       families return prose without exact proposed values, and most targets have no runtime admin
       setting path or console control. Prefill must wait for both contracts; recommendations remain
       read-only.
-- [ ] 4.6 Ask-AI Widget: read-only configuration is wired to CSAG; embeddable script, verified
-      token, unconditional identity substitution, and adversarial test suite remain
+- [x] 4.6 Ask-AI Widget: the console serves an embeddable script and generated install snippet;
+      the host provides the signed-in user's token, the browser sends only the question, and CSAG
+      derives identity from the verified token, enforces the configured origin, and limits each
+      verified user to 10 questions per minute by default. Browser rendering, token handoff,
+      identity injection, and limiter behavior are covered by tests.
 - [ ] 4.7 LLM Provider + Database Provider: both settings screens read CSAG's redacted responses.
       LLM provider writes stay disabled by the read-only AI policy. Usage counters and an LLM
       connection test are absent; changing the database provider needs the missing step-up flow

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { readSession } from "@/server/auth/guard";
+import { getConfig } from "@/server/config";
 
 import { ConsoleTopbar } from "../console-topbar";
 import { SignOutButton } from "../sign-out-button";
@@ -19,7 +20,7 @@ export default async function AskAIWidgetPage() {
         subtitle="Read-only embed scope and copy settings from CSAG."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <WidgetView />
+      <WidgetView apiBaseUrl={getConfig().api.url} />
     </>
   );
 }

@@ -1,0 +1,100 @@
+:host {
+  display: block;
+  color: #e8e9f2;
+  font:
+    14px/1.5 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.csax-panel {
+  box-sizing: border-box;
+  width: min(100%, 440px);
+  padding: 18px;
+  border: 1px solid #35364a;
+  border-radius: 14px;
+  background: #171821;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 22%);
+}
+
+.csax-panel * {
+  box-sizing: border-box;
+}
+
+h2 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+form {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  color: #b8bacb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #3d3e53;
+  border-radius: 9px;
+  outline: none;
+  background: #101118;
+  color: #f3f3f8;
+  font: inherit;
+}
+
+textarea:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgb(167 139 250 / 16%);
+}
+
+button {
+  justify-self: start;
+  min-height: 36px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #8b6cf0;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.csax-status {
+  min-height: 1.5em;
+  margin: 0;
+  color: #aeb0c1;
+  font-size: 12px;
+}
+
+.csax-answer {
+  max-height: 260px;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid #30313f;
+  border-radius: 9px;
+  background: #111219;
+  color: #e8e9f2;
+  font:
+    12px/1.6 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

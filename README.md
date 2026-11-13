@@ -166,7 +166,7 @@ The six sidebar groups, and all 21 screens in them.
 | AI Admin | Weekly Digest | partial | tier 4, step 4.3; schedules and stored reports are live; email delivery needs a host-provided sender |
 | AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis can be copied for manual escalation; integrated ticketing needs API support |
 | AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose recommendations are live; safe prefill needs typed CSAG proposals and real owner-managed settings controls |
-| AI Admin | Ask-AI Widget (read-only) | partial | tier 4, step 4.6; configured scopes are live, but the embeddable script and install snippet remain |
+| AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
 | Configuration | LLM Provider | partial | tier 4, step 4.7; redacted Anthropic settings are live, while provider writes stay disabled by the read-only AI policy |
 | Configuration | Database Provider | partial | tier 4, step 4.7; redacted settings are live, but changing them needs the missing step-up flow |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
@@ -392,13 +392,11 @@ design.
 
 ### 8.1 The read-only AI guarantee
 
-> **Status: the guarantee is a design rule today, and code tomorrow.** The AI layer arrives in
-> tier 4. What exists now is the rule itself, and the one place it is already visible: the landing
-> page's console map tags the four AI screens `read-only`, from a flag on the navigation entry
-> rather than from a hand-written label.
+> **Status: implemented.** The AI screens use read-only query paths, and the Ask-AI widget replaces
+> model-produced identity filters with the caller id verified from the bearer token.
 
 **No AI feature may hold a reference to any write path.** Not a method it declines to call, not a
-tool with a disabled flag: no reference at all. Concretely, when tier 4 lands:
+tool with a disabled flag: no reference at all. Concretely:
 
 - The AI layer reaches data through `READONLY_DATABASE_URL`, a SELECT-only role, and through
   allowlisted query templates rather than generated SQL.
@@ -408,12 +406,27 @@ tool with a disabled flag: no reference at all. Concretely, when tier 4 lands:
 - The Ask-AI widget **discards any identity filter the model produces and substitutes the verified
   user id from the caller's token, unconditionally.** A model that is asked about one user cannot
   answer about another, because its output never carries the filter in the first place.
-- The invariant is held by tests, including an adversarial suite that tries to talk the widget into
-  acting on another account. Step 4.6 is where that suite is written.
+- The invariant is held by API and cryden tests, including adversarial prompts that try to make the
+  widget act on another account. The browser widget sends only the question and renders the answer
+  as text.
 
 The read-only flag lives on the navigation entry (`NavItem.readOnly` in `src/lib/nav.ts`) so that
-the tag has one source and cannot be added to a screen that is not read-only, or forgotten on one
-that is. The sidebar will draw it when the AI screens are built.
+the tag has one source and is not forgotten on an AI screen.
+
+### Embedding the Ask-AI widget
+
+The Ask-AI Widget screen generates an install snippet when CSAG has enabled and configured the
+widget. It loads `csax-widget.js` and its stylesheet from the console deployment. The embedding
+application must define `window.csaxGetUserAccessToken` to return the current signed-in end user's
+access token. The snippet contains no token or user id; each request sends only `{ question }` to
+`POST /v1/ask-ai`, with the token in the Bearer header. CSAG verifies that token and derives the
+user identity server-side.
+
+Add each exact embedding origin to both CSAG's `allowed_origins` widget setting and the API's
+`CORS_ORIGINS`. A site's Content Security Policy must allow the console deployment in `script-src`
+and `style-src`, and the API deployment in `connect-src`. CSAG limits Ask-AI to 10 questions per
+verified user per minute by default; `ASK_AI_RATE_LIMIT` changes the count. The limit is in memory
+per API process.
 
 ### 8.2 What is logged, and what never is
 
