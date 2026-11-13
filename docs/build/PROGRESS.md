@@ -97,8 +97,8 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
       and refuses delivery enablement.
-- [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG; escalation and
-      ticketing integrations remain
+- [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
+      the operator's existing workflow. Integrated escalation and ticketing need API support.
 - [ ] 4.5 Config Advisor: evidence-backed suggestions are wired to CSAG; its response has no
       structured setting/value for prefill, so the console presents recommendations only
 - [ ] 4.6 Ask-AI Widget: read-only configuration is wired to CSAG; embeddable script, verified

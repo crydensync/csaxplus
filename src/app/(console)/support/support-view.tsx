@@ -12,12 +12,14 @@ export function SupportView() {
   const [email, setEmail] = useState("");
   const [diagnosis, setDiagnosis] = useState<SupportDiagnosis | null>(null);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "unavailable">("idle");
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setDiagnosis(null);
     setFailure(null);
+    setCopyState("idle");
     setLoading(true);
     try {
       const response = await fetch(
@@ -48,6 +50,16 @@ export function SupportView() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyDiagnosis = async () => {
+    if (diagnosis === null) return;
+    try {
+      await navigator.clipboard.writeText(`${diagnosis.email}\n\n${diagnosis.text}`);
+      setCopyState("copied");
+    } catch {
+      setCopyState("unavailable");
     }
   };
 
@@ -93,6 +105,21 @@ export function SupportView() {
       ) : null}
       {diagnosis ? (
         <Card title={`Diagnosis for ${diagnosis.email}`}>
+          <div className="actions-row" style={{ marginBottom: 12 }}>
+            <Button type="button" onClick={() => void copyDiagnosis()}>
+              {copyState === "copied" ? "Copied" : "Copy diagnosis"}
+            </Button>
+            {copyState === "copied" ? (
+              <span className="hint" role="status">
+                Diagnosis copied for your support workflow.
+              </span>
+            ) : null}
+            {copyState === "unavailable" ? (
+              <span className="hint" role="status">
+                Clipboard access was denied. Select and copy the report manually.
+              </span>
+            ) : null}
+          </div>
           <pre className="drawer-json" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {diagnosis.text}
           </pre>
@@ -101,7 +128,9 @@ export function SupportView() {
       <Card title="Scope and actions">
         <p className="hint">
           This endpoint only reads the named account and its recent login history. It cannot unlock
-          an account, reset failures, revoke sessions, or create a support ticket.
+          an account, reset failures, revoke sessions, or create a support ticket. Ticketing
+          integrations are coming soon. For escalation, copy this report into your existing support
+          workflow.
         </p>
       </Card>
     </div>

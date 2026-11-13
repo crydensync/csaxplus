@@ -163,8 +163,8 @@ The six sidebar groups, and all 21 screens in them.
 | Developer | Webhooks | partial | tier 3, step 3.2; one runtime destination, encrypted secret, test delivery, and history are managed in CSAG; multi-endpoint support remains |
 | Developer | JWT Claims | built locally | tier 3, step 3.3; global source mappings and account-specific claim preview are backed by CSAG |
 | Developer | Cloud Logging | built locally | tier 3, step 3.4; runtime archive toggle and severity threshold are live; redaction mode remains CSAG deployment configuration and no external vendor connector is included |
-| AI Admin | Weekly Digest | partial | tier 4, step 4.3; stored CSAG reports are live, but schedules, recipients and delivery settings need API support |
-| AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis is live, while escalation and ticketing integrations need their APIs |
+| AI Admin | Weekly Digest | partial | tier 4, step 4.3; schedules and stored reports are live; email delivery needs a host-provided sender |
+| AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis can be copied for manual escalation; integrated ticketing needs API support |
 | AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose suggestions are live, but structured field prefill needs a response contract |
 | AI Admin | Ask-AI Widget (read-only) | partial | tier 4, step 4.6; configured scopes are live, but the embeddable script and install snippet remain |
 | Configuration | LLM Provider | partial | tier 4, step 4.7; redacted Anthropic settings are live, while provider writes stay disabled by the read-only AI policy |
