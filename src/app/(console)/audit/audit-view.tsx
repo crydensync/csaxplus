@@ -144,7 +144,7 @@ export function AuditView() {
           </>
         ),
       },
-      { key: "ip", header: "IP address", cell: (event) => event.ip || "—" },
+      { key: "ip", header: "IP address", cell: (event) => event.ip || "Not recorded" },
       {
         key: "metadata",
         header: "Details",
@@ -283,7 +283,7 @@ export function AuditView() {
 
 function MetadataView({ metadata }: { metadata: Record<string, string> }) {
   const entries = Object.entries(metadata);
-  if (entries.length === 0) return <span className="hint">—</span>;
+  if (entries.length === 0) return <span className="hint">No details</span>;
   return (
     <dl style={{ margin: 0 }}>
       {entries.map(([key, value]) => (

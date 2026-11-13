@@ -210,7 +210,7 @@ export function SessionsView({ csrf }: { csrf: string }) {
       {page && page.total > PAGE_SIZE ? (
         <div className="row-between" style={{ marginTop: 16 }}>
           <span className="hint">
-            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, page.total)} of {page.total}
+            Showing {offset + 1} to {Math.min(offset + PAGE_SIZE, page.total)} of {page.total}
           </span>
           <div className="actions-row">
             <Button

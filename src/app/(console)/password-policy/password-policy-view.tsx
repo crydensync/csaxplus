@@ -243,8 +243,8 @@ function HashMigration({ report }: { report: HashMigration }) {
       >
         {report.hasher.algorithm === "argon2id" ? (
           <p className="hint" style={{ marginTop: 10 }}>
-            Argon2id parameters: {report.hasher.memory_kib ?? "—"} KiB memory,{" "}
-            {report.hasher.iterations ?? "—"} iterations, {report.hasher.parallelism ?? "—"} lanes.
+            Argon2id parameters: {report.hasher.memory_kib ?? "not reported"} KiB memory,{" "}
+            {report.hasher.iterations ?? "not reported"} iterations, {report.hasher.parallelism ?? "not reported"} lanes.
           </p>
         ) : null}
         <div style={{ marginTop: 18 }}>

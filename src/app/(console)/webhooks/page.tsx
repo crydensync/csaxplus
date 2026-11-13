@@ -19,7 +19,7 @@ export default async function WebhooksPage() {
         subtitle="Manage the runtime destination and inspect CSAG delivery attempts."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <WebhooksView />
+      <WebhooksView csrf={session.csrf} />
     </>
   );
 }
