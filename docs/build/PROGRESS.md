@@ -91,8 +91,8 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 4.2 The AI page offers self-scoped Ask-AI, validated admin queries, redacted log summaries,
       bounded anomaly scans, audit-only queries, and composed admin answers. CSAG generates each
       citation from the source rows and keeps all operations read-only. The new API routes are on
-      the local CSAG feature branch and must be merged and deployed before a running API serves
-      them.
+      the CSAG feature branch and can be used by building and running that branch locally; no
+      merge to `main` is needed for local use.
 - [ ] 4.3 Weekly Digest: stored run history is wired to CSAG; schedule, recipients and delivery
       settings still need API support
 - [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG; escalation and
