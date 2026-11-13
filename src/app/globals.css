@@ -386,7 +386,8 @@ nav.primary {
   padding: 28px 36px 60px;
   max-width: 1180px;
 }
-.view.ai-assistant-view {
+.view.ai-assistant-view,
+.view.spaced-view {
   display: grid;
   align-content: start;
   gap: 16px;

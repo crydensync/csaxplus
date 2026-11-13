@@ -64,7 +64,7 @@ export function SupportView() {
   };
 
   return (
-    <div className="view anim">
+    <div className="view anim spaced-view">
       <Card
         title="Diagnose a login issue"
         hint="Enter the exact account email. The API reports lock state, failed attempts, active session count, and recent login failures."

@@ -58,13 +58,13 @@ export function ConfigAdvisorView() {
 
   if (loading && report === null)
     return (
-      <div className="view anim">
+      <div className="view anim spaced-view">
         <LoadingAnnouncement>Loading configuration recommendations</LoadingAnnouncement>
       </div>
     );
   if (failure !== null && report === null)
     return (
-      <div className="view anim">
+      <div className="view anim spaced-view">
         <Card>
           <ErrorState
             title="Recommendations did not load"
@@ -77,7 +77,7 @@ export function ConfigAdvisorView() {
     );
   if (report?.state !== "ok")
     return (
-      <div className="view anim">
+      <div className="view anim spaced-view">
         <Card>
           <SectionState
             section={report ?? { state: "error", detail: "No report was returned.", code: null }}
@@ -90,7 +90,7 @@ export function ConfigAdvisorView() {
   const data = report.data;
   const counts = Object.entries(data.counts).sort(([left], [right]) => left.localeCompare(right));
   return (
-    <div className="view anim">
+    <div className="view anim spaced-view">
       <Card
         title="Evidence window"
         hint={`${formatInstant(data.since)} to ${formatInstant(data.until)}`}
