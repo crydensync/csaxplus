@@ -590,10 +590,11 @@ the page. That hop is also the reason the four states can be tested at all: the 
 cannot intercept a server-side API call, and it can intercept this one.
 
 **Four sections, not one result.** `dashboardOverview` returns a `Section<T>` per report instead of
-throwing or returning a single value. A deployment can have accounts and no digest schedule
-(`DIGEST_INTERVAL_HOURS` unset means the API's digest store is not wired, and the route answers 404
-`not_configured`), or a working digest and a hasher that a future API version renames out from under
-the console. One combined failure would blank three reports that arrived.
+throwing or returning a single value. A deployment can have accounts and no digest schedule, or a
+working digest and a hasher that a future API version renames out from under the console. One
+combined failure would blank three reports that arrived. Digest storage is now wired independently
+of the legacy interval environment variable; the weekly schedule is configured through the admin
+settings endpoint.
 
 **The state is chosen by the API's code, not by the status.** `not_implemented_on_sqlite` becomes
 `unavailable`, `not_operator` becomes `forbidden`, `not_configured` becomes `empty` with a sentence

@@ -4,6 +4,7 @@ import {
   DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
   DIGEST_HISTORY_PATH,
+  DIGEST_SETTINGS_PATH,
   ADMIN_AI_LOGS_PATH,
   ADMIN_AI_ANOMALIES_PATH,
   ADMIN_AI_AUDIT_PATH,
@@ -13,6 +14,8 @@ import {
   OAUTH_PROVIDERS_PATH,
   USERS_PATH,
   fetchDigestHistory,
+  fetchDigestSchedule,
+  saveDigestSchedule,
   fetchHashMigration,
   fetchMfaAdoption,
   fetchOAuthProviders,
@@ -507,6 +510,42 @@ describe("reading the digest history", () => {
     stubApi(() => jsonResponse({ data: { runs: [withoutText], count: 1, limit: 1 } }));
 
     await expect(fetchDigestHistory({ token: TOKEN })).rejects.toThrow(DIGEST_HISTORY_PATH);
+  });
+});
+
+describe("digest schedule settings", () => {
+  const schedule = {
+    enabled: true,
+    day_of_week: "friday" as const,
+    time: "16:30",
+    timezone: "Africa/Casablanca",
+    recipients: ["security@example.com"],
+    delivery_enabled: false,
+    delivery_available: false,
+  };
+
+  it("reads persisted schedule and sender availability", async () => {
+    const seen = stubApi(() => jsonResponse({ data: schedule }));
+
+    await expect(fetchDigestSchedule({ token: TOKEN })).resolves.toEqual(schedule);
+    expect(seen[0]?.path).toBe(DIGEST_SETTINGS_PATH);
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("saves schedule fields without trusting client-supplied sender availability", async () => {
+    const seen = stubApi(() => jsonResponse({ data: schedule }));
+    const { delivery_available: _readOnly, ...input } = schedule;
+
+    await expect(saveDigestSchedule({ token: TOKEN, settings: input })).resolves.toEqual(schedule);
+    expect(seen[0]?.path).toBe(DIGEST_SETTINGS_PATH);
+    expect(seen[0]?.method).toBe("PUT");
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(seen[0]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("refuses a response that names an unknown timezone-independent schedule field", async () => {
+    stubApi(() => jsonResponse({ data: { ...schedule, delivery_available: "false" } }));
+    await expect(fetchDigestSchedule({ token: TOKEN })).rejects.toThrow(DIGEST_SETTINGS_PATH);
   });
 });
 

@@ -26,6 +26,7 @@ export const USERS_PATH = "/v1/admin/users";
 export const HASH_MIGRATION_PATH = "/v1/admin/security/hash-migration";
 export const MFA_ADOPTION_PATH = "/v1/admin/security/mfa-adoption";
 export const DIGEST_HISTORY_PATH = "/v1/admin/digest/history";
+export const DIGEST_SETTINGS_PATH = "/v1/admin/settings/digest";
 export const EMAIL_STATS_PATH = "/v1/admin/email/stats";
 export const EMAIL_TEMPLATES_PATH = "/v1/admin/settings/email-templates";
 export const PASSWORD_POLICY_PATH = "/v1/admin/settings/password-policy";
@@ -638,9 +639,8 @@ export type DigestHistory = z.infer<typeof digestHistorySchema>;
 /**
  * The digests the schedule has stored, newest first. Admin token required.
  *
- * A deployment with no digest schedule answers 404 here, because the API's
- * digest store is only wired when `DIGEST_INTERVAL_HOURS` asked for one: with no
- * schedule there is no history to read, and an empty list would be a lie about a
+ * A deployment whose API has no digest store answers 404 here: with no store
+ * there is no history to read, and an empty list would be a lie about a
  * deployment that has never built a digest. That is why this function is allowed
  * to throw a 404 and why the caller treats it as a state rather than a fault.
  */
@@ -659,6 +659,49 @@ export async function fetchDigestHistory(options: {
 
   const parsed = digestHistorySchema.safeParse(data);
   if (!parsed.success) throw malformed("the digest history", DIGEST_HISTORY_PATH);
+  return parsed.data;
+}
+
+const digestScheduleSchema = z.object({
+  enabled: z.boolean(),
+  day_of_week: z.enum(["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  timezone: z.string().min(1).max(64),
+  recipients: z.array(z.string().email()).max(20),
+  delivery_enabled: z.boolean(),
+  delivery_available: z.boolean(),
+  interval_hours: z.number().int().min(1).max(8760).optional(),
+});
+
+const digestScheduleInputSchema = digestScheduleSchema.omit({ delivery_available: true });
+export type DigestSchedule = z.infer<typeof digestScheduleSchema>;
+export type DigestScheduleInput = z.infer<typeof digestScheduleInputSchema>;
+
+export async function fetchDigestSchedule(options: { token: string }): Promise<DigestSchedule> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: DIGEST_SETTINGS_PATH,
+    token: options.token,
+  });
+  const parsed = digestScheduleSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the digest schedule", DIGEST_SETTINGS_PATH);
+  return parsed.data;
+}
+
+export async function saveDigestSchedule(options: {
+  token: string;
+  settings: DigestScheduleInput;
+}): Promise<DigestSchedule> {
+  const input = digestScheduleInputSchema.safeParse(options.settings);
+  if (!input.success) throw malformed("the digest schedule input", DIGEST_SETTINGS_PATH);
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: DIGEST_SETTINGS_PATH,
+    token: options.token,
+    body: input.data,
+  });
+  const parsed = digestScheduleSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the saved digest schedule", DIGEST_SETTINGS_PATH);
   return parsed.data;
 }
 

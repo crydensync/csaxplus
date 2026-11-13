@@ -25,7 +25,7 @@ Confirmed present and usable today, including routes on the local `feat/console-
 - `GET|PUT|DELETE /v1/admin/users/{userID}/metadata[/{key}]`
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
 - `GET /v1/admin/webhooks/deliveries`, `GET /v1/admin/logging/recent`
-- `GET /v1/admin/digest`, `GET /v1/admin/digest/history`
+- `GET /v1/admin/digest`, `GET /v1/admin/digest/history`, `GET|PUT /v1/admin/settings/digest`
 - `GET /v1/admin/email/stats`, `GET /v1/admin/settings/email-templates`
 - `GET|PUT /v1/admin/settings/password-policy`
 - `GET /v1/admin/sessions`, `DELETE /v1/admin/sessions/{sessionID}`,
@@ -45,7 +45,7 @@ Missing, grouped by the tier that first needs them:
 | 1 | Email | No CSAG endpoint for product-host delivery reporting or test send; CSAG template writes (`PUT /v1/admin/settings/email-templates`) are also absent |
 | 2 | Sessions | Admin listing, one-session revoke, and global revoke are built on the local CSAG feature branch; per-account revoke is also available at `POST /v1/admin/users/{id}/revoke-sessions` |
 | 3 | Webhooks | Runtime single-destination management and queued test delivery are built locally: `GET|PUT|DELETE /v1/admin/webhooks`, `POST /v1/admin/webhooks/test`; multi-endpoint CRUD remains |
-| 4 | Digest schedule | `GET|PUT /v1/admin/settings/digest`; history is available at `GET /v1/admin/digest/history` |
+| 4 | Digest schedule | Built on the local CSAG feature branch: persisted weekly schedule, recipient validation, stored scheduled runs and console settings. Email delivery requires a host-injected `DeliverySender`; standalone CSAG reports delivery unavailable and refuses to enable it. |
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | Extend `/v1/admin/config-tuning` suggestions with a stable setting path and typed value; current suggestions are prose only |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |

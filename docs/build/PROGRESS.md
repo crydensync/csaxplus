@@ -93,8 +93,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       citation from the source rows and keeps all operations read-only. The new API routes are on
       the CSAG feature branch and can be used by building and running that branch locally; no
       merge to `main` is needed for local use.
-- [ ] 4.3 Weekly Digest: stored run history is wired to CSAG; schedule, recipients and delivery
-      settings still need API support
+- [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
+      scheduled reports, and exposes the settings through the console BFF. Delivery is available
+      only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
+      and refuses delivery enablement.
 - [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG; escalation and
       ticketing integrations remain
 - [ ] 4.5 Config Advisor: evidence-backed suggestions are wired to CSAG; its response has no
@@ -325,10 +327,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `error` collapses only when all four sentences are identical, since four different failures are
   four different things to fix.
 - The API's `not_configured` code is shared by every feature whose store was never wired, so the
-  sentence for it is supplied per section: an unconfigured digest says to set
-  `DIGEST_INTERVAL_HOURS`, and an unconfigured anything else says the report has no store. The
-  wording lives in `src/lib/dashboard.ts`, imported by both the server and the browser, so a
-  failure cannot be worded two ways.
+  sentence for it is supplied per section. A digest without a store points to a CSAG build with
+  weekly digest support; an unconfigured anything else says the report has no store. The wording
+  lives in `src/lib/dashboard.ts`, imported by both the server and browser, so a failure cannot be
+  worded two ways.
 - `formatInstant` formats on UTC and names the zone. These timestamps are read beside API counts and
   against logs, both of which are UTC, and one clock is also what keeps a server render and a
   browser render identical.

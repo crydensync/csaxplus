@@ -129,12 +129,6 @@ export function DigestView() {
           </Card>
         ))
       )}
-      <Card title="Schedule and recipients">
-        <p className="hint">
-          This CSAG API exposes digest history only. Schedule, timezone, recipient, and delivery
-          settings need API endpoints that are not available yet.
-        </p>
-      </Card>
     </div>
   );
 }
