@@ -9,18 +9,105 @@ import { Pill } from "@/components/Pill";
 import { ErrorState } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { formatCount } from "@/lib/format";
-import type { AdminAIQuery, AskAIAnswer } from "@/server/cryden/admin";
+import type { AdminAIAnswer, AdminAIQuery, AskAIAnswer } from "@/server/cryden/admin";
 
 export function AssistantView({ csrf }: { csrf: string }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AskAIAnswer | null>(null);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"account" | "admin">("account");
+  const [mode, setMode] = useState<
+    "account" | "admin" | "logs" | "anomalies" | "audit" | "composed"
+  >("account");
   const [adminQuestion, setAdminQuestion] = useState("");
   const [adminResult, setAdminResult] = useState<AdminAIQuery | null>(null);
   const [adminFailure, setAdminFailure] = useState<ConsoleFailure | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [toolQuestion, setToolQuestion] = useState("");
+  const [toolAnswer, setToolAnswer] = useState<AdminAIAnswer | null>(null);
+  const [toolQuery, setToolQuery] = useState<AdminAIQuery | null>(null);
+  const [toolFailure, setToolFailure] = useState<ConsoleFailure | null>(null);
+  const [toolLoading, setToolLoading] = useState(false);
+  const [since, setSince] = useState<"1h" | "24h" | "7d" | "30d">("24h");
+
+  const runAdminTool = async (event: FormEvent<HTMLFormElement> | undefined) => {
+    event?.preventDefault();
+    setToolAnswer(null);
+    setToolQuery(null);
+    setToolFailure(null);
+    setToolLoading(true);
+    const endpoint =
+      mode === "logs"
+        ? "logs"
+        : mode === "anomalies"
+          ? "anomalies-scan"
+          : mode === "audit"
+            ? "audit"
+            : "ask";
+    const body =
+      mode === "logs" ? {} : mode === "anomalies" ? { since } : { question: toolQuestion };
+    try {
+      const response = await fetch(`/api/console/ai/${endpoint}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "x-csrf-token": csrf,
+        },
+        body: JSON.stringify(body),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        setToolFailure(failureFrom(payload, response.status));
+        return;
+      }
+      const data = dataFrom<AdminAIAnswer | AdminAIQuery>(payload);
+      if (data === null || typeof data !== "object") {
+        setToolFailure({
+          message: "The API returned a response this screen does not recognise.",
+          code: "console_malformed",
+        });
+        return;
+      }
+      if (mode === "audit") {
+        if (
+          !("entity" in data) ||
+          data.entity !== "audit_events" ||
+          !Array.isArray(data.columns) ||
+          !Array.isArray(data.rows)
+        ) {
+          setToolFailure({
+            message: "The API returned a response this screen does not recognise.",
+            code: "console_malformed",
+          });
+          return;
+        }
+        setToolQuery(data as AdminAIQuery);
+      } else {
+        if (
+          !("answer" in data) ||
+          typeof data.answer !== "string" ||
+          typeof data.source_entity !== "string" ||
+          typeof data.row_count !== "number"
+        ) {
+          setToolFailure({
+            message: "The API returned a response this screen does not recognise.",
+            code: "console_malformed",
+          });
+          return;
+        }
+        setToolAnswer(data as AdminAIAnswer);
+      }
+    } catch {
+      setToolFailure({
+        message: "The console could not reach its server.",
+        code: "console_unreachable",
+      });
+    } finally {
+      setToolLoading(false);
+    }
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -141,6 +228,24 @@ export function AssistantView({ csrf }: { csrf: string }) {
         <Button variant={mode === "admin" ? "primary" : undefined} onClick={() => setMode("admin")}>
           Admin query
         </Button>
+        <Button variant={mode === "logs" ? "primary" : undefined} onClick={() => setMode("logs")}>
+          Log summary
+        </Button>
+        <Button
+          variant={mode === "anomalies" ? "primary" : undefined}
+          onClick={() => setMode("anomalies")}
+        >
+          Anomaly scan
+        </Button>
+        <Button variant={mode === "audit" ? "primary" : undefined} onClick={() => setMode("audit")}>
+          Audit query
+        </Button>
+        <Button
+          variant={mode === "composed" ? "primary" : undefined}
+          onClick={() => setMode("composed")}
+        >
+          Ask admin AI
+        </Button>
       </div>
       {mode === "account" ? (
         <Card
@@ -170,7 +275,7 @@ export function AssistantView({ csrf }: { csrf: string }) {
             </div>
           </form>
         </Card>
-      ) : (
+      ) : mode === "admin" ? (
         <>
           <Card
             title="Read-only admin query"
@@ -235,6 +340,141 @@ export function AssistantView({ csrf }: { csrf: string }) {
               limit, then executes through the configured read-only database connection.
             </p>
           </Card>
+        </>
+      ) : (
+        <>
+          <Card
+            title={
+              mode === "logs"
+                ? "Summarize recent shipped logs"
+                : mode === "anomalies"
+                  ? "Scan flagged authentication events"
+                  : mode === "audit"
+                    ? "Query audit events"
+                    : "Ask about admin data"
+            }
+            hint="Read-only. CSAG uses bounded, redacted or allowlisted data and returns its source citation."
+          >
+            <form onSubmit={(event) => void runAdminTool(event)}>
+              {mode === "anomalies" ? (
+                <label className="field-label" htmlFor="ai-anomaly-window">
+                  Time window
+                  <select
+                    id="ai-anomaly-window"
+                    className="text-input"
+                    value={since}
+                    onChange={(event) => setSince(event.target.value as typeof since)}
+                  >
+                    <option value="1h">Last hour</option>
+                    <option value="24h">Last 24 hours</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                  </select>
+                </label>
+              ) : null}
+              {mode === "audit" || mode === "composed" ? (
+                <label className="field-label" htmlFor="ai-admin-tool-question">
+                  Question
+                  <textarea
+                    id="ai-admin-tool-question"
+                    className="text-input"
+                    rows={4}
+                    maxLength={500}
+                    value={toolQuestion}
+                    onChange={(event) => setToolQuestion(event.target.value)}
+                    placeholder={
+                      mode === "audit"
+                        ? "For example: show recent account suspension events"
+                        : "For example: which accounts had repeated login failures?"
+                    }
+                  />
+                </label>
+              ) : null}
+              <div className="row-between" style={{ marginTop: 8, gap: 12, flexWrap: "wrap" }}>
+                <span className="hint">
+                  {mode === "logs"
+                    ? "Uses the latest 50 redacted shipped log entries."
+                    : mode === "anomalies"
+                      ? "Scans at most 50 flagged events in the selected window."
+                      : "Questions are limited to 500 characters."}
+                </span>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={
+                    toolLoading ||
+                    ((mode === "audit" || mode === "composed") && !toolQuestion.trim())
+                  }
+                >
+                  {toolLoading
+                    ? "Working…"
+                    : mode === "logs"
+                      ? "Summarize logs"
+                      : mode === "anomalies"
+                        ? "Scan events"
+                        : mode === "audit"
+                          ? "Query audit"
+                          : "Ask"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+          {toolFailure ? (
+            <Card>
+              <ErrorState
+                title="The AI request could not run"
+                description={toolFailure.message}
+                code={toolFailure.code ?? undefined}
+              />
+            </Card>
+          ) : null}
+          {toolAnswer ? (
+            <Card
+              title="AI summary"
+              hint={`${formatCount(toolAnswer.row_count)} rows from ${toolAnswer.source_entity}${toolAnswer.since ? ` · ${toolAnswer.since}` : ""}`}
+            >
+              <Pill tone="neutral">
+                Source: {toolAnswer.source_entity} · {toolAnswer.row_count} rows
+              </Pill>
+              <pre
+                className="drawer-json"
+                style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+              >
+                {toolAnswer.answer}
+              </pre>
+            </Card>
+          ) : null}
+          {toolQuery ? (
+            <Card
+              title="Audit query result"
+              hint={`${formatCount(toolQuery.row_count)} rows from audit_events`}
+            >
+              <Pill tone="neutral">Source: audit_events</Pill>
+              <DataTable
+                caption="Read-only audit event query results"
+                columns={[
+                  { key: "row", header: "#", cell: (item) => item.row },
+                  ...toolQuery.columns.map((column) => ({
+                    key: column,
+                    header: column,
+                    cell: (item: Record<string, string>) => item[column] ?? "",
+                  })),
+                ]}
+                rows={toolQuery.rows.map((cells, index) => ({
+                  row: String(index + 1),
+                  ...Object.fromEntries(
+                    toolQuery.columns.map((column, columnIndex) => [
+                      column,
+                      cells[columnIndex] ?? "",
+                    ]),
+                  ),
+                }))}
+                rowKey={(item) => item.row}
+                minWidthPx={600}
+                emptyState={<span className="hint">No rows matched this query.</span>}
+              />
+            </Card>
+          ) : null}
         </>
       )}
       {mode === "account" && failure ? (

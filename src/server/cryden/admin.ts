@@ -44,6 +44,10 @@ export const CONFIG_TUNING_PATH = "/v1/admin/config-tuning";
 export const ASK_AI_WIDGET_PATH = "/v1/admin/settings/ask-ai-widget";
 export const ASK_AI_PATH = "/v1/ask-ai";
 export const ADMIN_AI_QUERY_PATH = "/v1/admin/ai/query";
+export const ADMIN_AI_LOGS_PATH = "/v1/admin/ai/logs";
+export const ADMIN_AI_ANOMALIES_PATH = "/v1/admin/ai/anomalies-scan";
+export const ADMIN_AI_AUDIT_PATH = "/v1/admin/ai/audit";
+export const ADMIN_AI_ASK_PATH = "/v1/admin/ai/ask";
 
 /**
  * One account's own routes. A function rather than a constant because the id is
@@ -1308,7 +1312,7 @@ export async function askAI(options: { token: string; question: string }): Promi
 }
 
 const adminAIQuerySchema = z.object({
-  entity: z.string(),
+  entity: z.enum(["users", "sessions", "audit_events"]),
   columns: z.array(z.string()),
   rows: z.array(z.array(z.string())),
   row_count: z.number().int(),
@@ -1319,13 +1323,61 @@ export async function queryAdminAI(options: {
   token: string;
   question: string;
 }): Promise<AdminAIQuery> {
+  return readAdminAIQuery(options, ADMIN_AI_QUERY_PATH);
+}
+
+const adminAIAnswerSchema = z.object({
+  answer: z.string(),
+  source_entity: z.enum(["shipped_logs", "anomalies", "users", "sessions", "audit_events"]),
+  row_count: z.number().int().nonnegative(),
+  since: z.enum(["1h", "24h", "7d", "30d"]).optional(),
+});
+export type AdminAIAnswer = z.infer<typeof adminAIAnswerSchema>;
+
+async function readAdminAIAnswer(
+  path: string,
+  token: string,
+  body: unknown,
+): Promise<AdminAIAnswer> {
+  const data = await apiRequest<unknown>({ method: "POST", path, token, body });
+  const parsed = adminAIAnswerSchema.safeParse(data);
+  if (!parsed.success) throw malformed("admin AI answer", path);
+  return parsed.data;
+}
+
+export function summarizeAdminLogs(token: string): Promise<AdminAIAnswer> {
+  return readAdminAIAnswer(ADMIN_AI_LOGS_PATH, token, {});
+}
+
+export function scanAdminAnomalies(token: string, since: "1h" | "24h" | "7d" | "30d") {
+  return readAdminAIAnswer(ADMIN_AI_ANOMALIES_PATH, token, { since });
+}
+
+export async function queryAdminAudit(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIQuery> {
+  return readAdminAIQuery(options, ADMIN_AI_AUDIT_PATH);
+}
+
+export async function askAdminAI(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIAnswer> {
+  return readAdminAIAnswer(ADMIN_AI_ASK_PATH, options.token, { question: options.question });
+}
+
+async function readAdminAIQuery(
+  options: { token: string; question: string },
+  path: string,
+): Promise<AdminAIQuery> {
   const data = await apiRequest<unknown>({
     method: "POST",
-    path: ADMIN_AI_QUERY_PATH,
+    path,
     token: options.token,
     body: { question: options.question },
   });
   const parsed = adminAIQuerySchema.safeParse(data);
-  if (!parsed.success) throw malformed("admin AI query result", ADMIN_AI_QUERY_PATH);
+  if (!parsed.success) throw malformed("admin AI query result", path);
   return parsed.data;
 }

@@ -88,7 +88,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 ## Tier 4 - AI admin, read-only (tag v0.4.0)
 
 - [x] 4.1 Admin questions are converted to typed query intents and validated against cryden's allowlist before reaching the configured read-only database.
-- [ ] 4.2 The AI page now offers self-scoped Ask-AI and admin query modes with a source entity citation; log, anomaly-scan, audit, and composed-answer modes remain.
+- [x] 4.2 The AI page offers self-scoped Ask-AI, validated admin queries, redacted log summaries,
+      bounded anomaly scans, audit-only queries, and composed admin answers. CSAG generates each
+      citation from the source rows and keeps all operations read-only. The new API routes are on
+      the local CSAG feature branch and must be merged and deployed before a running API serves
+      them.
 - [ ] 4.3 Weekly Digest: stored run history is wired to CSAG; schedule, recipients and delivery
       settings still need API support
 - [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG; escalation and

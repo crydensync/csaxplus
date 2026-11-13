@@ -4,6 +4,10 @@ import {
   DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
   DIGEST_HISTORY_PATH,
+  ADMIN_AI_LOGS_PATH,
+  ADMIN_AI_ANOMALIES_PATH,
+  ADMIN_AI_AUDIT_PATH,
+  ADMIN_AI_ASK_PATH,
   HASH_MIGRATION_PATH,
   MFA_ADOPTION_PATH,
   OAUTH_PROVIDERS_PATH,
@@ -15,6 +19,10 @@ import {
   fetchUserDetail,
   fetchUserMetadata,
   fetchUsers,
+  summarizeAdminLogs,
+  scanAdminAnomalies,
+  queryAdminAudit,
+  askAdminAI,
   testOAuthProvider,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
@@ -55,7 +63,13 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-type Seen = { path: string; search: string; method?: string; authorization: string | null };
+type Seen = {
+  path: string;
+  search: string;
+  method?: string;
+  body?: BodyInit | null;
+  authorization: string | null;
+};
 
 /** Records the requests the console made, and answers each with `handler`'s reply. */
 function stubApi(handler: () => Response): Seen[] {
@@ -67,6 +81,7 @@ function stubApi(handler: () => Response): Seen[] {
       path: url.pathname,
       search: url.search,
       method: init?.method,
+      body: init?.body,
       authorization: new Headers(init?.headers).get("authorization"),
     });
     return handler();
@@ -578,5 +593,66 @@ describe("testing one OAuth provider", () => {
     await expect(testOAuthProvider({ token: TOKEN, provider: "google" })).rejects.toThrow(
       "/v1/admin/oauth/google/test",
     );
+  });
+});
+
+describe("admin AI modes", () => {
+  it("calls each read-only mode with its endpoint and validates the returned citation", async () => {
+    const replies: unknown[] = [
+      { data: { answer: "No repeated errors.", source_entity: "shipped_logs", row_count: 2 } },
+      {
+        data: {
+          answer: "One flagged event.",
+          source_entity: "anomalies",
+          row_count: 1,
+          since: "24h",
+        },
+      },
+      { data: { entity: "audit_events", columns: ["type"], rows: [["login"]], row_count: 1 } },
+      { data: { answer: "Three users matched.", source_entity: "users", row_count: 3 } },
+    ];
+    const seen: Seen[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      seen.push({
+        path: url.pathname,
+        search: url.search,
+        method: init?.method,
+        body: init?.body,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      return jsonResponse(replies.shift());
+    });
+
+    await expect(summarizeAdminLogs(TOKEN)).resolves.toMatchObject({
+      source_entity: "shipped_logs",
+      row_count: 2,
+    });
+    await expect(scanAdminAnomalies(TOKEN, "24h")).resolves.toMatchObject({
+      source_entity: "anomalies",
+      since: "24h",
+    });
+    await expect(
+      queryAdminAudit({ token: TOKEN, question: "recent logins" }),
+    ).resolves.toMatchObject({ entity: "audit_events" });
+    await expect(
+      askAdminAI({ token: TOKEN, question: "who has locked accounts?" }),
+    ).resolves.toMatchObject({ source_entity: "users" });
+
+    expect(seen.map((item) => item.path)).toEqual([
+      ADMIN_AI_LOGS_PATH,
+      ADMIN_AI_ANOMALIES_PATH,
+      ADMIN_AI_AUDIT_PATH,
+      ADMIN_AI_ASK_PATH,
+    ]);
+    expect(
+      seen.every((item) => item.method === "POST" && item.authorization === `Bearer ${TOKEN}`),
+    ).toBe(true);
+    expect(seen.map((item) => item.body)).toEqual([
+      JSON.stringify({}),
+      JSON.stringify({ since: "24h" }),
+      JSON.stringify({ question: "recent logins" }),
+      JSON.stringify({ question: "who has locked accounts?" }),
+    ]);
   });
 });
