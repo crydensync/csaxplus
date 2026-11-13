@@ -19,7 +19,7 @@ export default async function LLMProviderPage() {
         subtitle="Encrypted provider settings used by CSAG's AI features."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <LLMProviderView />
+      <LLMProviderView csrf={session.csrf} />
     </>
   );
 }

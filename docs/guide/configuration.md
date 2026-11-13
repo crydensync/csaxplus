@@ -138,19 +138,7 @@ browser is actually on.
 
 ### AI provider
 
-| Key | Required | Default | Secret |
-|---|---|---|---|
-| `LLM_PROVIDER` | no | none | no |
-| `ANTHROPIC_API_KEY` | no | none | **yes** |
-| `OPENAI_API_KEY` | no | none | **yes** |
-
-`LLM_PROVIDER` accepts `anthropic`, `openai`, `azure-openai` or `openai-compatible`. These values
-are reserved for console-owned AI features and are not currently used by the Ask-AI page, which
-calls CSAG's `/v1/ask-ai` endpoint. CSAG keeps its provider settings separately in its encrypted
-settings store; configure `SETTINGS_ENCRYPTION_KEY` in the CSAG process before saving a provider
-through CSAG's admin settings API. The same CSAG key protects webhook signing secrets saved from
-the Webhooks screen. Runtime webhook URLs must use HTTPS, except loopback URLs for development.
-The console's LLM Provider page is read-only.
+Provider settings are configured in the authenticated LLM Provider screen and encrypted by CSAG. The console does not need an LLM vendor key in its environment. CSAG supports Anthropic and any endpoint implementing the OpenAI-compatible chat-completions protocol.
 
 Every AI feature is read-only, always. See
 [the guarantee](secrets-and-passkeys.md#the-read-only-guarantee) and

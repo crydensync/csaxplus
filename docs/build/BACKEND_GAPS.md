@@ -32,7 +32,8 @@ Confirmed present and usable today, including routes on the local `feat/console-
   `POST /v1/admin/sessions/revoke-all` (local CSAG feature branch)
 - `GET /v1/admin/audit` with event, user, date-range filters and cursor pagination (local CSAG feature branch)
 - `GET /v1/admin/support/diagnose`, `GET /v1/admin/config-tuning`
-- `GET|PUT|DELETE /v1/admin/settings/llm-provider`
+- `GET|PUT|DELETE /v1/admin/settings/llm-provider`, plus provider test, model discovery and
+  process-lifetime usage counters on the local CSAG feature branch
 - `GET|PUT|DELETE /v1/admin/settings/database-provider`
 - `GET|PUT|DELETE /v1/admin/settings/ask-ai-widget`
 

@@ -167,8 +167,8 @@ The six sidebar groups, and all 21 screens in them.
 | AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis can be copied for manual escalation; integrated ticketing needs API support |
 | AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose recommendations are live; safe prefill needs typed CSAG proposals and real owner-managed settings controls |
 | AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
-| Configuration | LLM Provider | partial | tier 4, step 4.7; redacted Anthropic settings are live, while provider writes stay disabled by the read-only AI policy |
-| Configuration | Database Provider | partial | tier 4, step 4.7; redacted settings are live, but changing them needs the missing step-up flow |
+| Configuration | LLM Provider | built locally | tier 4, step 4.7; Anthropic and generic OpenAI-compatible settings, model discovery, connection test and process-lifetime usage stats are on the CSAG feature branch |
+| Configuration | Database Provider | partial | tier 4, step 4.7; PostgreSQL is the only supported query store; changing its settings needs the step-up flow |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
 Several of those still need endpoints the API does not have yet. Every one is listed in
@@ -297,9 +297,6 @@ naming the key and the reason and never the value.
 | `CSAX_SESSION_SECRET` | yes | `CSAX_SESSION_SECRET` | none, required | **yes** |
 | `CSAX_VAULT_KEY` | yes | `CSAX_VAULT_KEY` | none, required | **yes** |
 | `WEBAUTHN_ORIGIN` | yes | `WEBAUTHN_ORIGIN` | none, required | no |
-| `LLM_PROVIDER` | yes | `LLM_PROVIDER` | none | no |
-| `ANTHROPIC_API_KEY` | yes | `ANTHROPIC_API_KEY` | none | **yes** |
-| `OPENAI_API_KEY` | yes | `OPENAI_API_KEY` | none | **yes** |
 | `LOG_LEVEL` | yes | `LOG_LEVEL` | `info` | no |
 | `SKIP_AUTO_MIGRATE` | yes | `SKIP_AUTO_MIGRATE` | `0` | no |
 | `CSAX_CONFIG_FILE` | n/a | n/a | `csax.config.json` | no |
@@ -326,12 +323,7 @@ is.
   The relying party for passkeys is not here: it belongs to the API, whose own `WEBAUTHN_RP_ID` and
   `WEBAUTHN_RP_ORIGINS` decide it, because a passkey is a credential on the operator's account
   there rather than on this console.
-- **`LLM_PROVIDER`.** `anthropic`, `openai`, `azure-openai` or `openai-compatible`.
-- **`ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.** Reserved for console-owned AI features and not
-  currently used by the Ask-AI page. That page calls CSAG's `/v1/ask-ai`; configure its provider
-  separately through the CSAG admin settings API with `SETTINGS_ENCRYPTION_KEY` set in CSAG. The
-  console's LLM Provider screen only reads the redacted status. The same CSAG key encrypts webhook
-  signing secrets configured from the Webhooks screen.
+- **LLM provider settings.** Configure them on the authenticated LLM Provider screen. CSAG stores the provider key encrypted; the console does not need vendor-specific environment variables.
 - **`LOG_LEVEL`.** `error`, `warn`, `info` or `debug`. Validated and carried today; the logger that
   consumes it arrives in step 5.5.
 - **`SKIP_AUTO_MIGRATE`.** Stops the console applying its own store migrations on boot.
@@ -402,7 +394,7 @@ tool with a disabled flag: no reference at all. Concretely:
   allowlisted query templates rather than generated SQL.
 - It gets its own API client, a different module from the one the console's own screens use, and
   the mutation methods are **absent** from it rather than present and discouraged.
-- The LLM Provider screen's write toggle is locked off and stays locked off.
+- The LLM Provider screen's human settings form is guarded by the normal role, CSRF and origin checks. AI features have no reference to its mutation paths and cannot save settings themselves.
 - The Ask-AI widget **discards any identity filter the model produces and substitutes the verified
   user id from the caller's token, unconditionally.** A model that is asked about one user cannot
   answer about another, because its output never carries the filter in the first place.

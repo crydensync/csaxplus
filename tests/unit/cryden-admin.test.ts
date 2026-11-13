@@ -27,6 +27,11 @@ import {
   queryAdminAudit,
   askAdminAI,
   testOAuthProvider,
+  LLM_PROVIDER_PATH,
+  fetchLLMModels,
+  fetchLLMUsage,
+  saveLLMProvider,
+  testLLMProvider,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
 import { resetConfigCache } from "@/server/config/index";
@@ -693,5 +698,96 @@ describe("admin AI modes", () => {
       JSON.stringify({ question: "recent logins" }),
       JSON.stringify({ question: "who has locked accounts?" }),
     ]);
+  });
+});
+
+describe("LLM provider operations", () => {
+  const input = {
+    kind: "openai-compatible" as const,
+    model: "model-x",
+    api_key: "provider-secret",
+    base_url: "https://provider.example/v1",
+    max_tokens: 2048,
+    temperature: 0.2,
+    rpm: 60,
+  };
+
+  it("saves settings and accepts only a redacted response", async () => {
+    const seen = stubApi(() =>
+      jsonResponse({
+        data: {
+          kind: input.kind,
+          model: input.model,
+          base_url: input.base_url,
+          max_tokens: input.max_tokens,
+          temperature: input.temperature,
+          rpm: input.rpm,
+          api_key_set: true,
+          configured: true,
+        },
+      }),
+    );
+    await expect(saveLLMProvider({ token: TOKEN, input })).resolves.toMatchObject({
+      configured: true,
+      api_key_set: true,
+    });
+    expect(seen[0]).toMatchObject({
+      path: LLM_PROVIDER_PATH,
+      method: "PUT",
+      authorization: `Bearer ${TOKEN}`,
+      body: JSON.stringify(input),
+    });
+  });
+
+  it("tests, discovers models, and reads usage from their CSAG endpoints", async () => {
+    const seen: Seen[] = [];
+    const replies: unknown[] = [
+      { data: { status: "ok", kind: input.kind, model: input.model } },
+      { data: { models: ["model-x", "model-y"] } },
+      {
+        data: {
+          scope: "since_process_start",
+          providers: [
+            {
+              kind: input.kind,
+              model: input.model,
+              requests: 4,
+              succeeded: 3,
+              failed: 1,
+              rate_limited: 0,
+              average_ms: 120,
+            },
+          ],
+        },
+      },
+    ];
+    vi.stubGlobal("fetch", async (url: RequestInfo | URL, init?: RequestInit) => {
+      const parsed = new URL(String(url));
+      seen.push({
+        path: parsed.pathname,
+        search: parsed.search,
+        method: init?.method,
+        body: init?.body,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      return jsonResponse(replies.shift());
+    });
+
+    await expect(testLLMProvider({ token: TOKEN, input })).resolves.toMatchObject({ status: "ok" });
+    await expect(
+      fetchLLMModels({ token: TOKEN, api_key: input.api_key, base_url: input.base_url }),
+    ).resolves.toEqual(["model-x", "model-y"]);
+    await expect(fetchLLMUsage({ token: TOKEN })).resolves.toMatchObject({
+      scope: "since_process_start",
+    });
+    expect(seen.map((request) => request.path)).toEqual([
+      `${LLM_PROVIDER_PATH}/test`,
+      `${LLM_PROVIDER_PATH}/models`,
+      `${LLM_PROVIDER_PATH}/usage`,
+    ]);
+    expect(seen.every((request) => request.authorization === `Bearer ${TOKEN}`)).toBe(true);
+    expect(seen[1]?.body).toBe(
+      JSON.stringify({ api_key: input.api_key, base_url: input.base_url }),
+    );
   });
 });

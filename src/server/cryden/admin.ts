@@ -1220,12 +1220,24 @@ export async function fetchShippedLogs(options: {
 const llmProviderSchema = z.object({
   kind: z.string(),
   model: z.string(),
+  base_url: z.string().default(""),
   max_tokens: z.number().int(),
+  temperature: z.number().default(0.2),
+  rpm: z.number().int().default(60),
   api_key_set: z.boolean(),
   configured: z.boolean(),
 });
 
 export type LLMProvider = z.infer<typeof llmProviderSchema>;
+export type LLMProviderInput = {
+  kind: "anthropic" | "openai-compatible";
+  model: string;
+  api_key: string;
+  base_url?: string;
+  max_tokens: number;
+  temperature: number;
+  rpm: number;
+};
 
 /** Read the encrypted LLM setting in its redacted form. */
 export async function fetchLLMProvider(options: { token: string }): Promise<LLMProvider> {
@@ -1236,6 +1248,82 @@ export async function fetchLLMProvider(options: { token: string }): Promise<LLMP
   });
   const parsed = llmProviderSchema.safeParse(data);
   if (!parsed.success) throw malformed("the LLM provider settings", LLM_PROVIDER_PATH);
+  return parsed.data;
+}
+
+export async function saveLLMProvider(options: {
+  token: string;
+  input: LLMProviderInput;
+}): Promise<LLMProvider> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: LLM_PROVIDER_PATH,
+    token: options.token,
+    body: options.input,
+  });
+  const parsed = llmProviderSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the saved LLM provider settings", LLM_PROVIDER_PATH);
+  return parsed.data;
+}
+
+export async function testLLMProvider(options: {
+  token: string;
+  input: LLMProviderInput;
+}): Promise<{ status: string; kind: string; model: string }> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${LLM_PROVIDER_PATH}/test`,
+    token: options.token,
+    body: options.input,
+    timeoutMs: 25_000,
+  });
+  const parsed = z
+    .object({ status: z.string(), kind: z.string(), model: z.string() })
+    .safeParse(data);
+  if (!parsed.success) throw malformed("the LLM provider test result", `${LLM_PROVIDER_PATH}/test`);
+  return parsed.data;
+}
+
+export async function fetchLLMModels(options: {
+  token: string;
+  api_key: string;
+  base_url: string;
+}): Promise<string[]> {
+  const path = `${LLM_PROVIDER_PATH}/models`;
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path,
+    token: options.token,
+    body: { api_key: options.api_key, base_url: options.base_url },
+    timeoutMs: 15_000,
+  });
+  const parsed = z.object({ models: z.array(z.string()) }).safeParse(data);
+  if (!parsed.success) throw malformed("the LLM provider model list", path);
+  return parsed.data.models;
+}
+
+const llmUsageSchema = z.object({
+  scope: z.string(),
+  providers: z.array(
+    z.object({
+      kind: z.string(),
+      model: z.string(),
+      requests: z.number(),
+      succeeded: z.number(),
+      failed: z.number(),
+      rate_limited: z.number(),
+      last_request_at: z.string().optional(),
+      average_ms: z.number(),
+    }),
+  ),
+});
+export type LLMUsage = z.infer<typeof llmUsageSchema>;
+
+export async function fetchLLMUsage(options: { token: string }): Promise<LLMUsage> {
+  const path = `${LLM_PROVIDER_PATH}/usage`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = llmUsageSchema.safeParse(data);
+  if (!parsed.success) throw malformed("LLM usage statistics", path);
   return parsed.data;
 }
 

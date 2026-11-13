@@ -795,3 +795,21 @@ There are no admin write endpoints or console controls for most of them. Prefill
 when CSAG provides an explicit typed proposal and the console has a real owner-managed control for
 that setting. It will populate a draft for review; it will never apply the setting. Until both
 parts exist, the Config Advisor remains a read-only evidence and recommendation screen.
+
+## D24. AI provider choice is protocol based
+
+**Date:** 2026-11-13
+**Status:** accepted
+
+The provider form offers the existing Anthropic adapter and a generic OpenAI-compatible chat
+completions adapter. The latter takes a base URL, API key and model id, so hosted and self-hosted
+providers that implement that protocol need no vendor-specific settings or branch. A different
+wire protocol still needs an adapter. CSAG keeps the API key encrypted and never returns it to the
+console. Model discovery, a real test call and in-process usage counters are server-side operations.
+Usage counters report request outcomes and latency, not token billing data. This step keeps one
+active endpoint and credential, so it does not add automatic fallback to a second model or vendor.
+Failover requires a separately configured target and will be a later explicit setting.
+
+The console saves settings only from a human guarded action. AI features remain read-only and hold
+no reference to these settings mutation handlers. The database choice remains PostgreSQL because
+CSAG's only query store is Postgres; database writes in the console wait for the step-up requirement.

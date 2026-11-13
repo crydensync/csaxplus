@@ -34,7 +34,6 @@ function keyOf32Bytes(what: string) {
   );
 }
 
-const LLM_PROVIDERS = ["anthropic", "openai", "azure-openai", "openai-compatible"] as const;
 const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
 
 const schema = z.object({
@@ -51,10 +50,6 @@ const schema = z.object({
 
   WEBAUTHN_ORIGIN: z.url(),
 
-  LLM_PROVIDER: z.enum(LLM_PROVIDERS).optional(),
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional(),
-
   LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
   SKIP_AUTO_MIGRATE: booleanish.default(false),
 });
@@ -65,8 +60,6 @@ export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   "READONLY_DATABASE_URL",
   "CSAX_SESSION_SECRET",
   "CSAX_VAULT_KEY",
-  "ANTHROPIC_API_KEY",
-  "OPENAI_API_KEY",
 ]);
 
 export type StoreConfig = { kind: "postgres"; url: string } | { kind: "sqlite"; path: string };
@@ -78,11 +71,6 @@ export type ConsoleConfig = {
   session: { secret: Uint8Array };
   vault: { key: Uint8Array };
   webauthn: { origin: string };
-  llm: {
-    provider: (typeof LLM_PROVIDERS)[number] | undefined;
-    anthropicApiKey: string | undefined;
-    openaiApiKey: string | undefined;
-  };
   logLevel: (typeof LOG_LEVELS)[number];
   skipAutoMigrate: boolean;
 };
@@ -141,11 +129,6 @@ function toConfig(parsed: z.infer<typeof schema>): ConsoleConfig {
     vault: { key: new Uint8Array(Buffer.from(parsed.CSAX_VAULT_KEY, "base64")) },
     webauthn: {
       origin: parsed.WEBAUTHN_ORIGIN,
-    },
-    llm: {
-      provider: parsed.LLM_PROVIDER,
-      anthropicApiKey: parsed.ANTHROPIC_API_KEY,
-      openaiApiKey: parsed.OPENAI_API_KEY,
     },
     logLevel: parsed.LOG_LEVEL,
     skipAutoMigrate: parsed.SKIP_AUTO_MIGRATE,

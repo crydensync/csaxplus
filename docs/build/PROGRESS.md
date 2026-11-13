@@ -108,9 +108,13 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       derives identity from the verified token, enforces the configured origin, and limits each
       verified user to 10 questions per minute by default. Browser rendering, token handoff,
       identity injection, and limiter behavior are covered by tests.
-- [ ] 4.7 LLM Provider + Database Provider: both settings screens read CSAG's redacted responses.
-      LLM provider writes stay disabled by the read-only AI policy. Usage counters and an LLM
-      connection test are absent; changing the database provider needs the missing step-up flow
+- [ ] 4.7 LLM Provider + Database Provider: the LLM path is implemented and verified locally.
+      CSAG supports Anthropic plus a generic OpenAI-compatible chat-completions adapter configured
+      by base URL, API key and model. The console has guarded test, model-list and save operations
+      plus process-lifetime usage stats; credentials remain redacted and encrypted by CSAG. The
+      database remains PostgreSQL-only and read-only in the console until the step-up flow exists.
+      Full CSAG tests, `go build -o csag`, console typecheck, lint, unit tests and production build
+      pass. Commits remain local to the two feature branches until pushed.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
