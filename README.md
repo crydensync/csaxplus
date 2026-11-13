@@ -165,7 +165,7 @@ The six sidebar groups, and all 21 screens in them.
 | Developer | Cloud Logging | built locally | tier 3, step 3.4; runtime archive toggle and severity threshold are live; redaction mode remains CSAG deployment configuration and no external vendor connector is included |
 | AI Admin | Weekly Digest | partial | tier 4, step 4.3; schedules and stored reports are live; email delivery needs a host-provided sender |
 | AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis can be copied for manual escalation; integrated ticketing needs API support |
-| AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose suggestions are live, but structured field prefill needs a response contract |
+| AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose recommendations are live; safe prefill needs typed CSAG proposals and real owner-managed settings controls |
 | AI Admin | Ask-AI Widget (read-only) | partial | tier 4, step 4.6; configured scopes are live, but the embeddable script and install snippet remain |
 | Configuration | LLM Provider | partial | tier 4, step 4.7; redacted Anthropic settings are live, while provider writes stay disabled by the read-only AI policy |
 | Configuration | Database Provider | partial | tier 4, step 4.7; redacted settings are live, but changing them needs the missing step-up flow |

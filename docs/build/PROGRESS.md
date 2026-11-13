@@ -99,8 +99,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       and refuses delivery enablement.
 - [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
       the operator's existing workflow. Integrated escalation and ticketing need API support.
-- [ ] 4.5 Config Advisor: evidence-backed suggestions are wired to CSAG; its response has no
-      structured setting/value for prefill, so the console presents recommendations only
+- [ ] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
+      families return prose without exact proposed values, and most targets have no runtime admin
+      setting path or console control. Prefill must wait for both contracts; recommendations remain
+      read-only.
 - [ ] 4.6 Ask-AI Widget: read-only configuration is wired to CSAG; embeddable script, verified
       token, unconditional identity substitution, and adversarial test suite remain
 - [ ] 4.7 LLM Provider + Database Provider: both settings screens read CSAG's redacted responses.

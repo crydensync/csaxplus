@@ -48,7 +48,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | Digest schedule | Built on the local CSAG feature branch: persisted weekly schedule, recipient validation, stored scheduled runs and console settings. Email delivery requires a host-injected `DeliverySender`; standalone CSAG reports delivery unavailable and refuses to enable it. |
 | 4 | Support escalation | No CSAG endpoint or ticketing adapter exists. The console can copy the read-only diagnosis into an operator's existing workflow; Zendesk, Intercom and Freshdesk integrations remain unavailable. |
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
-| 4 | Config Advisor prefill | Extend `/v1/admin/config-tuning` suggestions with a stable setting path and typed value; current suggestions are prose only |
+| 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
 | 5 | Operators | `GET|POST /v1/admin/operators`, `PUT|DELETE /v1/admin/operators/{id}` |
 

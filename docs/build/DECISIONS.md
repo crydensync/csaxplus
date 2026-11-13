@@ -778,3 +778,20 @@ still the value its mutation origin check compares against and renaming it would
 Two consequences to state plainly. Migration `0002` drops any passkey enrolled through the console
 during step 1.2b testing, and a local `.env` may still carry the two removed keys, which are ignored
 rather than fatal. Both are one-time and neither affects the API's own data.
+
+## D23. Config Advisor suggestions do not invent setting values
+
+**Date:** 2026-11-13
+**Status:** accepted
+
+CSAG's `/v1/admin/config-tuning` returns evidence and prose for five rule families. Several
+suggestions name alternatives such as raising a threshold or shortening a duration, without
+choosing a value. Others describe an integration choice, such as replacing the in-memory limiter
+with Redis, or recommend a breach checker for which CSAG ships no implementation. The report
+therefore cannot safely be translated into a single field and value by parsing its wording.
+
+The settings those suggestions concern are read from process configuration when CSAG starts.
+There are no admin write endpoints or console controls for most of them. Prefill will only be added
+when CSAG provides an explicit typed proposal and the console has a real owner-managed control for
+that setting. It will populate a draft for review; it will never apply the setting. Until both
+parts exist, the Config Advisor remains a read-only evidence and recommendation screen.
