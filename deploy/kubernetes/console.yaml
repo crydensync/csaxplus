@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: csaxplus-console
+data:
+  CSAX_API_URL: https://auth.example.com
+  CRYDEN_MODE: live
+  WEBAUTHN_ORIGIN: https://console.example.com
+  CSAX_STORE_URL_FILE: /run/secrets/csaxplus/store-url
+  CSAX_SESSION_SECRET_FILE: /run/secrets/csaxplus/session-secret
+  CSAX_VAULT_KEY_FILE: /run/secrets/csaxplus/vault-key
+  LOG_LEVEL: info
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csaxplus-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csaxplus-console
+  template:
+    metadata:
+      labels:
+        app: csaxplus-console
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: console
+          image: ghcr.io/your-org/csaxplus:replace-with-tag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: csaxplus-console
+          volumeMounts:
+            - name: runtime-secrets
+              mountPath: /run/secrets/csaxplus
+              readOnly: true
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: runtime-secrets
+          secret:
+            secretName: csaxplus-runtime
+            items:
+              - key: store-url
+                path: store-url
+              - key: session-secret
+                path: session-secret
+              - key: vault-key
+                path: vault-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: csaxplus-console
+spec:
+  type: ClusterIP
+  selector:
+    app: csaxplus-console
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

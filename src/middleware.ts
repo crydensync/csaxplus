@@ -9,9 +9,18 @@ function contentSecurityPolicy(value: string): string {
   const development = process.env.NODE_ENV !== "production";
   const scripts = ["'self'", `'nonce-${value}'`, "'strict-dynamic'"];
   const connections = ["'self'"];
+  const apiUrl = process.env.CSAX_API_URL;
+  if (apiUrl !== undefined) {
+    try {
+      connections.push(new URL(apiUrl).origin);
+    } catch {
+      // Configuration validation reports an invalid API URL during boot. Do
+      // not broaden connect-src while that deployment is being corrected.
+    }
+  }
   if (development) {
     scripts.push("'unsafe-eval'");
-    connections.push("ws:", "wss:");
+    connections.push("ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*");
   }
 
   return [
@@ -24,7 +33,7 @@ function contentSecurityPolicy(value: string): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    "frame-ancestors 'self'",
   ].join("; ");
 }
 
@@ -39,7 +48,7 @@ export function middleware(request: NextRequest) {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
   response.headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), publickey-credentials-get=(self)",

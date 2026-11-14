@@ -435,16 +435,15 @@ so nothing on the page can be mistaken for a reading from a real deployment.
 
 ---
 
-## D15. The README has no CI badge yet
+## D15. The CI badge waits for the default branch
 
 BUILD_NOTE section 8 asks the README's badge row for four things: license, CI, Node and the Go
-engine. Three of them are static facts and are there. The fourth is not: the GitHub Actions
-workflow arrives in step 5.6, and a shields.io CI badge would point at a workflow run that does not
-exist. It renders as "no status", which reads as a failing build to anyone who does not click it.
+engine. Three are static facts. The CI workflow has been added on `feat/console-build`, but it is
+not present on the repository's default branch yet. A badge against a workflow missing from that
+branch would show no status and look like a failing build.
 
-There is no build to report yet, so the badge is left out and the absence is explained in the
-README itself rather than left for a reader to notice. Step 5.6 adds the workflow and the badge
-together, which is the only order in which the badge means anything.
+The badge remains out until the workflow is available on the default branch. No merge or release is
+part of this build step.
 
 The other three badges were checked before they were written: MIT is `LICENSE`, Node 22 is
 `package.json`'s `engines`, and Go 1.25 is what `cryden/go.mod` and `api/go.mod` both declare. The
