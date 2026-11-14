@@ -1,5 +1,6 @@
 import { ConfigError } from "./server/config/errors";
 import { getConfig } from "./server/config";
+import { logJson } from "./server/logging/json";
 
 /**
  * Node-only boot. `instrumentation.ts` calls this only when NEXT_RUNTIME is
@@ -15,7 +16,9 @@ export async function startConsole(): Promise<void> {
     getConfig();
   } catch (error) {
     if (error instanceof ConfigError) {
-      console.error(`csax+ cannot start.\n${error.message}`);
+      logJson("error", "console configuration is invalid", "error", {
+        detail: error.message,
+      });
       process.exit(1);
     }
     throw error;
@@ -24,15 +27,23 @@ export async function startConsole(): Promise<void> {
   try {
     const { migrateOnBoot } = await import("./server/db/index");
     const report = await migrateOnBoot();
+    const config = getConfig();
     if (report === null) {
-      console.info("csax+ store migrations skipped (SKIP_AUTO_MIGRATE is set)");
-    } else if (report.applied.length > 0) {
-      console.info(`csax+ store ready on ${report.dialect}, applied ${report.applied.join(", ")}`);
+      logJson("warn", "console store migrations skipped", config.logLevel, {
+        reason: "SKIP_AUTO_MIGRATE is set",
+      });
+    } else {
+      logJson("info", "console store ready", config.logLevel, {
+        dialect: report.dialect,
+        applied_migration_count: report.applied.length,
+        already_applied_migration_count: report.skipped,
+      });
     }
   } catch (error) {
-    console.error(
-      `csax+ cannot start: the console store is not usable.\n${(error as Error).message}`,
-    );
+    logJson("error", "console store initialization failed", "error", {
+      error_type: error instanceof Error ? error.name : "UnknownError",
+      detail: "Check console database connectivity and migration state.",
+    });
     process.exit(1);
   }
 }

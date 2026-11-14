@@ -150,8 +150,8 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - In progress: nonce-based CSP and baseline browser security headers are applied by middleware;
   `/healthz` reports process liveness and `/readyz` checks the console store without leaking
   connection details. Password login and passkey step-up continue to use CSAG's upstream rate
-  limits rather than a duplicate console limiter. Dedicated repeated step-up lockout and structured
-  JSON logging remain to be built.
+  limits rather than a duplicate console limiter. Console boot events now use structured JSON
+  stdout logs filtered by `LOG_LEVEL`. Dedicated repeated step-up lockout remains to be built.
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
 - [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete
