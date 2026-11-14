@@ -55,14 +55,14 @@ export function DigestView() {
 
   if (loading && report === null) {
     return (
-      <div className="view anim">
+      <div className="view anim digest-history-view">
         <LoadingAnnouncement>Loading digest history</LoadingAnnouncement>
       </div>
     );
   }
   if (failure !== null && report === null) {
     return (
-      <div className="view anim">
+      <div className="view anim digest-history-view">
         <Card>
           <ErrorState
             title="Digest history did not load"
@@ -76,7 +76,7 @@ export function DigestView() {
   }
   if (report?.state !== "ok") {
     return (
-      <div className="view anim">
+      <div className="view anim digest-history-view">
         <Card>
           <SectionState
             section={report ?? { state: "error", detail: "No report was returned.", code: null }}
@@ -88,7 +88,7 @@ export function DigestView() {
   }
 
   return (
-    <div className="view anim">
+    <div className="view anim digest-history-view">
       <Card title="Digest history" hint="Each report is the text stored when CSAG generated it.">
         <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
           <span className="hint">{formatCount(report.data.count)} stored runs</span>

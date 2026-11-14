@@ -400,6 +400,18 @@ nav.primary {
 .view.email-view .section-title {
   margin: 0;
 }
+.view.llm-provider-view,
+.view.digest-history-view {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.view.digest-schedule-view {
+  padding-bottom: 16px;
+}
+.view.digest-history-view {
+  padding-top: 0;
+}
 .view.anim {
   animation: fadeUp 0.35s ease both;
 }

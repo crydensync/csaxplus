@@ -162,13 +162,13 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
 
   if (loading && provider === null)
     return (
-      <div className="view anim">
+      <div className="view anim llm-provider-view">
         <LoadingAnnouncement>Loading LLM provider settings</LoadingAnnouncement>
       </div>
     );
   if (failure && provider === null)
     return (
-      <div className="view anim">
+      <div className="view anim llm-provider-view">
         <Card>
           <ErrorState
             title="Provider settings did not load"
@@ -183,7 +183,7 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
   const update = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm((state) => ({ ...state, [key]: value }));
   return (
-    <div className="view anim">
+    <div className="view anim llm-provider-view">
       {failure ? (
         <Card>
           <ErrorState
@@ -281,6 +281,11 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
           Credential: {current.api_key_set ? "saved and redacted" : "not configured"}. The API key
           is never returned to this page. To update settings, enter the key again.
         </p>
+        <p className="hint">
+          To test a provider, enter its API key and model. OpenAI-compatible providers also need a
+          base URL. Tests use the values in this form; saved credentials are never sent back to the
+          browser.
+        </p>
         <div className="actions-row">
           {form.kind === "openai-compatible" ? (
             <Button
@@ -292,14 +297,24 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
           ) : null}
           <Button
             onClick={() => void testProvider()}
-            disabled={busy || !form.api_key || !form.model}
+            disabled={
+              busy ||
+              !form.api_key ||
+              !form.model ||
+              (form.kind === "openai-compatible" && !form.base_url)
+            }
           >
             {busy ? "Working…" : "Test provider"}
           </Button>
           <Button
             variant="primary"
             onClick={() => void save()}
-            disabled={busy || !form.api_key || !form.model}
+            disabled={
+              busy ||
+              !form.api_key ||
+              !form.model ||
+              (form.kind === "openai-compatible" && !form.base_url)
+            }
           >
             {busy ? "Working…" : "Save settings"}
           </Button>
@@ -316,7 +331,6 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
       <Card
         title="AI usage"
         hint="Actual provider requests counted since the CSAG API process started."
-        style={{ marginTop: 18 }}
       >
         {usage?.providers.length ? (
           <div className="table-wrap">

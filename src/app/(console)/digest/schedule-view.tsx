@@ -116,7 +116,7 @@ export function DigestScheduleView({ csrf }: { csrf: string }) {
   };
 
   return (
-    <div className="view anim">
+    <div className="view anim digest-schedule-view">
       <Card title="Digest schedule" hint="Choose when CSAG generates and stores the weekly report.">
         {loading && schedule === null ? (
           <LoadingAnnouncement>Loading digest schedule</LoadingAnnouncement>
