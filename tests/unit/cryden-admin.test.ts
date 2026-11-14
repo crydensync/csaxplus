@@ -22,6 +22,10 @@ import {
   fetchUserDetail,
   fetchUserMetadata,
   fetchUsers,
+  beginOperatorStepUp,
+  finishOperatorStepUp,
+  changeOperatorRole,
+  removeOperator,
   summarizeAdminLogs,
   scanAdminAnomalies,
   queryAdminAudit,
@@ -77,6 +81,7 @@ type Seen = {
   method?: string;
   body?: BodyInit | null;
   authorization: string | null;
+  operatorGrant?: string | null;
 };
 
 /** Records the requests the console made, and answers each with `handler`'s reply. */
@@ -91,6 +96,7 @@ function stubApi(handler: () => Response): Seen[] {
       method: init?.method,
       body: init?.body,
       authorization: new Headers(init?.headers).get("authorization"),
+      operatorGrant: new Headers(init?.headers).get("X-CSAG-Operator-Grant"),
     });
     return handler();
   });
@@ -637,6 +643,67 @@ describe("testing one OAuth provider", () => {
     await expect(testOAuthProvider({ token: TOKEN, provider: "google" })).rejects.toThrow(
       "/v1/admin/oauth/google/test",
     );
+  });
+});
+
+describe("operator mutation requests", () => {
+  it("unwraps the API WebAuthn options and retains the ceremony token server side", async () => {
+    const seen = stubApi(() =>
+      jsonResponse({
+        data: {
+          public_key: {
+            publicKey: {
+              challenge: "challenge",
+              rpId: "localhost",
+              userVerification: "required",
+            },
+          },
+          ceremony_token: "c".repeat(40),
+        },
+      }),
+    );
+    const offer = await beginOperatorStepUp({ token: TOKEN, purpose: "operator_role_change" });
+    expect(offer.public_key).toEqual({
+      challenge: "challenge",
+      rpId: "localhost",
+      userVerification: "required",
+    });
+    expect(seen[0]?.path).toBe("/v1/admin/operators/step-up/begin");
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({ purpose: "operator_role_change" });
+  });
+
+  it("forwards an assertion and sends a one-use grant only on operator writes", async () => {
+    const assertion = { id: "credential" };
+    let seen = stubApi(() => jsonResponse({ data: { grant: "g".repeat(40) } }));
+    await expect(
+      finishOperatorStepUp({
+        token: TOKEN,
+        purpose: "operator_remove",
+        ceremonyToken: "c".repeat(40),
+        credential: assertion,
+      }),
+    ).resolves.toBe("g".repeat(40));
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({
+      purpose: "operator_remove",
+      ceremony_token: "c".repeat(40),
+      credential: assertion,
+    });
+
+    const target = "01a1d782-0635-7e41-bd60-50e1cfef5fc8";
+    seen = stubApi(() => jsonResponse({ data: { updated: true } }));
+    await changeOperatorRole({
+      token: TOKEN,
+      grant: "g".repeat(40),
+      userID: target,
+      role: "viewer",
+    });
+    expect(seen[0]?.operatorGrant).toBe("g".repeat(40));
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({ role: "viewer" });
+
+    seen = stubApi(() => jsonResponse({ data: { removed: true } }));
+    await removeOperator({ token: TOKEN, grant: "g".repeat(40), userID: target });
+    expect(seen[0]?.path).toBe(`/v1/admin/operators/${target}`);
+    expect(seen[0]?.operatorGrant).toBe("g".repeat(40));
   });
 });
 

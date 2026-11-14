@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { readSession } from "@/server/auth/guard";
+import { sessionRole } from "@/server/auth/session";
 
 import { ConsoleTopbar } from "../console-topbar";
 import { SignOutButton } from "../sign-out-button";
@@ -19,7 +20,7 @@ export default async function OperatorsPage() {
         subtitle="Console access and roles reported by the authentication API."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <OperatorsView />
+      <OperatorsView owner={sessionRole(session) === "owner"} csrf={session.csrf} />
     </>
   );
 }

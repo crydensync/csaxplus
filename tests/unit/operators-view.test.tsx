@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe("OperatorsView", () => {
-  it("shows the live operator roster and states unavailable writes clearly", async () => {
+  it("shows the live operator roster and keeps writes hidden from non-owners", async () => {
     vi.stubGlobal(
       "fetch",
       async () =>
@@ -46,13 +46,15 @@ describe("OperatorsView", () => {
         ),
     );
 
-    await act(async () => root.render(<OperatorsView />));
+    await act(async () => root.render(<OperatorsView owner={false} csrf="test-csrf" />));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
 
     expect(container.textContent).toContain("owner@example.com");
     expect(container.textContent).toContain("owner");
     expect(container.textContent).toContain("1 operators");
-    expect(container.textContent).toContain("Invitations, role changes, removal");
+    expect(container.textContent).toContain(
+      "Role changes and removal require a fresh passkey confirmation.",
+    );
     expect(
       Array.from(container.querySelectorAll("button")).map((button) => button.textContent),
     ).toEqual(["Refresh"]);

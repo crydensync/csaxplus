@@ -809,7 +809,7 @@ The console saves settings only from a human guarded action. AI features remain 
 no reference to these settings mutation handlers. The database choice remains PostgreSQL because
 CSAG's only query store is Postgres; database writes in the console wait for the step-up requirement.
 
-## D25. Operator management reads the API roster and waits for API step-up writes
+## D25. Operator management uses the API roster and API-enforced step-up
 
 **Date:** 2026-11-14
 **Status:** accepted
@@ -819,9 +819,9 @@ roles, and the admin guard checks the live stored role as well as the token, so 
 revocation takes effect immediately for admin requests. `GET /v1/admin/operators` and the console
 screen expose that roster.
 
-The build note requires a fresh WebAuthn step-up for changing operator roles. CSAG currently has no
-assertion verification or step-up grant contract, and its passkey delete method only re-confirms
-the account's current password. Therefore this increment does not register operator mutation
-routes or pretend an email invitation was sent. CSAG has no invitation sender. The remaining
-operator actions will be added when the API can verify the step-up itself and can scope operator
-sessions/passkeys without weakening the existing account-owned passkey contract.
+Role changes and removal now require a fresh WebAuthn assertion verified by CSAG with user
+verification. The API stores only hashes of short-lived challenge and grant tokens; grants are
+single-use and bound to the owner, exact access token and action. The console keeps those opaque
+values inside its encrypted HttpOnly session. CSAG still has no invitation sender, and scoped
+operator session/passkey routes remain future work; the existing account-owned passkey contract is
+unchanged.

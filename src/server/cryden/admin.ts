@@ -886,6 +886,87 @@ export async function fetchAdminOperators(options: { token: string }): Promise<A
   return parsed.data;
 }
 
+type OperatorStepUpPurpose = "operator_role_change" | "operator_remove";
+const operatorStepUpOfferSchema = z.object({
+  public_key: z.object({
+    publicKey: z
+      .object({
+        challenge: z.string().min(1),
+        rpId: z.string().min(1),
+        allowCredentials: z.array(z.unknown()).optional(),
+        userVerification: z.enum(["required", "preferred", "discouraged"]).optional(),
+      })
+      .passthrough(),
+  }),
+  ceremony_token: z.string().min(32),
+});
+
+export async function beginOperatorStepUp(options: {
+  token: string;
+  purpose: OperatorStepUpPurpose;
+}) {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/begin`,
+    token: options.token,
+    body: { purpose: options.purpose },
+  });
+  const parsed = operatorStepUpOfferSchema.safeParse(data);
+  if (!parsed.success)
+    throw malformed("operator step-up options", `${ADMIN_OPERATORS_PATH}/step-up/begin`);
+  return { ...parsed.data, public_key: parsed.data.public_key.publicKey };
+}
+
+export async function finishOperatorStepUp(options: {
+  token: string;
+  purpose: OperatorStepUpPurpose;
+  ceremonyToken: string;
+  credential: unknown;
+}): Promise<string> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/finish`,
+    token: options.token,
+    body: {
+      purpose: options.purpose,
+      ceremony_token: options.ceremonyToken,
+      credential: options.credential,
+    },
+  });
+  const parsed = z.object({ grant: z.string().min(32) }).safeParse(data);
+  if (!parsed.success)
+    throw malformed("operator step-up grant", `${ADMIN_OPERATORS_PATH}/step-up/finish`);
+  return parsed.data.grant;
+}
+
+export async function changeOperatorRole(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  role: AdminOperator["role"];
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "PUT",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+    body: { role: options.role },
+  });
+}
+
+export async function removeOperator(options: {
+  token: string;
+  grant: string;
+  userID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
 /** Revoke one active session by its ID. */
 export async function revokeAdminSession(options: {
   token: string;

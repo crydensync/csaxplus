@@ -51,7 +51,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
-| 5 | Operators | `GET /v1/admin/operators` now returns the live roster on the CSAG feature branch. Role changes and removal require API-enforced WebAuthn step-up; operator-scoped session/passkey reads and safe passkey removal also need explicit API contracts. CSAG has no invitation sender, so adding an existing account is not an email invitation. |
+| 5 | Operators | Built on the CSAG feature branch: `GET /v1/admin/operators`, API-enforced WebAuthn step-up begin/finish, and owner-only `PUT|DELETE /v1/admin/operators/{userID}`. Invitations and operator-scoped session/passkey reads/removal still need explicit API contracts. |
 
 Until an endpoint exists, the screen either shows an honest "not available in this deployment"
 state or is served by the fixtures adapter while `CRYDEN_MODE=fixtures`. A fixture is never a
@@ -154,10 +154,12 @@ samples. These are CSAG's samples; they do not represent a host product's templa
 is read-only and file changes require an API restart.
 
 The console renders those counts and samples without claiming product delivery health or providing
-a test-send action against the wrong sender. Product delivery and test-send checks belong in the
-host integration. The old prototype's `{{user_email}}`, `{{action_url}}`, `{{app_name}}` and
-`{{expires_in}}` variables also do not describe CSAG's Go templates (`{{.To}}`, `{{.Token}}`,
-`{{.URL}}`).
+a test-send action against the wrong sender. A local consumer demo now demonstrates the contract:
+CSAG can relay generated magic-link and verification tokens to a loopback consumer, which owns the
+Resend key, sends the message, and completes a magic-link against CSAG. This is a local integration
+test, not a product delivery-reporting API. The old prototype's `{{user_email}}`, `{{action_url}}`,
+`{{app_name}}` and `{{expires_in}}` variables also do not describe CSAG's Go templates
+(`{{.To}}`, `{{.Token}}`, `{{.URL}}`).
 
 ### 2.8 Cloud logging
 

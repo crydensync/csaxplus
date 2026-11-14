@@ -58,9 +58,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
 - [x] 1.5 Email & Magic Link: the console reads CSAG's email-event stats and server-rendered
       template samples. The host product provides the `EmailSender` and `MagicLinkSender` that
-      deliver real messages; CSAG's standalone sender is a development stand-in. Delivery
-      reporting and product-sender testing stay with the host integration (see BACKEND_GAPS 1 and
-      2.7). No provider key belongs in this console.
+      deliver real messages; CSAG's standalone sender is a development stand-in. A local
+      consuming-app demo now relays CSAG magic-link and verification messages through Resend with
+      its key held only by the consumer, and completes the magic-link callback against CSAG.
+      Delivery reporting and product-sender testing stay with the host integration (see
+      BACKEND_GAPS 1 and 2.7). No provider key belongs in this console.
 - [x] 1.6 Password Policy: the console shows hash migration and reads/updates the active policy
       through CSAG's persistent admin endpoints. Signup, account password changes and
       admin-created accounts enforce the live policy. The API implementation is on the local
@@ -123,11 +125,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
 - [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
-- In progress: the CSAG feature branch now exposes the live operator roster at
-  `GET /v1/admin/operators`, checks current API roles against the operator store, and the console
-  has a live, admin-gated roster screen. Mutations and per-operator sessions/passkeys remain
-  unavailable until their API step-up and scoped read contracts are implemented. No invite is
-  claimed because CSAG has no invitation delivery integration.
+- In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
+  step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
+  action; final-owner protection remains in the operator store. The console keeps ceremony state
+  and grants in its encrypted HttpOnly session. Invitations and operator-scoped passkey/session
+  management remain unavailable because CSAG has no invitation sender or scoped read contracts.
 - [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
       key rotation, audit
 - [ ] 5.3 Config view (source of each setting, redacted)

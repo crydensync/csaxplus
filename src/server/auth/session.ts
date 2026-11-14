@@ -61,6 +61,22 @@ const sessionSchema = z.object({
   }),
   /** Double-submit value for mutations. See csrf.ts. */
   csrf: z.string().min(1),
+  /** API ceremony state stays inside the encrypted, HttpOnly session cookie. */
+  operatorStepUp: z
+    .object({
+      purpose: z.enum(["operator_role_change", "operator_remove"]),
+      ceremonyToken: z.string().min(32),
+    })
+    .nullable()
+    .optional(),
+  /** One-use API grant, never returned to browser JavaScript. */
+  operatorGrant: z
+    .object({
+      purpose: z.enum(["operator_role_change", "operator_remove"]),
+      token: z.string().min(32),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type Session = z.infer<typeof sessionSchema>;
