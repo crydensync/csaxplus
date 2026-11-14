@@ -16,10 +16,9 @@
   <img alt="Postgres: 13 or newer" src="https://img.shields.io/badge/postgres-%3E%3D13-7c5cff">
 </p>
 
-> **Status: tier 0 of 5.** The foundation is in place and runs: configuration, the console's own
-> store, operator sign-in against the CrydenSync API, the API client with its health tag, the
-> design system, the landing page, and the dashboard. Twenty of the 21 console screens are not
-> built yet, and every one of them says so on screen rather than showing stand-in data. See
+> **Status: tier 5 of 5 in progress.** The console now includes 24 sidebar screens across identity,
+> security, developer tools, AI administration and configuration. Their feature table distinguishes
+> completed integrations from remaining API and host-integration work. See
 > [Feature status](#3-feature-status) for the honest per-screen picture, and
 > [docs/build/PROGRESS.md](docs/build/PROGRESS.md) for what is being worked on now.
 
@@ -145,7 +144,7 @@ Three statuses, and they mean exactly this:
 
 ### 3.2 Screens
 
-The six sidebar groups, and all 21 screens in them.
+The six sidebar groups, and all 24 screens in them.
 
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
@@ -169,6 +168,7 @@ The six sidebar groups, and all 21 screens in them.
 | AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
 | Configuration | LLM Provider | built locally | tier 4, step 4.7; Anthropic and generic OpenAI-compatible settings, model discovery, connection test and process-lifetime usage stats are on the CSAG feature branch |
 | Configuration | Database Provider | built locally | tier 4, step 4.7; PostgreSQL DSN is stored by CSAG after it verifies the role is read-only; use a separate read-only role, even when querying the local auth database |
+| Configuration | System Status | built locally | read-only auth database counts, deployment diagnostics, and applied/pending schema migrations |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
 Several of those still need endpoints the API does not have yet. Every one is listed in
