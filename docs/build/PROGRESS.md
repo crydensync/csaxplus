@@ -128,8 +128,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
   step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
   action; final-owner protection remains in the operator store. The console keeps ceremony state
-  and grants in its encrypted HttpOnly session. Invitations and operator-scoped passkey/session
-  management remain unavailable because CSAG has no invitation sender or scoped read contracts.
+  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
+  lists, session revocation, and passkey removal are being added on the CSAG and console feature
+  branches. Scoped reads and mutations are implemented and verified, including target-operator
+  checks and the final-passkey guard. Invitation sending remains unavailable because CSAG has no
+  invitation contract, so Tier 5.1 stays in progress.
 - [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
       key rotation, audit
 - [ ] 5.3 Config view (source of each setting, redacted)

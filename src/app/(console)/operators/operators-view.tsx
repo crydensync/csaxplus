@@ -6,10 +6,12 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Pill } from "@/components/Pill";
+import { Drawer } from "@/components/Drawer";
 import { EmptyState, ErrorState, LoadingAnnouncement } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { formatCount, formatInstant } from "@/lib/format";
 import type { AdminOperator, AdminOperators } from "@/server/cryden/admin";
+import type { OperatorPasskeys, OperatorSessions } from "@/server/cryden/admin";
 import {
   startAuthentication,
   type PublicKeyCredentialRequestOptionsJSON,
@@ -50,6 +52,10 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [managed, setManaged] = useState<AdminOperator | null>(null);
+  const [operatorSessions, setOperatorSessions] = useState<OperatorSessions | null>(null);
+  const [operatorPasskeys, setOperatorPasskeys] = useState<OperatorPasskeys | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const read = useCallback(async () => {
     setLoading(true);
@@ -141,6 +147,85 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
     [csrf, read],
   );
 
+  const readDetails = useCallback(async (operator: AdminOperator) => {
+    setManaged(operator);
+    setDetailError(null);
+    setOperatorSessions(null);
+    setOperatorPasskeys(null);
+    try {
+      const [sessionsResponse, passkeysResponse] = await Promise.all([
+        fetch(`/api/console/operators/${encodeURIComponent(operator.user_id)}/sessions`, {
+          credentials: "same-origin",
+        }),
+        fetch(`/api/console/operators/${encodeURIComponent(operator.user_id)}/passkeys`, {
+          credentials: "same-origin",
+        }),
+      ]);
+      const [sessionsPayload, passkeysPayload]: unknown[] = await Promise.all([
+        sessionsResponse.json().catch(() => null),
+        passkeysResponse.json().catch(() => null),
+      ]);
+      if (!sessionsResponse.ok)
+        throw new Error(failureFrom(sessionsPayload, sessionsResponse.status).message);
+      if (!passkeysResponse.ok)
+        throw new Error(failureFrom(passkeysPayload, passkeysResponse.status).message);
+      const sessions = dataFrom<OperatorSessions>(sessionsPayload);
+      const passkeys = dataFrom<OperatorPasskeys>(passkeysPayload);
+      if (!sessions || !passkeys)
+        throw new Error(
+          "The API returned operator security details this screen does not recognise.",
+        );
+      setOperatorSessions(sessions);
+      setOperatorPasskeys(passkeys);
+    } catch (error) {
+      setDetailError(
+        error instanceof Error ? error.message : "Could not load operator security details.",
+      );
+    }
+  }, []);
+
+  const manageAction = useCallback(
+    async (purpose: "operator_session_revoke" | "operator_passkey_remove", path: string) => {
+      if (!managed) return;
+      setBusy(managed.user_id);
+      setDetailError(null);
+      try {
+        const begin = await fetch("/api/console/operators/step-up/begin", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+          body: JSON.stringify({ purpose }),
+        });
+        const beginPayload: unknown = await begin.json().catch(() => null);
+        if (!begin.ok) throw new Error(failureFrom(beginPayload, begin.status).message);
+        const offer = dataFrom<{ public_key: PublicKeyCredentialRequestOptionsJSON }>(beginPayload);
+        if (!offer) throw new Error("CSAG returned invalid passkey options.");
+        const credential = await startAuthentication({ optionsJSON: offer.public_key });
+        const finish = await fetch("/api/console/operators/step-up/finish", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+          body: JSON.stringify({ purpose, credential }),
+        });
+        const finishPayload: unknown = await finish.json().catch(() => null);
+        if (!finish.ok) throw new Error(failureFrom(finishPayload, finish.status).message);
+        const response = await fetch(path, {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { [CSRF_HEADER]: csrf },
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+        await readDetails(managed);
+      } catch (error) {
+        setDetailError(error instanceof Error ? error.message : "The operator action failed.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [csrf, managed, readDetails],
+  );
+
   const columns = useMemo<Column<AdminOperator>[]>(
     () => [
       {
@@ -193,13 +278,19 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
                   >
                     Remove
                   </Button>
+                  <Button
+                    disabled={busy === operator.user_id}
+                    onClick={() => void readDetails(operator)}
+                  >
+                    Manage
+                  </Button>
                 </div>
               ),
             } as Column<AdminOperator>,
           ]
         : []),
     ],
-    [busy, mutate, owner],
+    [busy, mutate, owner, readDetails],
   );
 
   if (loading && roster === null) {
@@ -241,9 +332,8 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
           </p>
         ) : null}
         <p className="hint" style={{ margin: "12px 0 16px" }}>
-          {roster ? `${formatCount(roster.total)} operators` : ""}. Role changes and removal require
-          a fresh passkey confirmation. Invitations, passkey controls and operator session details
-          are not enabled yet.
+          {roster ? `${formatCount(roster.total)} operators` : ""}. Access changes, session
+          revocation and passkey removal require a fresh passkey confirmation.
         </p>
         <DataTable
           caption="Console operators"
@@ -259,6 +349,100 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
           }
         />
       </Card>
+      <Drawer
+        open={managed !== null}
+        onClose={() => setManaged(null)}
+        title={managed?.email ?? "Operator security"}
+        subtitle="Active sessions and registered passkeys"
+      >
+        {detailError ? (
+          <p className="error-text" role="status">
+            {detailError}
+          </p>
+        ) : null}
+        {!operatorSessions || !operatorPasskeys ? (
+          detailError ? null : (
+            <p className="hint">Loading operator security details…</p>
+          )
+        ) : (
+          <>
+            <Card
+              title="Sessions"
+              hint={`${operatorSessions.total} active sessions`}
+              action={
+                <Button
+                  disabled={busy !== null || operatorSessions.total === 0}
+                  onClick={() => {
+                    if (window.confirm(`Revoke all sessions for ${managed?.email}?`))
+                      void manageAction(
+                        "operator_session_revoke",
+                        `/api/console/operators/${encodeURIComponent(managed!.user_id)}/sessions`,
+                      );
+                  }}
+                >
+                  Revoke all
+                </Button>
+              }
+            >
+              {operatorSessions.sessions.length === 0 ? (
+                <p className="hint">No active sessions.</p>
+              ) : (
+                operatorSessions.sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    style={{ padding: "10px 0", borderBottom: "1px solid var(--line, #ddd)" }}
+                  >
+                    <b>{session.device || session.user_agent || "Unknown device"}</b>
+                    <div className="hint">
+                      {session.ip} · {formatInstant(session.created_at)}
+                    </div>
+                    <Button
+                      disabled={busy !== null}
+                      onClick={() =>
+                        void manageAction(
+                          "operator_session_revoke",
+                          `/api/console/operators/${encodeURIComponent(managed!.user_id)}/sessions/${encodeURIComponent(session.id)}`,
+                        )
+                      }
+                    >
+                      Revoke
+                    </Button>
+                  </div>
+                ))
+              )}
+            </Card>
+            <Card
+              title="Passkeys"
+              hint={`${operatorPasskeys.total} registered · at least one must remain`}
+            >
+              {operatorPasskeys.passkeys.map((passkey) => (
+                <div
+                  key={passkey.credential_id}
+                  style={{ padding: "10px 0", borderBottom: "1px solid var(--line, #ddd)" }}
+                >
+                  <b>{passkey.nickname || "Passkey"}</b>
+                  <div className="hint">
+                    Added {formatInstant(passkey.created_at)}
+                    {passkey.last_used_at ? ` · used ${formatInstant(passkey.last_used_at)}` : ""}
+                  </div>
+                  <Button
+                    disabled={busy !== null || operatorPasskeys.total <= 1}
+                    onClick={() => {
+                      if (window.confirm(`Remove ${passkey.nickname || "this passkey"}?`))
+                        void manageAction(
+                          "operator_passkey_remove",
+                          `/api/console/operators/${encodeURIComponent(managed!.user_id)}/passkeys/${encodeURIComponent(passkey.credential_id)}`,
+                        );
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </Card>
+          </>
+        )}
+      </Drawer>
     </div>
   );
 }

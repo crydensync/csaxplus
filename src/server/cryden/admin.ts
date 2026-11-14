@@ -886,7 +886,11 @@ export async function fetchAdminOperators(options: { token: string }): Promise<A
   return parsed.data;
 }
 
-type OperatorStepUpPurpose = "operator_role_change" | "operator_remove";
+export type OperatorStepUpPurpose =
+  | "operator_role_change"
+  | "operator_remove"
+  | "operator_session_revoke"
+  | "operator_passkey_remove";
 const operatorStepUpOfferSchema = z.object({
   public_key: z.object({
     publicKey: z
@@ -962,6 +966,108 @@ export async function removeOperator(options: {
   await apiRequest<unknown>({
     method: "DELETE",
     path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
+const operatorSessionsSchema = z.object({
+  sessions: z.array(
+    z.object({
+      id: z.string().min(1),
+      ip: z.string(),
+      user_agent: z.string(),
+      device: z.string(),
+      created_at: z.string().datetime({ offset: true }),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  email: z.string().email(),
+});
+export type OperatorSessions = z.infer<typeof operatorSessionsSchema>;
+
+export async function fetchOperatorSessions(options: {
+  token: string;
+  userID: string;
+}): Promise<OperatorSessions> {
+  const path = `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions?limit=100&offset=0`;
+  const parsed = operatorSessionsSchema.safeParse(
+    await apiRequest<unknown>({ method: "GET", path, token: options.token }),
+  );
+  if (!parsed.success) throw malformed("operator sessions", path);
+  return parsed.data;
+}
+
+const operatorPasskeysSchema = z.object({
+  passkeys: z.array(
+    z.object({
+      credential_id: z.string().min(1),
+      nickname: z.string(),
+      created_at: z.string().datetime({ offset: true }),
+      last_used_at: z.string().datetime({ offset: true }).optional(),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+});
+export type OperatorPasskeys = z.infer<typeof operatorPasskeysSchema>;
+
+export async function fetchOperatorPasskeys(options: {
+  token: string;
+  userID: string;
+}): Promise<OperatorPasskeys> {
+  const path = `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/passkeys`;
+  const parsed = operatorPasskeysSchema.safeParse(
+    await apiRequest<unknown>({ method: "GET", path, token: options.token }),
+  );
+  if (!parsed.success) throw malformed("operator passkeys", path);
+  return parsed.data;
+}
+
+export async function revokeOperatorSession(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  sessionID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions/${encodeURIComponent(options.sessionID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
+export async function revokeOperatorSessions(options: {
+  token: string;
+  grant: string;
+  userID: string;
+}): Promise<number> {
+  const data = await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+  const parsed = z.object({ revoked: z.number().int().nonnegative() }).safeParse(data);
+  if (!parsed.success)
+    throw malformed(
+      "revoked operator sessions",
+      `${ADMIN_OPERATORS_PATH}/${options.userID}/sessions`,
+    );
+  return parsed.data.revoked;
+}
+
+export async function removeOperatorPasskey(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  credentialID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/passkeys/${encodeURIComponent(options.credentialID)}`,
     token: options.token,
     headers: { "X-CSAG-Operator-Grant": options.grant },
   });

@@ -822,6 +822,8 @@ screen expose that roster.
 Role changes and removal now require a fresh WebAuthn assertion verified by CSAG with user
 verification. The API stores only hashes of short-lived challenge and grant tokens; grants are
 single-use and bound to the owner, exact access token and action. The console keeps those opaque
-values inside its encrypted HttpOnly session. CSAG still has no invitation sender, and scoped
-operator session/passkey routes remain future work; the existing account-owned passkey contract is
-unchanged.
+values inside its encrypted HttpOnly session. Owner-only routes expose only active session
+metadata and passkey labels, timestamps and credential IDs. Revocation and passkey removal each
+consume a purpose-bound grant; CSAG rejects removal of the final passkey. Invitation sending
+remains future work because email delivery belongs to the consuming application. The existing
+account-owned passkey contract is unchanged.

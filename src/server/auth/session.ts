@@ -64,7 +64,12 @@ const sessionSchema = z.object({
   /** API ceremony state stays inside the encrypted, HttpOnly session cookie. */
   operatorStepUp: z
     .object({
-      purpose: z.enum(["operator_role_change", "operator_remove"]),
+      purpose: z.enum([
+        "operator_role_change",
+        "operator_remove",
+        "operator_session_revoke",
+        "operator_passkey_remove",
+      ]),
       ceremonyToken: z.string().min(32),
     })
     .nullable()
@@ -72,7 +77,12 @@ const sessionSchema = z.object({
   /** One-use API grant, never returned to browser JavaScript. */
   operatorGrant: z
     .object({
-      purpose: z.enum(["operator_role_change", "operator_remove"]),
+      purpose: z.enum([
+        "operator_role_change",
+        "operator_remove",
+        "operator_session_revoke",
+        "operator_passkey_remove",
+      ]),
       token: z.string().min(32),
     })
     .nullable()

@@ -14,7 +14,14 @@ import {
 import { beginOperatorStepUp } from "@/server/cryden/admin";
 
 export const dynamic = "force-dynamic";
-const schema = z.object({ purpose: z.enum(["operator_role_change", "operator_remove"]) });
+const schema = z.object({
+  purpose: z.enum([
+    "operator_role_change",
+    "operator_remove",
+    "operator_session_revoke",
+    "operator_passkey_remove",
+  ]),
+});
 
 export async function POST(request: Request): Promise<Response> {
   const authorized = await requireOwnerMutation(request);

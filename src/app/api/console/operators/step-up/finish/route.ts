@@ -15,7 +15,12 @@ import { finishOperatorStepUp } from "@/server/cryden/admin";
 
 export const dynamic = "force-dynamic";
 const schema = z.object({
-  purpose: z.enum(["operator_role_change", "operator_remove"]),
+  purpose: z.enum([
+    "operator_role_change",
+    "operator_remove",
+    "operator_session_revoke",
+    "operator_passkey_remove",
+  ]),
   credential: z.unknown(),
 });
 

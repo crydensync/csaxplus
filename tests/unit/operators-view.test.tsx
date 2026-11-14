@@ -53,7 +53,7 @@ describe("OperatorsView", () => {
     expect(container.textContent).toContain("owner");
     expect(container.textContent).toContain("1 operators");
     expect(container.textContent).toContain(
-      "Role changes and removal require a fresh passkey confirmation.",
+      "Access changes, session revocation and passkey removal require a fresh passkey confirmation.",
     );
     expect(
       Array.from(container.querySelectorAll("button")).map((button) => button.textContent),
