@@ -2,7 +2,7 @@ import { pathApi, readTextFile } from "../node/builtins";
 import { ConfigError, type ConfigProblem } from "./errors";
 
 /** Where a setting's value came from. Values themselves are never returned here. */
-export type ConfigSource = "env" | "env-file" | "file" | "default";
+export type ConfigSource = "env" | "env-file" | "file" | "default" | "unset";
 
 export type ResolvedValue = {
   value: string;

@@ -166,7 +166,9 @@ export function loadConfig(
 
   const entries: ReadonlyArray<ConfigEntry> = Object.keys(schema.shape).map((key) => ({
     key,
-    source: sources.get(key) ?? "default",
+    source:
+      sources.get(key) ??
+      ((result.data as Record<string, unknown>)[key] === undefined ? "unset" : "default"),
     sensitive: SENSITIVE_KEYS.has(key),
   }));
 

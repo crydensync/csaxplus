@@ -128,17 +128,20 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
   step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
   action; final-owner protection remains in the operator store. The console keeps ceremony state
-  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
-  lists, session revocation, and passkey removal are being added on the CSAG and console feature
-  branches. Scoped reads and mutations are implemented and verified, including target-operator
-  checks and the final-passkey guard. Invitation sending remains unavailable because CSAG has no
-  invitation contract, so Tier 5.1 stays in progress.
-- [ ] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
+-  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
+  lists, session revocation, and passkey removal are implemented and verified, including
+  target-operator checks and the final-passkey guard. Invitation sending remains unavailable
+  because CSAG has no invitation contract or consuming-app sender integration, so Tier 5.1 stays
+  in progress.
+- [x] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
       passkey step-up, 20-second reveal masking, audited mutations/copy, and a key-rotation command.
       Implemented and verified: all 349 console tests, typecheck, lint, and production build pass;
       all CSAG tests pass, and the local CSAG executable builds successfully. Secret provider values
       are returned only after the API consumes a one-use passkey grant.
-- [ ] 5.3 Config view (source of each setting, redacted)
+- [x] 5.3 Config view (source of each setting, redacted). A server-rendered table reports
+      environment, environment-file, config-file, built-in-default, or unset provenance and never
+      includes values. It explicitly distinguishes the console's own store and optional AI query
+      connection from CSAG's authentication database.
 - [ ] 5.4 SQLite mode: honest 501 state instead of broken screens
 - [ ] 5.5 Hardening: CSP, security headers, rate limiting, lockout, /healthz, /readyz, JSON logs
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
