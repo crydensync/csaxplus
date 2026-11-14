@@ -16,14 +16,17 @@
   <img alt="Postgres: 13 or newer" src="https://img.shields.io/badge/postgres-%3E%3D13-7c5cff">
 </p>
 
-> **Status: Tier 5 build in progress.** Identity, security, developer, AI admin, operator, secret,
-> and runtime configuration screens are implemented. Hardening and packaging are underway;
-> operator invitations still need an API contract and consuming-app sender. See
-> [Feature status](#3-feature-status) and [docs/build/PROGRESS.md](docs/build/PROGRESS.md) for
-> details.
+> **Status: tier 0 of 5.** The foundation is in place and runs: configuration, the console's own
+> store, operator sign-in against the CrydenSync API, the API client with its health tag, the
+> design system, the landing page, and the dashboard. Twenty of the 21 console screens are not
+> built yet, and every one of them says so on screen rather than showing stand-in data. See
+> [Feature status](#3-feature-status) for the honest per-screen picture, and
+> [docs/build/PROGRESS.md](docs/build/PROGRESS.md) for what is being worked on now.
 
-The CI workflow currently lives on the `feat/console-build` branch. The badge will be added when
-the workflow is available from the repository's default branch.
+There is no CI badge above, and that is deliberate rather than an oversight: the GitHub Actions
+workflow arrives in step 5.6. A badge pointing at a workflow that does not exist resolves to
+nothing, and a badge that resolves to nothing is the kind of small untrue thing this project
+avoids on its screens. Recorded in [docs/build/DECISIONS.md](docs/build/DECISIONS.md) as D15.
 
 ---
 
@@ -138,11 +141,11 @@ Three statuses, and they mean exactly this:
 | Landing page | done | static, and its claims are generated from the console's own navigation |
 | Operator passkeys | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the credential belongs to the operator's account at the API (`/v1/passkeys`), so it works wherever that account signs in, and removing one asks for the current password |
 | Secrets vault | built | tier 5, step 5.2; values are encrypted in the console store and revealed only after API-verified passkey step-up |
-| Hardening and deployment | in progress | tier 5, steps 5.5 and 5.6; CSP, browser headers, health probes, JSON boot logs and packaging are being verified |
+| Hardening and deployment | planned | tier 5, steps 5.5 and 5.6 |
 
 ### 3.2 Screens
 
-The six sidebar groups, and all 23 screens in them.
+The six sidebar groups, and all 21 screens in them.
 
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
@@ -166,9 +169,7 @@ The six sidebar groups, and all 23 screens in them.
 | AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
 | Configuration | LLM Provider | built locally | tier 4, step 4.7; Anthropic and generic OpenAI-compatible settings, model discovery, connection test and process-lifetime usage stats are on the CSAG feature branch |
 | Configuration | Database Provider | built locally | tier 4, step 4.7; PostgreSQL DSN is stored by CSAG after it verifies the role is read-only; use a separate read-only role, even when querying the local auth database |
-| Configuration | Operators | partial | tier 5, step 5.1; roster, role changes, removal, passkeys and sessions are managed; invitations need an API and sender contract |
-| Configuration | Runtime Config | done | tier 5, step 5.3; shows setting provenance and whether a value is sensitive without returning values |
-| Configuration | Settings & Secrets | done | tier 5, step 5.2; environment and file secrets are masked, vault values are encrypted and passkey-gated |
+| Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
 Several of those still need endpoints the API does not have yet. Every one is listed in
 [docs/build/BACKEND_GAPS.md](docs/build/BACKEND_GAPS.md) with the evidence for it, and a screen
@@ -262,15 +263,9 @@ Then open <http://localhost:3000>. `/design` shows every component in every stat
 
 ### 5.3 Docker Compose
 
-Copy `.env.docker.example` to `.env.docker`, replace the session and vault keys with separate
-outputs from `openssl rand -base64 32`, and set the API URL and operator origin. Then run:
-
-```bash
-docker compose up --build -d
-```
-
-Compose binds to `127.0.0.1:3000` and persists the console store in a named volume. See the
-[deployment guide](docs/guide/deployment.md) for PostgreSQL, Kubernetes, and production details.
+Not yet. The image, the compose file and the Kubernetes manifest arrive in step 5.6, and this
+section will be replaced with the real instructions then rather than describing a file that does
+not exist.
 
 ---
 
@@ -475,10 +470,23 @@ See [SECURITY.md](SECURITY.md). Please do not open a public issue for a vulnerab
 
 ## 9. Deployment
 
-The repository includes a non-root standalone Docker image, Docker Compose with a persistent
-console store, a Kubernetes manifest using mounted secret files, and a GitHub Actions workflow.
-Start with [docs/guide/deployment.md](docs/guide/deployment.md). These artifacts currently live on
-`feat/console-build` and have not been merged to the default branch.
+> **Status: not built.** The Dockerfile, the Compose file, the Kubernetes manifest and the CI
+> workflow arrive in step 5.6. Today the console runs from a checkout with `pnpm dev` or
+> `pnpm build && pnpm start`. This section will be replaced with real, tested instructions when
+> those files exist, rather than describing files that do not.
+
+What is already true and worth knowing before then:
+
+- The production build is `output: "standalone"`, so the server ships as a self-contained bundle
+  with `node_modules` pruned to what it actually uses.
+- `/` is the only statically rendered route. Everything under `(console)` reads the session and is
+  therefore dynamic, which is correct: it differs per operator.
+- A production boot requires `CSAX_API_URL`, `CSAX_SESSION_SECRET` and `CSAX_VAULT_KEY` at minimum,
+  and refuses to start without them, naming what is missing.
+- `Secure` cookies are forced in production, and `WEBAUTHN_ORIGIN` must be the HTTPS origin the
+  operator actually uses, or sign-in is refused by design.
+
+A fuller sketch of the intended shape is in [docs/guide/deployment.md](docs/guide/deployment.md).
 
 ---
 

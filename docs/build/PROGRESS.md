@@ -153,11 +153,6 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   limits rather than a duplicate console limiter. Console boot events now use structured JSON
   stdout logs filtered by `LOG_LEVEL`. Dedicated repeated step-up lockout remains to be built.
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
-- In progress: the non-root standalone Docker image, persistent Compose setup, Kubernetes secret-file
-  example, and GitHub Actions checks are written. Unit tests (357), lint, typecheck, Prettier on
-  supported files, production build, and the 25-test Playwright suite pass. Local image/Compose
-  validation is still pending because this environment has no Docker socket access or Compose
-  plugin; CI's image-build job will provide that check after the branch push.
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
 - [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete
 
