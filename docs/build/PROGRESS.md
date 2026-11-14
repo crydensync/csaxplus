@@ -123,6 +123,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
 - [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
+- In progress: the CSAG feature branch now exposes the live operator roster at
+  `GET /v1/admin/operators`, checks current API roles against the operator store, and the console
+  has a live, admin-gated roster screen. Mutations and per-operator sessions/passkeys remain
+  unavailable until their API step-up and scoped read contracts are implemented. No invite is
+  claimed because CSAG has no invitation delivery integration.
 - [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
       key rotation, audit
 - [ ] 5.3 Config view (source of each setting, redacted)

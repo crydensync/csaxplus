@@ -277,7 +277,7 @@ start one.
 ## D10. The console reads the API's one role bit, and leaves `owner` unreachable
 
 **Date:** 2026-10-04
-**Status:** accepted, pending an API endpoint
+**Status:** superseded by D24
 
 The console has three roles, `owner`, `admin` and `viewer` (BUILD_NOTE 5). The
 API has one: a row in `operators(user_id, role)` whose only meaningful value is
@@ -285,15 +285,10 @@ the literal `"admin"`, which is what `RequireAdmin` tests for; an ordinary user
 carries no `role` claim at all. So the console maps `role === "admin"` to
 `admin` and everything else, including a missing claim, to `viewer`.
 
-`owner` is not reachable yet, and no code path can produce it. It is meant for
-whoever may manage other operators, and the endpoint that would answer that
-question, `GET /v1/admin/operators`, does not exist in the API. The alternative
-was a console-side list of owner ids in configuration, which would be a second
-source of truth for a fact the API owns, and would disagree with the API from the
-moment a role changed there. Mapping one bit to two roles and leaving the third
-unreachable keeps the API the only authority, at the cost of a role that exists
-in the type system and in no session. Recorded in BACKEND_GAPS.md as the
-endpoint that would make it reachable.
+At the time, `owner` was not reachable and `GET /v1/admin/operators` did not
+exist. The decision against a console-side list of owner ids remains valid: the
+API owns roles and reports the live roster. D25 records the API-backed owner role
+and the step-up boundary for operator management.
 
 The console does not verify the access token's signature and holds no signing
 key: `JWT_SECRET` is the API's, and BUILD_NOTE 11.1 forbids the console holding
@@ -813,3 +808,20 @@ Failover requires a separately configured target and will be a later explicit se
 The console saves settings only from a human guarded action. AI features remain read-only and hold
 no reference to these settings mutation handlers. The database choice remains PostgreSQL because
 CSAG's only query store is Postgres; database writes in the console wait for the step-up requirement.
+
+## D25. Operator management reads the API roster and waits for API step-up writes
+
+**Date:** 2026-11-14
+**Status:** accepted
+
+The console does not keep a second operator or owner list. CSAG's `operator.Store` is the source of
+roles, and the admin guard checks the live stored role as well as the token, so a role change or
+revocation takes effect immediately for admin requests. `GET /v1/admin/operators` and the console
+screen expose that roster.
+
+The build note requires a fresh WebAuthn step-up for changing operator roles. CSAG currently has no
+assertion verification or step-up grant contract, and its passkey delete method only re-confirms
+the account's current password. Therefore this increment does not register operator mutation
+routes or pretend an email invitation was sent. CSAG has no invitation sender. The remaining
+operator actions will be added when the API can verify the step-up itself and can scope operator
+sessions/passkeys without weakening the existing account-owned passkey contract.

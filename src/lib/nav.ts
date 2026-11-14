@@ -96,6 +96,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
   {
     label: "Configuration",
     items: [
+      { href: "/operators", label: "Operators", icon: IconUsers },
       { href: "/llm-provider", label: "LLM Provider", icon: IconChip },
       { href: "/database-provider", label: "Database Provider", icon: IconDatabase },
       { href: "/settings", label: "Settings & Secrets", icon: IconSettings },

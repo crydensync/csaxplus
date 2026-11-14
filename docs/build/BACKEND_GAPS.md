@@ -51,7 +51,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
-| 5 | Operators | `GET|POST /v1/admin/operators`, `PUT|DELETE /v1/admin/operators/{id}` |
+| 5 | Operators | `GET /v1/admin/operators` now returns the live roster on the CSAG feature branch. Role changes and removal require API-enforced WebAuthn step-up; operator-scoped session/passkey reads and safe passkey removal also need explicit API contracts. CSAG has no invitation sender, so adding an existing account is not an email invitation. |
 
 Until an endpoint exists, the screen either shows an honest "not available in this deployment"
 state or is served by the fixtures adapter while `CRYDEN_MODE=fixtures`. A fixture is never a

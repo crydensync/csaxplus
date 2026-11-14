@@ -33,6 +33,7 @@ export const PASSWORD_POLICY_PATH = "/v1/admin/settings/password-policy";
 export const ADMIN_SESSIONS_PATH = "/v1/admin/sessions";
 export const ADMIN_ANOMALIES_PATH = "/v1/admin/anomalies";
 export const ADMIN_AUDIT_PATH = "/v1/admin/audit";
+export const ADMIN_OPERATORS_PATH = "/v1/admin/operators";
 export const WEBHOOK_DELIVERIES_PATH = "/v1/admin/webhooks/deliveries";
 export const WEBHOOK_ENDPOINT_PATH = "/v1/admin/webhooks";
 export const JWT_CLAIMS_PATH = "/v1/admin/settings/jwt-claims";
@@ -664,7 +665,15 @@ export async function fetchDigestHistory(options: {
 
 const digestScheduleSchema = z.object({
   enabled: z.boolean(),
-  day_of_week: z.enum(["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]),
+  day_of_week: z.enum([
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ]),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   timezone: z.string().min(1).max(64),
   recipients: z.array(z.string().email()).max(20),
@@ -847,6 +856,33 @@ export async function fetchAdminSessions(options: {
   });
   const parsed = adminSessionsSchema.safeParse(data);
   if (!parsed.success) throw malformed("active sessions", ADMIN_SESSIONS_PATH);
+  return parsed.data;
+}
+
+const adminOperatorSchema = z.object({
+  user_id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(["owner", "admin", "viewer"]),
+  created_at: z.string().datetime({ offset: true }),
+});
+
+const adminOperatorsSchema = z.object({
+  operators: z.array(adminOperatorSchema),
+  total: z.number().int().nonnegative(),
+});
+
+export type AdminOperator = z.infer<typeof adminOperatorSchema>;
+export type AdminOperators = z.infer<typeof adminOperatorsSchema>;
+
+/** Read the API's current operator roster. The API remains the role authority. */
+export async function fetchAdminOperators(options: { token: string }): Promise<AdminOperators> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: ADMIN_OPERATORS_PATH,
+    token: options.token,
+  });
+  const parsed = adminOperatorsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("operator roster", ADMIN_OPERATORS_PATH);
   return parsed.data;
 }
 
