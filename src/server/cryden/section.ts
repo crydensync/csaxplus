@@ -1,6 +1,10 @@
 import "server-only";
 
-import { NOT_OPERATOR_DETAIL, SQLITE_ADMIN_DETAIL } from "@/lib/dashboard";
+import {
+  NOT_IMPLEMENTED_ON_SQLITE,
+  NOT_OPERATOR_DETAIL,
+  SQLITE_ADMIN_DETAIL,
+} from "@/lib/dashboard";
 
 import { CrydenError } from "./http";
 
@@ -22,8 +26,6 @@ import { CrydenError } from "./http";
  * (`api/httpapi/middleware.go:145-151`). Named here because a screen has to tell
  * "this deployment cannot do admin" apart from "this call failed".
  */
-export const NOT_IMPLEMENTED_ON_SQLITE = "not_implemented_on_sqlite";
-
 /**
  * The API's code for "this feature has no backing store on this deployment"
  * (`api/httpapi/errors.go`, errAdminStoresUnavailable). For an optional store it

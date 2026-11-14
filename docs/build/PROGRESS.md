@@ -142,7 +142,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       environment, environment-file, config-file, built-in-default, or unset provenance and never
       includes values. It explicitly distinguishes the console's own store and optional AI query
       connection from CSAG's authentication database.
-- [ ] 5.4 SQLite mode: honest 501 state instead of broken screens
+- [x] 5.4 SQLite mode: the documented `not_implemented_on_sqlite` API response is rendered as an
+      informational deployment state across console error surfaces, with no generic failure
+      alert or retry action. The existing dashboard and MFA section states keep their matching
+      deployment-level explanation.
 - [ ] 5.5 Hardening: CSP, security headers, rate limiting, lockout, /healthz, /readyz, JSON logs
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
