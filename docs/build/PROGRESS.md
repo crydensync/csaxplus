@@ -97,24 +97,27 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
       and refuses delivery enablement.
-- [ ] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
+- [x] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
       the operator's existing workflow. Integrated escalation and ticketing need API support.
-- [ ] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
+- [x] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
       families return prose without exact proposed values, and most targets have no runtime admin
       setting path or console control. Prefill must wait for both contracts; recommendations remain
-      read-only.
+      read-only (D23).
 - [x] 4.6 Ask-AI Widget: the console serves an embeddable script and generated install snippet;
       the host provides the signed-in user's token, the browser sends only the question, and CSAG
       derives identity from the verified token, enforces the configured origin, and limits each
       verified user to 10 questions per minute by default. Browser rendering, token handoff,
       identity injection, and limiter behavior are covered by tests.
-- [ ] 4.7 LLM Provider + Database Provider: the LLM path is implemented and verified locally.
+- [x] 4.7 LLM Provider + Database Provider: the LLM path is implemented and verified locally.
       CSAG supports Anthropic plus a generic OpenAI-compatible chat-completions adapter configured
       by base URL, API key and model. The console has guarded test, model-list and save operations
       plus process-lifetime usage stats; credentials remain redacted and encrypted by CSAG. The
       database remains PostgreSQL-only and read-only in the console until the step-up flow exists.
       Full CSAG tests, `go build -o csag`, console typecheck, lint, unit tests and production build
-      pass. Commits remain local to the two feature branches until pushed.
+      pass. Commits are pushed on both feature branches (console 10db945, api 43f5764 plus 58ee18e
+      which only ignores the built binary). The console's production build failed twice on a stale
+      `.next` directory and once on a transient Google Fonts fetch before passing clean; the tree
+      had not changed.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
