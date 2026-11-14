@@ -19,7 +19,7 @@ export default async function DatabaseProviderPage() {
         subtitle="Read-only database settings for AI-assisted queries."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <DatabaseProviderView />
+      <DatabaseProviderView csrf={session.csrf} />
     </>
   );
 }

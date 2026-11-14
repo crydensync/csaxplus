@@ -1,7 +1,7 @@
 import { requireMutation } from "@/server/auth/guard";
 import { responseForFailure } from "@/server/auth/failures";
 import { jsonError, jsonOk } from "@/server/auth/response";
-import { testLLMProvider, type LLMProviderInput } from "@/server/cryden/admin";
+import { testLLMProvider, type LLMProviderTestInput } from "@/server/cryden/admin";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   kind: z.enum(["anthropic", "openai-compatible"]),
   model: z.string().trim().min(1).max(200),
-  api_key: z.string().min(1).max(4096),
+  api_key: z.string().max(4096).optional(),
   base_url: z.string().max(2048).optional(),
   max_tokens: z.number().int().min(256).max(8192),
   temperature: z.number().min(0).max(2),
@@ -27,7 +27,7 @@ export async function POST(request: Request): Promise<Response> {
       jsonOk(
         await testLLMProvider({
           token: authorized.session.api.accessToken,
-          input: parsed.data as LLMProviderInput,
+          input: parsed.data as LLMProviderTestInput,
         }),
       ),
     );

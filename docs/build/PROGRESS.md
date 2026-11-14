@@ -113,13 +113,13 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 - [x] 4.7 LLM Provider + Database Provider: the LLM path is implemented and verified locally.
       CSAG supports Anthropic plus a generic OpenAI-compatible chat-completions adapter configured
       by base URL, API key and model. The console has guarded test, model-list and save operations
-      plus process-lifetime usage stats; credentials remain redacted and encrypted by CSAG. The
-      database remains PostgreSQL-only and read-only in the console until the step-up flow exists.
-      Full CSAG tests, `go build -o csag`, console typecheck, lint, unit tests and production build
-      pass. Commits are pushed on both feature branches (console 10db945, api 43f5764 plus 58ee18e
-      which only ignores the built binary). The console's production build failed twice on a stale
-      `.next` directory and once on a transient Google Fonts fetch before passing clean; the tree
-      had not changed.
+      plus process-lifetime usage stats; credentials remain redacted and encrypted by CSAG. Saved
+      provider credentials can now be tested and used for model discovery without returning them to
+      the browser. The Database Provider page can save a separate PostgreSQL DSN only after CSAG
+      verifies that its role cannot write. It may point to the local auth database, but needs a
+      read-only database role; `DATABASE_URL` is not reused automatically. Console typecheck, lint,
+      formatting, all 349 console tests, the production build, focused CSAG handler tests, and a
+      CSAG executable build pass for these changes.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)

@@ -1479,6 +1479,7 @@ export type LLMProviderInput = {
   temperature: number;
   rpm: number;
 };
+export type LLMProviderTestInput = Omit<LLMProviderInput, "api_key"> & { api_key?: string };
 
 /** Read the encrypted LLM setting in its redacted form. */
 export async function fetchLLMProvider(options: { token: string }): Promise<LLMProvider> {
@@ -1509,7 +1510,7 @@ export async function saveLLMProvider(options: {
 
 export async function testLLMProvider(options: {
   token: string;
-  input: LLMProviderInput;
+  input: LLMProviderTestInput;
 }): Promise<{ status: string; kind: string; model: string }> {
   const data = await apiRequest<unknown>({
     method: "POST",
@@ -1527,7 +1528,7 @@ export async function testLLMProvider(options: {
 
 export async function fetchLLMModels(options: {
   token: string;
-  api_key: string;
+  api_key?: string;
   base_url: string;
 }): Promise<string[]> {
   const path = `${LLM_PROVIDER_PATH}/models`;
@@ -1579,6 +1580,8 @@ const databaseProviderSchema = z.object({
 
 export type DatabaseProvider = z.infer<typeof databaseProviderSchema>;
 
+export type DatabaseProviderInput = { label: string; dsn: string; max_rows: number };
+
 /** Read database settings without receiving the DSN or its credentials. */
 export async function fetchDatabaseProvider(options: { token: string }): Promise<DatabaseProvider> {
   const data = await apiRequest<unknown>({
@@ -1588,6 +1591,24 @@ export async function fetchDatabaseProvider(options: { token: string }): Promise
   });
   const parsed = databaseProviderSchema.safeParse(data);
   if (!parsed.success) throw malformed("the database provider settings", DATABASE_PROVIDER_PATH);
+  return parsed.data;
+}
+
+/** Save a read-only connection; CSAG verifies the role by attempting a write before storing it. */
+export async function saveDatabaseProvider(options: {
+  token: string;
+  input: DatabaseProviderInput;
+}): Promise<DatabaseProvider> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: DATABASE_PROVIDER_PATH,
+    token: options.token,
+    body: options.input,
+    timeoutMs: 15_000,
+  });
+  const parsed = databaseProviderSchema.safeParse(data);
+  if (!parsed.success)
+    throw malformed("the saved database provider settings", DATABASE_PROVIDER_PATH);
   return parsed.data;
 }
 

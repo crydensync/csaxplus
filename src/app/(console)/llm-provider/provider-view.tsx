@@ -282,15 +282,14 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
           is never returned to this page. To update settings, enter the key again.
         </p>
         <p className="hint">
-          To test a provider, enter its API key and model. OpenAI-compatible providers also need a
-          base URL. Tests use the values in this form; saved credentials are never sent back to the
-          browser.
+          Testing and model discovery can use the saved key without revealing it here. For a new
+          provider, enter its API key and model; OpenAI-compatible providers also need a base URL.
         </p>
         <div className="actions-row">
           {form.kind === "openai-compatible" ? (
             <Button
               onClick={() => void loadModels()}
-              disabled={busy || !form.api_key || !form.base_url}
+              disabled={busy || (!form.api_key && !current.api_key_set) || !form.base_url}
             >
               {busy ? "Working…" : "Load models"}
             </Button>
@@ -299,7 +298,7 @@ export function LLMProviderView({ csrf }: { csrf: string }) {
             onClick={() => void testProvider()}
             disabled={
               busy ||
-              !form.api_key ||
+              (!form.api_key && !current.api_key_set) ||
               !form.model ||
               (form.kind === "openai-compatible" && !form.base_url)
             }

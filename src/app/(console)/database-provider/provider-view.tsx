@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { ErrorState, LoadingAnnouncement } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
+import { CSRF_HEADER } from "@/lib/csrf-header";
 import { formatCount } from "@/lib/format";
 import type { DatabaseProvider } from "@/server/cryden/admin";
 
@@ -18,10 +19,16 @@ const EMPTY: DatabaseProvider = {
   configured: false,
 };
 
-export function DatabaseProviderView() {
+export function DatabaseProviderView({ csrf }: { csrf: string }) {
   const [provider, setProvider] = useState<DatabaseProvider | null>(null);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
+  const [saveFailure, setSaveFailure] = useState<ConsoleFailure | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [label, setLabel] = useState("");
+  const [dsn, setDsn] = useState("");
+  const [maxRows, setMaxRows] = useState(100);
+  const [notice, setNotice] = useState("");
 
   const read = useCallback(async () => {
     setLoading(true);
@@ -49,6 +56,8 @@ export function DatabaseProviderView() {
         return;
       }
       setProvider(result);
+      setLabel(result.label || "Local read-only database");
+      setMaxRows(result.max_rows || 100);
     } catch {
       setFailure({
         message: "The console could not reach its server.",
@@ -63,16 +72,51 @@ export function DatabaseProviderView() {
     void read();
   }, [read]);
 
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setSaveFailure(null);
+    setNotice("");
+    try {
+      const response = await fetch("/api/console/database-provider", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+        body: JSON.stringify({ label, dsn, max_rows: maxRows }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw failureFrom(payload, response.status);
+      const saved = dataFrom<DatabaseProvider>(payload);
+      if (!saved || !saved.configured || !saved.dsn_set)
+        throw new Error("CSAG did not confirm the read-only database settings.");
+      setProvider(saved);
+      setDsn("");
+      setNotice("Saved. CSAG verified that this database role cannot write.");
+    } catch (error) {
+      setSaveFailure(
+        error && typeof error === "object" && "code" in error
+          ? (error as ConsoleFailure)
+          : {
+              message:
+                error instanceof Error ? error.message : "Database settings could not be saved.",
+              code: "database_provider_save_failed",
+            },
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && provider === null) {
     return (
-      <div className="view anim">
+      <div className="view anim spaced-view">
         <LoadingAnnouncement>Loading database provider settings</LoadingAnnouncement>
       </div>
     );
   }
   if (failure !== null && provider === null) {
     return (
-      <div className="view anim">
+      <div className="view anim spaced-view">
         <Card>
           <ErrorState
             title="Database settings did not load"
@@ -87,7 +131,7 @@ export function DatabaseProviderView() {
 
   const current = provider ?? EMPTY;
   return (
-    <div className="view anim">
+    <div className="view anim spaced-view">
       {failure ? (
         <Card>
           <ErrorState
@@ -99,7 +143,7 @@ export function DatabaseProviderView() {
       ) : null}
       <Card
         title="Read-only database"
-        hint="The API tests the supplied database role by attempting a write and confirming that the database refuses it before saving the connection."
+        hint="This is the data source for AI queries. It can be on the same local PostgreSQL server as auth, but must use a separate read-only database role. CSAG verifies that role before saving."
       >
         <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
           <div>
@@ -126,16 +170,78 @@ export function DatabaseProviderView() {
             </div>
           </dl>
         ) : null}
-        <div className="actions-row" style={{ marginTop: 14 }}>
-          <Button onClick={() => void read()} disabled={loading}>
-            {loading ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
+        <form onSubmit={(event) => void save(event)}>
+          <div className="form-grid" style={{ marginTop: 18 }}>
+            <label>
+              Display name
+              <input
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                maxLength={120}
+                placeholder="Local read-only database"
+                required
+              />
+            </label>
+            <label>
+              Maximum rows per AI query
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={maxRows}
+                onChange={(event) => setMaxRows(Number(event.target.value))}
+                required
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              PostgreSQL connection string
+              <input
+                type="password"
+                value={dsn}
+                onChange={(event) => setDsn(event.target.value)}
+                placeholder={
+                  current.dsn_set
+                    ? "Saved; enter a DSN to replace"
+                    : "postgres://readonly:…@localhost:5432/database"
+                }
+                autoComplete="new-password"
+                maxLength={4096}
+                required
+              />
+            </label>
+          </div>
+          <p className="hint">
+            The auth database URL is not reused automatically. Use a PostgreSQL role with read
+            access only; CSAG rejects this save if the supplied role can write.
+          </p>
+          {saveFailure ? (
+            <div style={{ marginTop: 12 }}>
+              <ErrorState
+                title="Database settings were not saved"
+                description={saveFailure.message}
+                code={saveFailure.code ?? undefined}
+              />
+            </div>
+          ) : null}
+          {notice ? (
+            <p className="hint" role="status" style={{ marginTop: 12 }}>
+              {notice}
+            </p>
+          ) : null}
+          <div className="actions-row" style={{ marginTop: 16 }}>
+            <Button type="submit" variant="primary" disabled={saving || loading || !dsn.trim()}>
+              {saving ? "Checking and saving…" : "Verify and save"}
+            </Button>
+            <Button type="button" onClick={() => void read()} disabled={loading || saving}>
+              {loading ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        </form>
       </Card>
-      <Card title="Credential handling" style={{ marginTop: 18 }}>
+      <Card title="Credential handling">
         <p className="hint">
-          The API never returns the DSN, username, or password. This screen is read-only; provider
-          changes require the separate step-up flow, which is not available in this console yet.
+          CSAG encrypts the DSN before storing it. The console never reads it back, and a save is
+          accepted only after CSAG confirms the role cannot write.
         </p>
       </Card>
     </div>

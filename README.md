@@ -168,7 +168,7 @@ The six sidebar groups, and all 21 screens in them.
 | AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose recommendations are live; safe prefill needs typed CSAG proposals and real owner-managed settings controls |
 | AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
 | Configuration | LLM Provider | built locally | tier 4, step 4.7; Anthropic and generic OpenAI-compatible settings, model discovery, connection test and process-lifetime usage stats are on the CSAG feature branch |
-| Configuration | Database Provider | partial | tier 4, step 4.7; PostgreSQL is the only supported query store; changing its settings needs the step-up flow |
+| Configuration | Database Provider | built locally | tier 4, step 4.7; PostgreSQL DSN is stored by CSAG after it verifies the role is read-only; use a separate read-only role, even when querying the local auth database |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
 Several of those still need endpoints the API does not have yet. Every one is listed in

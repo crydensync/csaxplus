@@ -7,7 +7,7 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  api_key: z.string().min(1).max(4096),
+  api_key: z.string().max(4096).optional(),
   base_url: z.string().url().max(2048),
 });
 

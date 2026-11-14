@@ -412,6 +412,37 @@ nav.primary {
 .view.digest-history-view {
   padding-top: 0;
 }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.form-grid > label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.form-grid input,
+.form-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: 2px solid color-mix(in srgb, var(--violet) 55%, transparent);
+  outline-offset: 1px;
+}
 .view.anim {
   animation: fadeUp 0.35s ease both;
 }
@@ -1518,6 +1549,9 @@ tr.clickable:hover td {
   }
   .view {
     padding: 22px 18px 50px;
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .topbar {
     padding: 14px 18px;
