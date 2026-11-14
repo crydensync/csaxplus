@@ -890,7 +890,9 @@ export type OperatorStepUpPurpose =
   | "operator_role_change"
   | "operator_remove"
   | "operator_session_revoke"
-  | "operator_passkey_remove";
+  | "operator_passkey_remove"
+  | "secret_reveal"
+  | "secret_mutation";
 const operatorStepUpOfferSchema = z.object({
   public_key: z.object({
     publicKey: z
@@ -941,6 +943,22 @@ export async function finishOperatorStepUp(options: {
   if (!parsed.success)
     throw malformed("operator step-up grant", `${ADMIN_OPERATORS_PATH}/step-up/finish`);
   return parsed.data.grant;
+}
+
+export async function consumeOperatorStepUp(options: {
+  token: string;
+  grant: string;
+  purpose: "secret_reveal" | "secret_mutation";
+}): Promise<void> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/consume`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+    body: { purpose: options.purpose },
+  });
+  if (!z.object({ consumed: z.literal(true) }).safeParse(data).success)
+    throw malformed("consumed operator step-up grant", `${ADMIN_OPERATORS_PATH}/step-up/consume`);
 }
 
 export async function changeOperatorRole(options: {

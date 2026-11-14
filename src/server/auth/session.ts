@@ -69,6 +69,8 @@ const sessionSchema = z.object({
         "operator_remove",
         "operator_session_revoke",
         "operator_passkey_remove",
+        "secret_reveal",
+        "secret_mutation",
       ]),
       ceremonyToken: z.string().min(32),
     })
@@ -82,6 +84,8 @@ const sessionSchema = z.object({
         "operator_remove",
         "operator_session_revoke",
         "operator_passkey_remove",
+        "secret_reveal",
+        "secret_mutation",
       ]),
       token: z.string().min(32),
     })

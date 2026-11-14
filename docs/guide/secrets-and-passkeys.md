@@ -1,6 +1,7 @@
 # Secrets, biometric unlock, and the read-only guarantee
 
-> **Status: mostly designed, not built.** The vault and the AI layer arrive in tiers 4 and 5.
+> **Status:** the encrypted vault, masked secrets screen, API-verified passkey step-up, audit trail,
+> and key rotation command are implemented in tier 5.2. The AI layer arrives in tier 4.
 > Registering, listing and removing an operator's own passkeys exists as of step 1.2b, and they are
 > credentials on the operator's account at the API (`/v1/passkeys`) rather than in the console's own
 > store, so they are the same passkeys that account uses anywhere else. What is still design rather
@@ -26,8 +27,9 @@ one answered rather than assuming:
 | **file** | the value is read from a path at call time | a mounted secret, a systemd credential |
 | **vault** | the value is in the console's own store, encrypted | anything you want to rotate from the console |
 
-The environment and file providers are the configuration loader, which exists today. The vault is
-step 5.2.
+The environment provider reads named secret variables from the console process. The file provider
+reads `*_FILE` mounts and files under `/run/secrets`. Both are read-only. The vault is stored in the
+console's own database.
 
 The point of having all three is that a deployment with a secrets manager (Vault, SOPS, a cloud KMS)
 should not have to put anything in the console's database, and a deployment without one should not
@@ -43,15 +45,14 @@ at boot.
   it protects. A vault that carries its own key is an obfuscated file.
 - Each secret gets its own nonce; GCM authenticates as well as encrypts, so a tampered ciphertext
   fails to open rather than opening into something else.
-- What is stored is the ciphertext and the metadata: the name, the provider, a fingerprint, who
-  last changed it and when. The plaintext exists in memory for the duration of a request that needs
-  it and nowhere else.
-- **Rotation** re-encrypts every secret under a new key in one transaction and records it as a
-  console audit entry. Step 5.2.
+- What is stored is ciphertext and metadata: name, tags, key id, who created/updated it, and
+  timestamps. Plaintext exists in memory only for a request that needs it.
+- **Rotation** re-encrypts every vault value under a new key in one transaction and records a
+  console audit entry. Run `pnpm csax:vault-rotate` with `CSAX_VAULT_KEY_NEXT_FILE` pointing to a
+  protected file containing the new base64 key. Stop every console instance before rotation,
+  update `CSAX_VAULT_KEY` or its `_FILE` source to the new key, then restart the instances.
 
-**Fingerprint, not suffix.** The list shows a short hash of the secret rather than its last four
-characters, because four characters are enough to confirm a guess to somebody who already has
-almost the whole value.
+The list shows a fixed mask, never a suffix or fingerprint of the plaintext.
 
 ## Masking, and revealing
 
@@ -60,8 +61,9 @@ The secrets list never shows a value on load. Revealing one is a deliberate act:
 1. The operator asks for it.
 2. The console requires a **WebAuthn user-verification** before it answers. Not a password prompt.
 3. The value is returned and shown once, in place.
-4. **The console re-masks it server-side after 20 seconds**, whether or not the operator is still
-   looking. The timer is the server's, not the browser's, so a tab left open cannot outlast it.
+4. The browser clears the revealed value after 20 seconds or when the tab is hidden. The server
+   accepts only a fresh API grant with a 20-second expiry and consumes it before returning the
+   value. The timer clears the screen; it cannot revoke a value already returned to a person.
 5. The reveal is written to the console's audit log: who, which secret, when. Never the value.
 
 The 20 seconds is deliberate. It is long enough to copy a value into the place it is needed and

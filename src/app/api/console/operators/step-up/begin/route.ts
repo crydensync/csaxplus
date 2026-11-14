@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { requireOwnerMutation } from "@/server/auth/guard";
+import { requireMutation } from "@/server/auth/guard";
 import { responseForFailure } from "@/server/auth/failures";
 import { serializeCookie } from "@/server/auth/cookies";
-import { jsonOk } from "@/server/auth/response";
+import { ERROR_CODES, jsonError, jsonOk } from "@/server/auth/response";
 import { readJsonBody } from "@/server/auth/routes";
 import {
   SESSION_COOKIE,
@@ -20,14 +20,20 @@ const schema = z.object({
     "operator_remove",
     "operator_session_revoke",
     "operator_passkey_remove",
+    "secret_reveal",
+    "secret_mutation",
   ]),
 });
 
 export async function POST(request: Request): Promise<Response> {
-  const authorized = await requireOwnerMutation(request);
+  const authorized = await requireMutation(request);
   if (!authorized.ok) return authorized.response;
   const body = await readJsonBody(request, schema);
   if (!body.ok) return authorized.respond(body.response);
+  if (body.value.purpose.startsWith("operator_") && authorized.role !== "owner")
+    return authorized.respond(
+      jsonError(403, ERROR_CODES.forbidden, "Only an owner can perform this operator action."),
+    );
   try {
     const offer = await beginOperatorStepUp({
       token: authorized.session.api.accessToken,

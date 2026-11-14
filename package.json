@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "screenshots": "CRYDEN_MODE=live playwright test --config playwright.screenshots.config.ts",
+    "csax:vault-rotate": "node scripts/vault-rotate.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

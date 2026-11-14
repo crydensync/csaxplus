@@ -140,7 +140,7 @@ Three statuses, and they mean exactly this:
 | Design system | done | the prototype's tokens and components, ported to React |
 | Landing page | done | static, and its claims are generated from the console's own navigation |
 | Operator passkeys | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the credential belongs to the operator's account at the API (`/v1/passkeys`), so it works wherever that account signs in, and removing one asks for the current password |
-| Secrets vault | planned | tier 5, step 5.2 |
+| Secrets vault | built | tier 5, step 5.2; values are encrypted in the console store and revealed only after API-verified passkey step-up |
 | Hardening and deployment | planned | tier 5, steps 5.5 and 5.6 |
 
 ### 3.2 Screens

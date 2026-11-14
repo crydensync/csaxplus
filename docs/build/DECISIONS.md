@@ -827,3 +827,20 @@ metadata and passkey labels, timestamps and credential IDs. Revocation and passk
 consume a purpose-bound grant; CSAG rejects removal of the final passkey. Invitation sending
 remains future work because email delivery belongs to the consuming application. The existing
 account-owned passkey contract is unchanged.
+
+## D26. The secrets vault belongs to the console and uses CSAG step-up grants
+
+**Date:** 2026-11-14
+**Status:** accepted
+
+Vault values live only in the console store, encrypted with AES-256-GCM under the deployment's
+`CSAX_VAULT_KEY`; environment and mounted-file entries remain read-only. The browser receives
+masked metadata on list requests. Reveal, create, edit and delete each require a fresh passkey
+assertion verified by CSAG. CSAG stores only the one-use grant hash and consumes that grant before
+the console handles the local secret. The API never receives the secret value.
+
+The reveal response is `no-store`; the browser clears its display after 20 seconds or when hidden.
+That timer is a screen-cleanup measure, not a way to revoke a value already delivered to the person.
+The key-rotation command re-encrypts every vault row and its audit event in one database transaction.
+All console processes must be stopped during rotation and restarted only after the new key is
+configured.

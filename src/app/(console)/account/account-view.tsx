@@ -143,7 +143,7 @@ export function AccountView({ csrf }: { csrf: string }) {
   const busy = progress === "working";
 
   return (
-    <div className="stack">
+    <div className="view anim spaced-view">
       <Card
         title="Your passkeys"
         hint="Registered on your account at the API, so they work anywhere that account signs in, not only here."

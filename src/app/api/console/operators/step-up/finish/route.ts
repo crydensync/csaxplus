@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { requireOwnerMutation } from "@/server/auth/guard";
+import { requireMutation } from "@/server/auth/guard";
 import { responseForFailure } from "@/server/auth/failures";
 import { serializeCookie } from "@/server/auth/cookies";
 import { jsonError, jsonOk, ERROR_CODES } from "@/server/auth/response";
@@ -20,15 +20,21 @@ const schema = z.object({
     "operator_remove",
     "operator_session_revoke",
     "operator_passkey_remove",
+    "secret_reveal",
+    "secret_mutation",
   ]),
   credential: z.unknown(),
 });
 
 export async function POST(request: Request): Promise<Response> {
-  const authorized = await requireOwnerMutation(request);
+  const authorized = await requireMutation(request);
   if (!authorized.ok) return authorized.response;
   const body = await readJsonBody(request, schema);
   if (!body.ok) return authorized.respond(body.response);
+  if (body.value.purpose.startsWith("operator_") && authorized.role !== "owner")
+    return authorized.respond(
+      jsonError(403, ERROR_CODES.forbidden, "Only an owner can perform this operator action."),
+    );
   const ceremony = authorized.session.operatorStepUp;
   if (!ceremony || ceremony.purpose !== body.value.purpose)
     return authorized.respond(

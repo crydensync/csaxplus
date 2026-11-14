@@ -76,14 +76,14 @@ export function EmailView() {
 
   if (load.kind === "loading") {
     return (
-      <div className="view anim">
+      <div className="view anim email-view">
         <LoadingAnnouncement>Loading email information</LoadingAnnouncement>
       </div>
     );
   }
   if (load.kind === "failed") {
     return (
-      <div className="view anim">
+      <div className="view anim email-view">
         <Card>
           <ErrorState
             title="Email information did not load"
@@ -97,10 +97,10 @@ export function EmailView() {
   }
 
   return (
-    <div className="view anim">
+    <div className="view anim email-view">
       <ActivitySection section={load.report.stats} onRetry={retry} />
       <TemplatesSection section={load.report.templates} onRetry={retry} />
-      <Card title="Product email delivery" style={{ marginTop: 30 }}>
+      <Card title="Product email delivery">
         <p className="hint">
           The product that embeds CSAX Auth provides the email sender used for verification and
           magic links. CSAG’s admin API reports auth events and its own template samples; it does

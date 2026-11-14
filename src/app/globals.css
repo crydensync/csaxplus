@@ -392,6 +392,14 @@ nav.primary {
   align-content: start;
   gap: 16px;
 }
+.view.email-view {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.view.email-view .section-title {
+  margin: 0;
+}
 .view.anim {
   animation: fadeUp 0.35s ease both;
 }

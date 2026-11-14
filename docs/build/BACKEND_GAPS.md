@@ -52,6 +52,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
 | 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
 | 5 | Operators | Built on the CSAG feature branch: live roster, API-enforced WebAuthn step-up, owner-only role/removal, `GET /v1/admin/operators/{userID}/sessions`, `DELETE .../sessions[/{sessionID}]`, `GET /v1/admin/operators/{userID}/passkeys`, and `DELETE .../passkeys/{credentialID}`. Invitations still need an explicit API contract and consuming-app email sender. |
+| 5 | Secrets | The vault lives in the console's own store. CSAG accepts `secret_reveal` and `secret_mutation` step-up purposes and consumes their one-use grants; no secret value is sent to the API. |
 
 Until an endpoint exists, the screen either shows an honest "not available in this deployment"
 state or is served by the fixtures adapter while `CRYDEN_MODE=fixtures`. A fixture is never a

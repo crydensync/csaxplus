@@ -133,8 +133,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   branches. Scoped reads and mutations are implemented and verified, including target-operator
   checks and the final-passkey guard. Invitation sending remains unavailable because CSAG has no
   invitation contract, so Tier 5.1 stays in progress.
-- [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
-      key rotation, audit
+- [ ] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
+      passkey step-up, 20-second reveal masking, audited mutations/copy, and a key-rotation command.
+      Implemented and verified: all 349 console tests, typecheck, lint, and production build pass;
+      all CSAG tests pass, and the local CSAG executable builds successfully. Secret provider values
+      are returned only after the API consumes a one-use passkey grant.
 - [ ] 5.3 Config view (source of each setting, redacted)
 - [ ] 5.4 SQLite mode: honest 501 state instead of broken screens
 - [ ] 5.5 Hardening: CSP, security headers, rate limiting, lockout, /healthz, /readyz, JSON logs
