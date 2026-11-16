@@ -9,9 +9,15 @@ import {
 import { SESSION_COOKIE, sealSession, type Session } from "@/server/auth/session";
 import {
   clearWebhookEndpoint,
+  createWebhookEndpoint,
+  fetchWebhookEndpoints,
   fetchWebhookEndpoint,
+  fetchWebhookDeliveries,
+  queueWebhookDestinationTest,
+  removeWebhookEndpoint,
   queueWebhookTest,
   saveWebhookEndpoint,
+  updateWebhookEndpoint,
 } from "@/server/cryden/admin";
 import { resetConfigCache } from "@/server/config/index";
 
@@ -45,6 +51,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 type Seen = {
   method: string;
   path: string;
+  search?: string;
   authorization: string | null;
   body: unknown;
 };
@@ -95,6 +102,93 @@ async function request(
 }
 
 describe("webhook calls against CSAG", () => {
+  it("creates, lists, edits, tests, removes, and filters destinations using the admin contract", async () => {
+    const calls: Seen[] = [];
+    const replies = [
+      {
+        data: {
+          id: "0123456789abcdef0123456789abcdef",
+          name: "Billing",
+          url: "https://billing.example/hook",
+          secret_set: true,
+        },
+      },
+      {
+        data: {
+          endpoints: [
+            {
+              id: "0123456789abcdef0123456789abcdef",
+              name: "Billing",
+              url: "https://billing.example/hook",
+              secret_set: true,
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          id: "0123456789abcdef0123456789abcdef",
+          name: "Billing v2",
+          url: "https://billing.example/v2",
+          secret_set: true,
+        },
+      },
+      {
+        data: {
+          queued: true,
+          event_id: "evt-test",
+          destination_id: "0123456789abcdef0123456789abcdef",
+        },
+      },
+      {
+        data: {
+          deliveries: [],
+          count: 0,
+          statuses: ["pending", "in_flight", "delivered", "failed"],
+        },
+      },
+      { data: { removed: true } },
+    ];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      calls.push({
+        path: url.pathname,
+        search: url.search,
+        method: init?.method ?? "GET",
+        authorization: new Headers(init?.headers).get("authorization"),
+        body: init?.body,
+      });
+      return jsonResponse(replies.shift());
+    });
+    const id = "0123456789abcdef0123456789abcdef";
+    await createWebhookEndpoint({
+      token: TOKEN,
+      name: "Billing",
+      url: "https://billing.example/hook",
+      secret: "secret",
+    });
+    await fetchWebhookEndpoints({ token: TOKEN });
+    await updateWebhookEndpoint({
+      token: TOKEN,
+      id,
+      name: "Billing v2",
+      url: "https://billing.example/v2",
+    });
+    await queueWebhookDestinationTest({ token: TOKEN, id });
+    await fetchWebhookDeliveries({ token: TOKEN, destinationID: id });
+    await removeWebhookEndpoint({ token: TOKEN, id });
+    expect(calls.map(({ method, path }) => [method, path])).toEqual([
+      ["POST", "/v1/admin/webhooks/endpoints"],
+      ["GET", "/v1/admin/webhooks/endpoints"],
+      ["PUT", `/v1/admin/webhooks/endpoints/${id}`],
+      ["POST", `/v1/admin/webhooks/endpoints/${id}/test`],
+      ["GET", "/v1/admin/webhooks/deliveries"],
+      ["DELETE", `/v1/admin/webhooks/endpoints/${id}`],
+    ]);
+    expect(calls[4]?.search).toContain(`destination_id=${id}`);
+    expect(calls.every((call) => call.authorization === `Bearer ${TOKEN}`)).toBe(true);
+  });
+
   it("reads only the endpoint URL and secret presence", async () => {
     const seen = stubApi(() =>
       jsonResponse({ data: { url: "https://hooks.example.test", secret_set: true } }),

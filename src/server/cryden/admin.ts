@@ -1229,6 +1229,8 @@ const webhookDeliverySchema = z.object({
   id: z.number().int(),
   event_id: z.string(),
   event_type: z.string(),
+  destination_id: z.string(),
+  destination_name: z.string(),
   user_id: z.string().optional(),
   ip: z.string().optional(),
   payload: z.record(z.string(), z.unknown()),
@@ -1253,8 +1255,97 @@ export type WebhookStatus = z.infer<typeof webhookStatusSchema>;
 export type WebhookDelivery = z.infer<typeof webhookDeliverySchema>;
 export type WebhookDeliveries = z.infer<typeof webhookDeliveriesSchema>;
 
-const webhookEndpointSchema = z.object({ url: z.string(), secret_set: z.boolean() });
+const webhookEndpointSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  url: z.string(),
+  secret_set: z.boolean(),
+});
 export type WebhookEndpoint = z.infer<typeof webhookEndpointSchema>;
+
+const webhookDestinationSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  url: z.string(),
+  secret_set: z.boolean(),
+});
+export type WebhookDestination = z.infer<typeof webhookDestinationSchema>;
+const webhookEndpointListSchema = z.object({ endpoints: z.array(webhookDestinationSchema) });
+export type WebhookEndpointList = z.infer<typeof webhookEndpointListSchema>;
+
+export async function fetchWebhookEndpoints(options: {
+  token: string;
+}): Promise<WebhookEndpointList> {
+  const path = `${WEBHOOK_ENDPOINT_PATH}/endpoints`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = webhookEndpointListSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook destinations", path);
+  return parsed.data;
+}
+
+export async function createWebhookEndpoint(options: {
+  token: string;
+  name: string;
+  url: string;
+  secret: string;
+}): Promise<WebhookDestination> {
+  return requestWebhookEndpoint({
+    method: "POST",
+    path: `${WEBHOOK_ENDPOINT_PATH}/endpoints`,
+    token: options.token,
+    body: { name: options.name, url: options.url, secret: options.secret },
+  });
+}
+
+export async function updateWebhookEndpoint(options: {
+  token: string;
+  id: string;
+  name: string;
+  url: string;
+  secret?: string;
+}): Promise<WebhookDestination> {
+  return requestWebhookEndpoint({
+    method: "PUT",
+    path: `${WEBHOOK_ENDPOINT_PATH}/endpoints/${encodeURIComponent(options.id)}`,
+    token: options.token,
+    body: { name: options.name, url: options.url, secret: options.secret },
+  });
+}
+
+async function requestWebhookEndpoint(options: {
+  method: "POST" | "PUT";
+  path: string;
+  token: string;
+  body: Record<string, string | undefined>;
+}): Promise<WebhookDestination> {
+  const data = await apiRequest<unknown>({
+    method: options.method,
+    path: options.path,
+    token: options.token,
+    body: options.body,
+  });
+  const parsed = webhookDestinationSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook destination", options.path);
+  return parsed.data;
+}
+
+export async function removeWebhookEndpoint(options: { token: string; id: string }): Promise<void> {
+  const path = `${WEBHOOK_ENDPOINT_PATH}/endpoints/${encodeURIComponent(options.id)}`;
+  await apiRequest<unknown>({ method: "DELETE", path, token: options.token });
+}
+
+export async function queueWebhookDestinationTest(options: {
+  token: string;
+  id: string;
+}): Promise<{ queued: boolean; event_id: string; destination_id: string }> {
+  const path = `${WEBHOOK_ENDPOINT_PATH}/endpoints/${encodeURIComponent(options.id)}/test`;
+  const data = await apiRequest<unknown>({ method: "POST", path, token: options.token });
+  const parsed = z
+    .object({ queued: z.boolean(), event_id: z.string(), destination_id: z.string() })
+    .safeParse(data);
+  if (!parsed.success) throw malformed("webhook test delivery", path);
+  return parsed.data;
+}
 
 export async function fetchWebhookEndpoint(options: { token: string }): Promise<WebhookEndpoint> {
   const data = await apiRequest<unknown>({
@@ -1368,10 +1459,12 @@ export async function previewJWTClaims(options: { token: string; userId: string 
 export async function fetchWebhookDeliveries(options: {
   token: string;
   status?: WebhookStatus;
+  destinationID?: string;
   limit?: number;
 }): Promise<WebhookDeliveries> {
   const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
   if (options.status) params.set("status", options.status);
+  if (options.destinationID) params.set("destination_id", options.destinationID);
   const data = await apiRequest<unknown>({
     method: "GET",
     path: `${WEBHOOK_DELIVERIES_PATH}?${params}`,
