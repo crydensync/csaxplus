@@ -47,6 +47,7 @@ export function LoginForm() {
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [passkeyOptions, setPasskeyOptions] = useState<AuthenticationOptions | null>(null);
 
   const firstField = useRef<HTMLInputElement>(null);
 
@@ -102,6 +103,13 @@ export function LoginForm() {
         // The password has done its part and is not needed again.
         setPassword("");
         setCode("");
+        setPasskeyOptions(null);
+        // Fetch the WebAuthn challenge before the operator clicks Continue.
+        // The browser may reject credentials.get() if it follows an awaited
+        // network request and the click's transient user activation has expired.
+        if (offered.includes("webauthn")) {
+          await preparePasskey();
+        }
         setStep("second-factor");
         return;
       }
@@ -114,14 +122,33 @@ export function LoginForm() {
     }
   }
 
-  async function submitPasskey() {
+  async function preparePasskey(): Promise<AuthenticationOptions | null> {
     const begin = await post("/api/auth/login/passkey/begin", {});
     if (!begin.ok) {
       setFailure(failureFrom(begin.payload, begin.status));
-      return;
+      return null;
     }
 
     const options = (begin.payload as { data?: { options?: unknown } }).data?.options;
+    if (typeof options !== "object" || options === null) {
+      setFailure({
+        message: "The server returned invalid passkey sign-in options. Try signing in again.",
+        code: "api_malformed",
+      });
+      return null;
+    }
+
+    const typedOptions = options as AuthenticationOptions;
+    setPasskeyOptions(typedOptions);
+    return typedOptions;
+  }
+
+  async function submitPasskey() {
+    const options = passkeyOptions ?? (await preparePasskey());
+    if (options === null) return;
+    // A challenge is single-use from the UI's perspective. If the user
+    // dismisses the prompt, prepare a fresh one for the next click.
+    setPasskeyOptions(null);
 
     let credential: unknown;
     try {
@@ -133,6 +160,9 @@ export function LoginForm() {
         message:
           "That passkey prompt was dismissed, or this device has no passkey for the account.",
         code: "passkey_cancelled",
+      });
+      void preparePasskey().catch(() => {
+        // The next attempt can retry challenge preparation from the button.
       });
       return;
     }
