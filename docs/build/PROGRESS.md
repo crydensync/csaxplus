@@ -94,11 +94,14 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       bounded anomaly scans, audit-only queries, and composed admin answers. CSAG generates each
       citation from the source rows and keeps all operations read-only. The new API routes are on
       the CSAG feature branch and can be used by building and running that branch locally; no
-      merge to `main` is needed for local use.
+      merge to `main` is needed for local use. These AI query features need both an LLM provider
+      and a separately configured, verified read-only PostgreSQL provider; the widget's origin
+      and entity settings do not configure that database connection.
 - [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
-      and refuses delivery enablement.
+      and refuses delivery enablement. The console also offers an on-demand, read-only 7-day report
+      preview through `GET /v1/admin/digest`; it is not added to scheduled history or emailed.
 - [x] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
       the operator's existing workflow. Integrated escalation and ticketing need API support.
 - [x] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
