@@ -65,7 +65,7 @@ const pausedSchema = z.object({
 });
 
 const passkeyChallengeSchema = z.object({
-  public_key: z.record(z.string(), z.unknown()),
+  public_key: z.object({ publicKey: z.record(z.string(), z.unknown()) }),
   ceremony_token: z.string().min(1),
 });
 
@@ -187,7 +187,12 @@ export async function beginPasskey(pendingToken: string): Promise<PasskeyChallen
 
   const parsed = passkeyChallengeSchema.safeParse(data);
   if (!parsed.success) throw shapeFailure("passkey challenge");
-  return { options: parsed.data.public_key, ceremonyToken: parsed.data.ceremony_token };
+  // CSAG serializes CredentialAssertion with a publicKey wrapper, while the
+  // browser helper accepts the request options inside that wrapper.
+  return {
+    options: parsed.data.public_key.publicKey,
+    ceremonyToken: parsed.data.ceremony_token,
+  };
 }
 
 /** `POST /v1/login/passkey/finish`. `credential` is the browser's response, passed through. */
