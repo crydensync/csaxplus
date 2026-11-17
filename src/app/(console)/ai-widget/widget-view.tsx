@@ -8,6 +8,13 @@ import { ErrorState, LoadingAnnouncement } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { buildAskAIWidgetSnippet } from "@/lib/ask-ai-widget-snippet";
 import type { AskAIWidgetConfig } from "@/server/cryden/admin";
+import { CSRF_HEADER } from "@/lib/csrf-header";
+
+const ENTITIES = [
+  { id: "users", label: "Users" },
+  { id: "sessions", label: "Sessions" },
+  { id: "audit_events", label: "Audit events" },
+] as const;
 
 const EMPTY: AskAIWidgetConfig = {
   enabled: false,
@@ -17,13 +24,15 @@ const EMPTY: AskAIWidgetConfig = {
   placeholder: "",
 };
 
-export function WidgetView({ apiBaseUrl }: { apiBaseUrl: string }) {
+export function WidgetView({ apiBaseUrl, csrf }: { apiBaseUrl: string; csrf: string }) {
   const [config, setConfig] = useState<AskAIWidgetConfig | null>(null);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
   const [loading, setLoading] = useState(true);
   const [consoleOrigin, setConsoleOrigin] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const read = useCallback(async () => {
     setLoading(true);
@@ -61,6 +70,37 @@ export function WidgetView({ apiBaseUrl }: { apiBaseUrl: string }) {
       setLoading(false);
     }
   }, []);
+
+  function updateConfig(patch: Partial<AskAIWidgetConfig>) {
+    setConfig((previous) => ({ ...(previous ?? EMPTY), ...patch }));
+    setSaveMessage("");
+  }
+
+  async function save() {
+    const draft = config ?? EMPTY;
+    setSaving(true);
+    setSaveMessage("");
+    try {
+      const response = await fetch("/api/console/ai-widget", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+        body: JSON.stringify(draft),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+      const saved = dataFrom<AskAIWidgetConfig>(payload);
+      if (saved === null) throw new Error("CSAG did not confirm the widget settings.");
+      setConfig(saved);
+      setSaveMessage("Widget settings saved.");
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "Widget settings could not be saved.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     setConsoleOrigin(window.location.origin);
@@ -122,7 +162,7 @@ export function WidgetView({ apiBaseUrl }: { apiBaseUrl: string }) {
       ) : null}
       <Card
         title="Widget status"
-        hint="Values are returned by CSAG. This screen does not change the configuration."
+        hint="The widget answers questions about the signed-in user only. Origins must also be allowed by CSAG CORS."
       >
         <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
           <strong>{current.enabled ? "Enabled" : "Disabled"}</strong>
@@ -169,6 +209,100 @@ export function WidgetView({ apiBaseUrl }: { apiBaseUrl: string }) {
           </div>
         </div>
       </Card>
+      <Card title="Configuration">
+        <label className="field-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={current.enabled}
+            onChange={(event) => updateConfig({ enabled: event.target.checked })}
+          />
+          Enable the widget
+        </label>
+        <div className="field-group">
+          <label className="field-label" htmlFor="widget-origins">
+            Allowed origins, one per line
+          </label>
+          <textarea
+            id="widget-origins"
+            className="text-input mono"
+            style={{ minHeight: 92 }}
+            value={current.allowed_origins.join("\n")}
+            placeholder="https://app.example.com"
+            onChange={(event) =>
+              updateConfig({
+                allowed_origins: event.target.value
+                  .split(/\r?\n/)
+                  .map((origin) => origin.trim())
+                  .filter(Boolean),
+              })
+            }
+          />
+          <p className="hint">
+            Enter exact origins with scheme and host; do not include a page path or wildcard.
+          </p>
+        </div>
+        <fieldset className="field-group" style={{ border: 0, padding: 0, margin: "0 0 16px" }}>
+          <legend className="field-label">Allowed entities</legend>
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            {ENTITIES.map((entity) => (
+              <label
+                className="field-label"
+                key={entity.id}
+                style={{ display: "flex", gap: 10, alignItems: "center" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={current.entities.includes(entity.id)}
+                  onChange={(event) =>
+                    updateConfig({
+                      entities: event.target.checked
+                        ? [...current.entities, entity.id]
+                        : current.entities.filter((value) => value !== entity.id),
+                    })
+                  }
+                />
+                {entity.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="field-group">
+          <label className="field-label" htmlFor="widget-greeting">
+            Greeting
+          </label>
+          <input
+            id="widget-greeting"
+            className="text-input"
+            maxLength={200}
+            value={current.greeting}
+            onChange={(event) => updateConfig({ greeting: event.target.value })}
+            placeholder="Ask a question about your account"
+          />
+        </div>
+        <div className="field-group">
+          <label className="field-label" htmlFor="widget-placeholder">
+            Question placeholder
+          </label>
+          <input
+            id="widget-placeholder"
+            className="text-input"
+            maxLength={200}
+            value={current.placeholder}
+            onChange={(event) => updateConfig({ placeholder: event.target.value })}
+            placeholder="What would you like to know?"
+          />
+        </div>
+        <div className="actions-row">
+          <Button variant="primary" onClick={() => void save()} disabled={saving || loading}>
+            {saving ? "Saving…" : "Save settings"}
+          </Button>
+          {saveMessage ? (
+            <span className="hint" role="status">
+              {saveMessage}
+            </span>
+          ) : null}
+        </div>
+      </Card>
       <Card title="Embed integration">
         {current.enabled && installSnippet ? (
           <>
@@ -211,8 +345,8 @@ export function WidgetView({ apiBaseUrl }: { apiBaseUrl: string }) {
           </>
         ) : (
           <p className="hint">
-            The widget is disabled or has no configured greeting and allowed origins. Enable and
-            configure it in CSAG before generating an install snippet.
+            Enable the widget, select at least one entity, add an exact allowed origin, and set a
+            greeting above before generating an install snippet.
           </p>
         )}
       </Card>
