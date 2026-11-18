@@ -39,6 +39,9 @@ export const WEBHOOK_DELIVERIES_PATH = "/v1/admin/webhooks/deliveries";
 export const WEBHOOK_ENDPOINT_PATH = "/v1/admin/webhooks";
 export const JWT_CLAIMS_PATH = "/v1/admin/settings/jwt-claims";
 export const SHIPPED_LOGS_PATH = "/v1/admin/logging/recent";
+export const RUNTIME_LOGS_PATH = "/v1/admin/logging/runtime";
+export const DATABASE_MIGRATIONS_PATH = "/v1/admin/database/migrations";
+export const DATABASE_TABLES_PATH = "/v1/admin/database/tables";
 export const LOGGING_SETTINGS_PATH = "/v1/admin/settings/logging";
 export const LLM_PROVIDER_PATH = "/v1/admin/settings/llm-provider";
 export const DATABASE_PROVIDER_PATH = "/v1/admin/settings/database-provider";
@@ -660,6 +663,88 @@ export async function fetchDigestReport(options: {
   });
   const parsed = digestReportSchema.safeParse(data);
   if (!parsed.success) throw malformed("the on-demand digest report", DIGEST_REPORT_PATH);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// Read-only auth database catalog and migration state
+// ---------------------------------------------------------------------------
+
+const migrationStatusSchema = z.object({
+  schema: z.string(),
+  current: z.string(),
+  applied: z.array(z.object({ name: z.string(), applied_at: z.string() })),
+  pending: z.array(z.string()),
+});
+export type APIMigrationStatus = z.infer<typeof migrationStatusSchema>;
+
+export async function fetchAPIMigrationStatus(options: {
+  token: string;
+}): Promise<APIMigrationStatus> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: DATABASE_MIGRATIONS_PATH,
+    token: options.token,
+  });
+  const parsed = migrationStatusSchema.safeParse(data);
+  if (!parsed.success) throw malformed("database migration status", DATABASE_MIGRATIONS_PATH);
+  return parsed.data;
+}
+
+const databaseColumnSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  nullable: z.boolean(),
+  readable: z.boolean(),
+});
+const databaseTableSchema = z.object({
+  name: z.string(),
+  columns: z.array(databaseColumnSchema),
+});
+const databaseCatalogSchema = z.object({
+  schema: z.string(),
+  tables: z.array(databaseTableSchema),
+});
+export type APIDatabaseCatalog = z.infer<typeof databaseCatalogSchema>;
+
+export async function fetchDatabaseCatalog(options: {
+  token: string;
+}): Promise<APIDatabaseCatalog> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: DATABASE_TABLES_PATH,
+    token: options.token,
+  });
+  const parsed = databaseCatalogSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the auth database catalog", DATABASE_TABLES_PATH);
+  return parsed.data;
+}
+
+const databaseRowsSchema = z.object({
+  schema: z.string(),
+  table: z.string(),
+  columns: z.array(z.string()),
+  rows: z.array(z.record(z.string(), z.unknown())),
+  total: z.number().int().nonnegative(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+export type APIDatabaseRows = z.infer<typeof databaseRowsSchema>;
+
+export async function fetchDatabaseRows(options: {
+  token: string;
+  table: string;
+  limit?: number;
+  offset?: number;
+}): Promise<APIDatabaseRows> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 25),
+    offset: String(options.offset ?? 0),
+  });
+  const path = `${DATABASE_TABLES_PATH}/${encodeURIComponent(options.table)}?${params.toString()}`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = databaseRowsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the selected auth database table", path);
   return parsed.data;
 }
 
@@ -1574,6 +1659,24 @@ export async function fetchShippedLogs(options: {
   });
   const parsed = shippedLogsSchema.safeParse(data);
   if (!parsed.success) throw malformed("shipped log events", SHIPPED_LOGS_PATH);
+  return parsed.data;
+}
+
+/** Read structured runtime events retained by the running CSAG process. */
+export async function fetchRuntimeLogs(options: {
+  token: string;
+  level?: string;
+  limit?: number;
+}): Promise<ShippedLogs> {
+  const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
+  if (options.level) params.set("level", options.level);
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${RUNTIME_LOGS_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = shippedLogsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("CSAG runtime log events", RUNTIME_LOGS_PATH);
   return parsed.data;
 }
 
