@@ -2,6 +2,7 @@ import { signOut } from "@/server/auth/flow";
 import { requireCsrf, withSetCookies } from "@/server/auth/guard";
 import { jsonOk } from "@/server/auth/response";
 import { clearedSessionSetCookie } from "@/server/auth/routes";
+import { recordConsoleActivity } from "@/server/logging/activity";
 
 /**
  * `POST /api/auth/logout`.
@@ -23,5 +24,6 @@ export async function POST(request: Request): Promise<Response> {
   if (!authorized.ok) return authorized.response;
 
   const { revoked } = await signOut(authorized.session);
+  await recordConsoleActivity({ actor: authorized.session.operator, action: "operator_logout" });
   return withSetCookies(jsonOk({ revoked }), [clearedSessionSetCookie()]);
 }

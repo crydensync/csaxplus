@@ -5,6 +5,7 @@ import { signIn } from "@/server/auth/flow";
 import { requireSameOrigin, withSetCookies } from "@/server/auth/guard";
 import { startPending } from "@/server/auth/pending";
 import { jsonOk } from "@/server/auth/response";
+import { recordConsoleActivity } from "@/server/logging/activity";
 import {
   pendingSetCookie,
   readJsonBody,
@@ -55,6 +56,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
+    await recordConsoleActivity({ actor: outcome.session.operator, action: "operator_login" });
     return withSetCookies(jsonOk(sessionSummary(outcome.session)), [
       await sessionSetCookie(outcome.session),
     ]);
