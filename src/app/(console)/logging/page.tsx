@@ -20,8 +20,8 @@ export default async function LoggingPage() {
         subtitle="Inspect CSAG logs and the actions recorded by this console."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <LoggingView csrf={session.csrf} />
       <ActivityView />
+      <LoggingView csrf={session.csrf} />
     </>
   );
 }

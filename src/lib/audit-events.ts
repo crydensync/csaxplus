@@ -43,6 +43,14 @@ const SUCCESS_EVENTS = new Set([
   "admin_sessions_revoked",
   "admin_totp_disabled",
   "admin_oauth_unlinked",
+  "operator_login",
+  "operator_logout",
+  "secret_reveal",
+  "secret_copy",
+  "secret_create",
+  "secret_update",
+  "secret_delete",
+  "secret_key_rotation",
 ]);
 
 /** Color only known event outcomes; unknown host-defined events stay neutral. */

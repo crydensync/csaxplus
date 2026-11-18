@@ -8,6 +8,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { Pill } from "@/components/Pill";
 import { ErrorState } from "@/components/states";
 import { dataFrom, failureFrom } from "@/lib/console-response";
+import { auditEventTone } from "@/lib/audit-events";
 import { formatCount, formatInstant } from "@/lib/format";
 import type { ShippedLogEvent, ShippedLogs } from "@/server/cryden/admin";
 import type { Section } from "@/server/cryden/section";
@@ -88,7 +89,16 @@ export function ActivityView() {
   const activityColumns: Column<ConsoleActivityEvent>[] = [
     { key: "at", header: "Time", cell: (row) => formatInstant(row.at) },
     { key: "actor", header: "Operator", cell: (row) => row.actor_label },
-    { key: "action", header: "Action", cell: (row) => <span className="mono">{row.action}</span> },
+    {
+      key: "action",
+      header: "Action",
+      cell: (row) => (
+        <span className="audit-event-cell">
+          <span className={`audit-dot ${auditEventTone(row.action)}`} aria-hidden="true" />
+          <span className="audit-event">{row.action}</span>
+        </span>
+      ),
+    },
     { key: "target", header: "Target", cell: (row) => row.target ?? "-" },
     { key: "result", header: "Result", cell: (row) => row.result },
   ];
