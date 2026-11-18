@@ -25,6 +25,8 @@ Confirmed present and usable today, including routes on the local `feat/console-
 - `GET|PUT|DELETE /v1/admin/users/{userID}/metadata[/{key}]`
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
 - `GET /v1/admin/webhooks/deliveries`, `GET /v1/admin/logging/recent`
+- `GET /v1/admin/logging/runtime`, `GET /v1/admin/database/migrations`, and read-only
+  `/v1/admin/database/tables[/{table}]` (local CSAG feature branch)
 - `GET /v1/admin/digest`, `GET /v1/admin/digest/history`, `GET|PUT /v1/admin/settings/digest`
 - `GET /v1/admin/email/stats`, `GET /v1/admin/settings/email-templates`
 - `GET|PUT /v1/admin/settings/password-policy`
@@ -50,7 +52,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | Support escalation | No CSAG endpoint or ticketing adapter exists. The console can copy the read-only diagnosis into an operator's existing workflow; Zendesk, Intercom and Freshdesk integrations remain unavailable. |
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
-| 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
+| 4 | System page | `GET /v1/admin/stats`, `/doctor`; CSAG migration state is exposed at `/v1/admin/database/migrations` on the feature branch |
 | 5 | Operators | Built on the CSAG feature branch: live roster, API-enforced WebAuthn step-up, owner-only role/removal, `GET /v1/admin/operators/{userID}/sessions`, `DELETE .../sessions[/{sessionID}]`, `GET /v1/admin/operators/{userID}/passkeys`, and `DELETE .../passkeys/{credentialID}`. Invitations still need an explicit API contract and consuming-app email sender. |
 | 5 | Secrets | The vault lives in the console's own store. CSAG accepts `secret_reveal` and `secret_mutation` step-up purposes and consumes their one-use grants; no secret value is sent to the API. |
 
