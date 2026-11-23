@@ -22,6 +22,18 @@ from table previews. CSAG queries `crydensync_auth` explicitly, independent of P
 `search_path`. Full test suites and production/build checks passed before pushing; neither branch
 is merged to `main` here.
 
+### In progress: operator invitations and AI database role verification
+
+On paired `feat/operator-invites` branches, CSAG is adding the `admin invite` command and one-time
+operator invitation endpoints while CSAX+ adds an owner-only invite form and acceptance page.
+CSAG stores only a token hash and does not send mail; the owner copies the seven-day link to the
+recipient. The database provider verifier is also being corrected: PostgreSQL's default TEMP
+privilege caused it to reject SELECT-only roles, so CSAG now checks effective data-write grants on
+the AI query tables and pins both checks and reads to `crydensync_auth`. Implementation and tests
+are complete: console typecheck, lint, 369 unit tests and production build pass; CSAG's full Go test
+suite and `go build -o csag .` pass. Changes are committed in focused commits on both feature
+branches; branch pushes remain.
+
 ---
 
 ## Tier 0 - Foundation (tag v0.0.1, then v0.0.2 for step 0.10)
@@ -138,15 +150,18 @@ is merged to `main` here.
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
-- [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
+- [x] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
 - In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
   step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
   action; final-owner protection remains in the operator store. The console keeps ceremony state
 -  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
   lists, session revocation, and passkey removal are implemented and verified, including
-  target-operator checks and the final-passkey guard. Invitation sending remains unavailable
-  because CSAG has no invitation contract or consuming-app sender integration, so Tier 5.1 stays
-  in progress.
+  target-operator checks and the final-passkey guard. **In progress on paired
+  `feat/operator-invites` branches:** CSAG has expiring, single-use operator invitations and
+  `csag admin invite`; CSAX+ has owner-only passkey confirmation, a copyable link, sign-in return
+  flow, account-email-bound acceptance, and a switch-account action. CSAG does not send email; the
+  owner delivers the link. CSAG stores only a token hash and invalidates an older unused invite for
+  the same address. Both branches pass their build and test checks.
 - [x] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
       passkey step-up, 20-second reveal masking, audited mutations/copy, and a key-rotation command.
       Implemented and verified: all 349 console tests, typecheck, lint, and production build pass;
