@@ -20,6 +20,7 @@ const schema = z.object({
     "operator_remove",
     "operator_session_revoke",
     "operator_passkey_remove",
+    "operator_invite",
     "secret_reveal",
     "secret_mutation",
   ]),

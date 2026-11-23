@@ -997,11 +997,58 @@ export async function fetchAdminOperators(options: { token: string }): Promise<A
   return parsed.data;
 }
 
+const operatorInvitationSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["admin", "viewer"]),
+  token: z.string().min(32).optional(),
+  expires_at: z.string().datetime({ offset: true }),
+});
+
+export type OperatorInvitation = z.infer<typeof operatorInvitationSchema>;
+
+export async function createOperatorInvitation(options: {
+  token: string;
+  grant: string;
+  email: string;
+  role: "admin" | "viewer";
+}): Promise<OperatorInvitation> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/invitations`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+    body: { email: options.email, role: options.role },
+  });
+  const parsed = operatorInvitationSchema.safeParse(data);
+  if (!parsed.success || !parsed.data.token)
+    throw malformed("operator invitation", `${ADMIN_OPERATORS_PATH}/invitations`);
+  return parsed.data;
+}
+
+export async function acceptOperatorInvitation(options: {
+  token: string;
+  invitationToken: string;
+}): Promise<{ email: string; role: "admin" | "viewer" }> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: "/v1/operators/invitations/accept",
+    token: options.token,
+    body: { token: options.invitationToken },
+  });
+  const parsed = z
+    .object({ email: z.string().email(), role: z.enum(["admin", "viewer"]) })
+    .safeParse(data);
+  if (!parsed.success)
+    throw malformed("accepted operator invitation", "/v1/operators/invitations/accept");
+  return parsed.data;
+}
+
 export type OperatorStepUpPurpose =
   | "operator_role_change"
   | "operator_remove"
   | "operator_session_revoke"
   | "operator_passkey_remove"
+  | "operator_invite"
   | "secret_reveal"
   | "secret_mutation";
 const operatorStepUpOfferSchema = z.object({
