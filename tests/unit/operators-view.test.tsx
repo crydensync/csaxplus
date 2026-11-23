@@ -53,10 +53,32 @@ describe("OperatorsView", () => {
     expect(container.textContent).toContain("owner");
     expect(container.textContent).toContain("1 operators");
     expect(container.textContent).toContain(
-      "Access changes, session revocation and passkey removal require a fresh passkey confirmation.",
+      "Invitations, access changes, session revocation and passkey removal require a fresh passkey confirmation.",
     );
     expect(
       Array.from(container.querySelectorAll("button")).map((button) => button.textContent),
     ).toEqual(["Refresh"]);
+  });
+
+  it("shows owners the invite flow with only admin and viewer roles", async () => {
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(JSON.stringify({ data: { total: 0, operators: [] } }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+
+    await act(async () => root.render(<OperatorsView owner csrf="test-csrf" />));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(container.textContent).toContain("Invite an operator");
+    expect(container.textContent).toContain("CSAG does not send email");
+    expect(
+      Array.from(container.querySelectorAll<HTMLOptionElement>("select option")).map(
+        (option) => option.value,
+      ),
+    ).toEqual(["viewer", "admin"]);
   });
 });

@@ -37,7 +37,7 @@ const UNREACHABLE: Failure = {
   code: "console_unreachable",
 };
 
-export function LoginForm() {
+export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const router = useRouter();
   const [step, setStep] = useState<"password" | "second-factor">("password");
   const [methods, setMethods] = useState<SecondFactorMethod[]>([]);
@@ -72,7 +72,7 @@ export function LoginForm() {
   }
 
   function enterConsole() {
-    router.replace("/dashboard");
+    router.replace(redirectTo);
     // The dashboard is a server component: it has to be rendered again for the
     // new session cookie to be seen.
     router.refresh();

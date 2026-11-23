@@ -16,7 +16,16 @@ export const metadata: Metadata = {
  * straight on rather than being asked to sign in again. It reads the cookie and
  * does nothing else: the form itself talks to the console's own endpoints.
  */
-export default async function LoginPage() {
-  if ((await readSession()) !== null) redirect("/dashboard");
-  return <LoginForm />;
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const { returnTo } = await searchParams;
+  const destination =
+    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes("\\")
+      ? returnTo
+      : "/dashboard";
+  if ((await readSession()) !== null) redirect(destination);
+  return <LoginForm redirectTo={destination} />;
 }
