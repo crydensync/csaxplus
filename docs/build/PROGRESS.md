@@ -24,15 +24,22 @@ is merged to `main` here.
 
 ### Completed follow-up: operator invitations and AI database role verification
 
-On paired `feat/operator-invites` branches, CSAG is adding the `admin invite` command and one-time
+On paired `feat/operator-invites` branches, CSAG adds the `admin invite` command and one-time
 operator invitation endpoints while CSAX+ adds an owner-only invite form and acceptance page.
 CSAG stores only a token hash and does not send mail; the owner copies the seven-day link to the
 recipient. The database provider verifier is also being corrected: PostgreSQL's default TEMP
 privilege caused it to reject SELECT-only roles, so CSAG now checks effective data-write grants on
 the AI query tables and pins both checks and reads to `crydensync_auth`. Implementation and tests
-are complete: console typecheck, lint, 369 unit tests and production build pass; CSAG's full Go test
+are complete: console typecheck, lint, 370 unit tests and production build pass; CSAG's full Go test
 suite and `go build -o csag .` pass. Changes are committed in focused commits on both feature
 branches; both branches are pushed and track their corresponding GitHub refs.
+
+The `csaxplusapi/csag` binary was inspected during follow-up troubleshooting and is from CSAG
+commit `aba1548` (2026-11-17), before the database-inspector and invite API work. It does not serve
+the runtime-log route and still has the old TEMP-table readonly verifier; deploy the executable
+built from the matching `_reference/csag` feature branch to use those changes. Passkey second-factor
+completion now also forwards the browser User-Agent so new API sessions are labeled correctly;
+existing session records retain their original `node` user-agent value.
 
 ---
 
