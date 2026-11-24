@@ -18,6 +18,9 @@ import { getConfig } from "../config";
 /** How long to wait for the API before giving up. */
 export const API_TIMEOUT_MS = 10_000;
 
+/** Leaves room for two sequential, 60-second model calls and API overhead. */
+export const AI_REQUEST_TIMEOUT_MS = 130_000;
+
 export type CrydenErrorKind =
   | "network" // never reached the API
   | "timeout" // reached it, or tried to, and gave up waiting
@@ -104,9 +107,11 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
     });
   } catch (error) {
     if (timeout.aborted) {
-      throw new CrydenError("timeout", `the API did not answer within ${API_TIMEOUT_MS} ms`, {
-        cause: error,
-      });
+      throw new CrydenError(
+        "timeout",
+        `the API did not answer within ${request.timeoutMs ?? API_TIMEOUT_MS} ms`,
+        { cause: error },
+      );
     }
     throw new CrydenError("network", "the API could not be reached", { cause: error });
   }

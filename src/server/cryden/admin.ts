@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import { CrydenError, apiRequest } from "./http";
+import { AI_REQUEST_TIMEOUT_MS, CrydenError, apiRequest } from "./http";
 
 /**
  * The admin reads the console makes on an operator's behalf.
@@ -1786,7 +1786,7 @@ export async function testLLMProvider(options: {
     path: `${LLM_PROVIDER_PATH}/test`,
     token: options.token,
     body: options.input,
-    timeoutMs: 25_000,
+    timeoutMs: 70_000,
   });
   const parsed = z
     .object({ status: z.string(), kind: z.string(), model: z.string() })
@@ -1984,6 +1984,7 @@ export async function askAI(options: { token: string; question: string }): Promi
     path: ASK_AI_PATH,
     token: options.token,
     body: { question: options.question },
+    timeoutMs: AI_REQUEST_TIMEOUT_MS,
   });
   const parsed = askAIAnswerSchema.safeParse(data);
   if (!parsed.success) throw malformed("the Ask-AI response", ASK_AI_PATH);
@@ -2018,7 +2019,13 @@ async function readAdminAIAnswer(
   token: string,
   body: unknown,
 ): Promise<AdminAIAnswer> {
-  const data = await apiRequest<unknown>({ method: "POST", path, token, body });
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path,
+    token,
+    body,
+    timeoutMs: AI_REQUEST_TIMEOUT_MS,
+  });
   const parsed = adminAIAnswerSchema.safeParse(data);
   if (!parsed.success) throw malformed("admin AI answer", path);
   return parsed.data;
@@ -2055,6 +2062,7 @@ async function readAdminAIQuery(
     path,
     token: options.token,
     body: { question: options.question },
+    timeoutMs: AI_REQUEST_TIMEOUT_MS,
   });
   const parsed = adminAIQuerySchema.safeParse(data);
   if (!parsed.success) throw malformed("admin AI query result", path);

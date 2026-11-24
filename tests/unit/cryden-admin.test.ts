@@ -12,6 +12,7 @@ import {
   ADMIN_AI_ANOMALIES_PATH,
   ADMIN_AI_AUDIT_PATH,
   ADMIN_AI_ASK_PATH,
+  ASK_AI_PATH,
   HASH_MIGRATION_PATH,
   MFA_ADOPTION_PATH,
   OAUTH_PROVIDERS_PATH,
@@ -37,6 +38,7 @@ import {
   scanAdminAnomalies,
   queryAdminAudit,
   askAdminAI,
+  askAI,
   testOAuthProvider,
   LLM_PROVIDER_PATH,
   fetchLLMModels,
@@ -783,6 +785,11 @@ describe("operator mutation requests", () => {
 
 describe("admin AI modes", () => {
   it("calls each read-only mode with its endpoint and validates the returned citation", async () => {
+    const requestedTimeouts: number[] = [];
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      requestedTimeouts.push(milliseconds);
+      return new AbortController().signal;
+    });
     const replies: unknown[] = [
       { data: { answer: "No repeated errors.", source_entity: "shipped_logs", row_count: 2 } },
       {
@@ -795,6 +802,7 @@ describe("admin AI modes", () => {
       },
       { data: { entity: "audit_events", columns: ["type"], rows: [["login"]], row_count: 1 } },
       { data: { answer: "Three users matched.", source_entity: "users", row_count: 3 } },
+      { data: { answer: "Your account has two sessions.", row_count: 2 } },
     ];
     const seen: Seen[] = [];
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -823,12 +831,16 @@ describe("admin AI modes", () => {
     await expect(
       askAdminAI({ token: TOKEN, question: "who has locked accounts?" }),
     ).resolves.toMatchObject({ source_entity: "users" });
+    await expect(askAI({ token: TOKEN, question: "show my sessions" })).resolves.toMatchObject({
+      row_count: 2,
+    });
 
     expect(seen.map((item) => item.path)).toEqual([
       ADMIN_AI_LOGS_PATH,
       ADMIN_AI_ANOMALIES_PATH,
       ADMIN_AI_AUDIT_PATH,
       ADMIN_AI_ASK_PATH,
+      ASK_AI_PATH,
     ]);
     expect(
       seen.every((item) => item.method === "POST" && item.authorization === `Bearer ${TOKEN}`),
@@ -838,7 +850,9 @@ describe("admin AI modes", () => {
       JSON.stringify({ since: "24h" }),
       JSON.stringify({ question: "recent logins" }),
       JSON.stringify({ question: "who has locked accounts?" }),
+      JSON.stringify({ question: "show my sessions" }),
     ]);
+    expect(requestedTimeouts).toEqual([130_000, 130_000, 130_000, 130_000, 130_000]);
   });
 });
 
@@ -881,6 +895,11 @@ describe("LLM provider operations", () => {
   });
 
   it("tests, discovers models, and reads usage from their CSAG endpoints", async () => {
+    const requestedTimeouts: number[] = [];
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      requestedTimeouts.push(milliseconds);
+      return new AbortController().signal;
+    });
     const seen: Seen[] = [];
     const replies: unknown[] = [
       { data: { status: "ok", kind: input.kind, model: input.model } },
@@ -930,5 +949,6 @@ describe("LLM provider operations", () => {
     expect(seen[1]?.body).toBe(
       JSON.stringify({ api_key: input.api_key, base_url: input.base_url }),
     );
+    expect(requestedTimeouts).toEqual([70_000, 15_000, 10_000]);
   });
 });

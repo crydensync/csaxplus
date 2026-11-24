@@ -127,6 +127,10 @@ existing session records retain their original `node` user-agent value.
       merge to `main` is needed for local use. These AI query features need both an LLM provider
       and a separately configured, verified read-only PostgreSQL provider; the widget's origin
       and entity settings do not configure that database connection.
+      The console allows 130 seconds for model-backed AI requests because CSAG's provider can spend
+      60 seconds on each model call and composed answers make two sequential calls. LLM test calls
+      allow 70 seconds. Console timeouts now report `api_timeout` separately from connection
+      failures, so a slow model is not mislabeled as an unreachable API.
 - [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
