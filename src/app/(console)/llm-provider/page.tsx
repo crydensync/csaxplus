@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { readSession } from "@/server/auth/guard";
+import { AIWorkInProgress } from "@/components/AIWorkInProgress";
 
 import { ConsoleTopbar } from "../console-topbar";
 import { SignOutButton } from "../sign-out-button";
-import { LLMProviderView } from "./provider-view";
 
 export const metadata: Metadata = { title: "LLM Provider" };
 
@@ -19,7 +19,7 @@ export default async function LLMProviderPage() {
         subtitle="Encrypted provider settings used by CSAG's AI features."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <LLMProviderView csrf={session.csrf} />
+      <AIWorkInProgress />
     </>
   );
 }

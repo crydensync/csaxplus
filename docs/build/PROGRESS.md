@@ -131,6 +131,10 @@ existing session records retain their original `node` user-agent value.
       60 seconds on each model call and composed answers make two sequential calls. LLM test calls
       allow 70 seconds. Console timeouts now report `api_timeout` separately from connection
       failures, so a slow model is not mislabeled as an unreachable API.
+      On 2026-11-25, the Assistant, Ask-AI Widget settings, LLM Provider and Database Provider
+      screens were temporarily locked behind a shared maintenance notice while these paths are
+      being verified. This console-only gate does not alter CSAG settings or disable consuming-app
+      widget requests.
 - [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
