@@ -1764,6 +1764,7 @@ const askAIWidgetSchema = z.object({
 });
 
 export type AskAIWidgetConfig = z.infer<typeof askAIWidgetSchema>;
+export type AskAIWidgetInput = AskAIWidgetConfig;
 
 /** Read the widget's non-secret configuration. */
 export async function fetchAskAIWidget(options: { token: string }): Promise<AskAIWidgetConfig> {
@@ -1774,6 +1775,22 @@ export async function fetchAskAIWidget(options: { token: string }): Promise<AskA
   });
   const parsed = askAIWidgetSchema.safeParse(data);
   if (!parsed.success) throw malformed("the Ask-AI Widget settings", ASK_AI_WIDGET_PATH);
+  return parsed.data;
+}
+
+/** Save widget configuration through CSAG's existing admin settings endpoint. */
+export async function saveAskAIWidget(options: {
+  token: string;
+  input: AskAIWidgetInput;
+}): Promise<AskAIWidgetConfig> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: ASK_AI_WIDGET_PATH,
+    token: options.token,
+    body: options.input,
+  });
+  const parsed = askAIWidgetSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the saved Ask-AI Widget settings", ASK_AI_WIDGET_PATH);
   return parsed.data;
 }
 
