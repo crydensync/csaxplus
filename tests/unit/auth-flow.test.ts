@@ -312,10 +312,15 @@ describe("the API's login answers", () => {
   it("returns the challenge and the ceremony token from a passkey begin", async () => {
     stubApi({
       "POST /v1/login/passkey/begin": () =>
-        jsonResponse({ data: { public_key: { challenge: "abc" }, ceremony_token: "cer" } }),
+        jsonResponse({
+          data: {
+            public_key: { publicKey: { challenge: "abc", rpId: "localhost" } },
+            ceremony_token: "cer",
+          },
+        }),
     });
     await expect(beginPasskey("pending")).resolves.toEqual({
-      options: { challenge: "abc" },
+      options: { challenge: "abc", rpId: "localhost" },
       ceremonyToken: "cer",
     });
   });

@@ -82,7 +82,7 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
 ## Tier 3 - Developer (tag v0.3.0)
 
 - [x] 3.1 API Keys: create a user-owned key shown once, list its prefix, expiry and last-used time, and revoke with confirmation. Creation sends no invented scopes.
-- [x] 3.2 Webhooks: one runtime destination, encrypted signing secret, queued test delivery, and history are managed through CSAG. The console protects endpoint changes and test delivery with its standard CSRF and same-origin guard. Multi-endpoint CRUD remains.
+- [x] 3.2 Webhooks: multiple named runtime destinations, independently encrypted signing secrets, per-destination test delivery and history filters are managed through CSAG. Each event is queued once per destination with a destination snapshot; removal waits until queued deliveries finish. Console mutations use CSRF and same-origin guards.
 - [x] 3.3 JWT Claims: global source mappings, reserved-name validation, and CSAG-computed per-user claim preview. Preview shows additional claims and is intentionally unsigned.
 - [x] 3.4 Cloud Logging: redacted local archive, runtime enable/pause, severity threshold, and history are wired to CSAG. External vendor connectors remain outside this API.
 - [ ] 3.5 Tag v0.3.0 and write the tier summary below
@@ -94,11 +94,14 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       bounded anomaly scans, audit-only queries, and composed admin answers. CSAG generates each
       citation from the source rows and keeps all operations read-only. The new API routes are on
       the CSAG feature branch and can be used by building and running that branch locally; no
-      merge to `main` is needed for local use.
+      merge to `main` is needed for local use. These AI query features need both an LLM provider
+      and a separately configured, verified read-only PostgreSQL provider; the widget's origin
+      and entity settings do not configure that database connection.
 - [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
-      and refuses delivery enablement.
+      and refuses delivery enablement. The console also offers an on-demand, read-only 7-day report
+      preview through `GET /v1/admin/digest`; it is not added to scheduled history or emailed.
 - [x] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
       the operator's existing workflow. Integrated escalation and ticketing need API support.
 - [x] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
@@ -154,7 +157,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `/healthz` reports process liveness and `/readyz` checks the console store without leaking
   connection details. Password login and passkey step-up continue to use CSAG's upstream rate
   limits rather than a duplicate console limiter. Console boot events now use structured JSON
-  stdout logs filtered by `LOG_LEVEL`. Dedicated repeated step-up lockout remains to be built.
+  stdout logs filtered by `LOG_LEVEL`. CSAG now persists failed passkey step-up attempts per
+  operator, locks new ceremonies for 15 minutes after five failures in a 15-minute window, and
+  clears the lock after successful confirmation. The console shows a specific lockout message.
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
 - [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete

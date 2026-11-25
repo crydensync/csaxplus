@@ -17,10 +17,10 @@ export default async function AskAIWidgetPage() {
     <>
       <ConsoleTopbar
         title="Ask-AI Widget"
-        subtitle="Read-only embed scope and copy settings from CSAG."
+        subtitle="Configure the signed-in user’s AI widget and its allowed embedding sites."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <WidgetView apiBaseUrl={getConfig().api.url} />
+      <WidgetView apiBaseUrl={getConfig().api.url} csrf={session.csrf} />
     </>
   );
 }

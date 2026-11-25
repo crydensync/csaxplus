@@ -4,6 +4,7 @@ import {
   DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
   DIGEST_HISTORY_PATH,
+  DIGEST_REPORT_PATH,
   DIGEST_SETTINGS_PATH,
   ADMIN_AI_LOGS_PATH,
   ADMIN_AI_ANOMALIES_PATH,
@@ -14,6 +15,7 @@ import {
   OAUTH_PROVIDERS_PATH,
   USERS_PATH,
   fetchDigestHistory,
+  fetchDigestReport,
   fetchDigestSchedule,
   saveDigestSchedule,
   fetchHashMigration,
@@ -527,6 +529,27 @@ describe("reading the digest history", () => {
     stubApi(() => jsonResponse({ data: { runs: [withoutText], count: 1, limit: 1 } }));
 
     await expect(fetchDigestHistory({ token: TOKEN })).rejects.toThrow(DIGEST_HISTORY_PATH);
+  });
+});
+
+describe("generating a digest report", () => {
+  it("requests the bounded window from CSAG and validates the report", async () => {
+    const report = {
+      since: "2026-11-10T12:00:00Z",
+      until: "2026-11-17T12:00:00Z",
+      window_days: 7,
+      text: "Weekly security report",
+    };
+    const seen = stubApi(() => jsonResponse({ data: report }));
+
+    expect(await fetchDigestReport({ token: TOKEN, windowDays: 7 })).toEqual(report);
+    expect(seen[0]?.path).toBe(DIGEST_REPORT_PATH);
+    expect(seen[0]?.search).toBe("?window_days=7");
+  });
+
+  it("rejects a malformed report", async () => {
+    stubApi(() => jsonResponse({ data: { text: "missing dates" } }));
+    await expect(fetchDigestReport({ token: TOKEN })).rejects.toThrow(DIGEST_REPORT_PATH);
   });
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -423,9 +424,18 @@ export function AssistantView({ csrf }: { csrf: string }) {
             <Card>
               <ErrorState
                 title="The AI request could not run"
-                description={toolFailure.message}
+                description={
+                  toolFailure.code === "not_configured"
+                    ? "AI analysis needs an LLM provider and a separately configured, verified read-only PostgreSQL provider. The widget enabled/origin settings do not configure its data source. Check Database Provider and LLM Provider settings."
+                    : toolFailure.message
+                }
                 code={toolFailure.code ?? undefined}
               />
+              {toolFailure.code === "not_configured" ? (
+                <p className="hint" style={{ marginTop: 12 }}>
+                  <Link href="/database-provider">Open Database Provider settings</Link>
+                </p>
+              ) : null}
             </Card>
           ) : null}
           {toolAnswer ? (
@@ -481,9 +491,18 @@ export function AssistantView({ csrf }: { csrf: string }) {
         <Card>
           <ErrorState
             title="The assistant could not answer"
-            description={failure.message}
+            description={
+              failure.code === "not_configured"
+                ? "This feature needs an LLM provider and a separately configured, verified read-only PostgreSQL provider. The widget enabled/origin settings do not configure its data source. Check Database Provider and LLM Provider settings."
+                : failure.message
+            }
             code={failure.code ?? undefined}
           />
+          {failure.code === "not_configured" ? (
+            <p className="hint" style={{ marginTop: 12 }}>
+              <Link href="/database-provider">Open Database Provider settings</Link>
+            </p>
+          ) : null}
         </Card>
       ) : null}
       {mode === "account" && answer ? (
