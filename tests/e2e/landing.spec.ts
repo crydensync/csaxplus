@@ -82,7 +82,11 @@ test.describe("landing page", () => {
     await expect(page.locator("#console .lp-h2")).toHaveText(
       `${SCREEN_COUNT} screens over the CLI.`,
     );
-    await expect(page.locator(".tier-tag")).toHaveCount(4);
+    const readOnlyCount = NAV_GROUPS.reduce(
+      (total, group) => total + group.items.filter((item) => item.readOnly === true).length,
+      0,
+    );
+    await expect(page.locator(".tier-tag")).toHaveCount(readOnlyCount);
   });
 
   test("Open console leads to the console, which asks for a sign-in when signed out", async ({
