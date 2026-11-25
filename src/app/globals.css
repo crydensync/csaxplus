@@ -392,6 +392,10 @@ nav.primary {
   align-content: start;
   gap: 16px;
 }
+.view.spaced-view,
+.view.spaced-view > .card {
+  min-width: 0;
+}
 .view.email-view {
   display: grid;
   align-content: start;

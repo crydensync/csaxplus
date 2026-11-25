@@ -21,12 +21,22 @@ must include the two co-author trailers documented in `BUILD_NOTE.md`.
 
 This build is limited to the digest experience and visual/display corrections. Remove the misleading
 manual preview control from the Digest screen. Make the Dashboard always show a current seven-day
-digest by using CSAG's read-only `GET /v1/admin/digest` report when no stored scheduled run exists;
-label it as a current report, not a stored run. Keep scheduled history distinct and continue to show
-the latest stored run when one exists. Verify schedule saving and history behavior against the
-current CSAG source and the running API contract before deciding whether any CSAG change is needed.
+digest using CSAG's read-only `GET /v1/admin/digest` report on every dashboard load; label it as a
+current report, not a stored run. Keep scheduled history distinct on the Digest screen. Verify
+schedule saving and history behavior against the current CSAG source and the running API contract
+before deciding whether any CSAG change is needed.
 Review existing screens at desktop and mobile widths, fix spacing/display defects without redesigning
 completed screens, and capture the exact screens and checks in the progress notes.
+
+Verified: the Dashboard reads the current seven-day report directly from
+`GET /v1/admin/digest`, independent of schedule history, and labels the report window. The Digest
+screen no longer offers the ephemeral manual-preview button; it remains the scheduled-history view.
+A temporary Playwright review covered all 25 console routes at 1440 px and 390 px. It found mobile
+document overflow on Logs only; setting `min-width: 0` on the spaced view grid and its cards fixes
+the 390 px overflow. The Logs route was rechecked after the fix. The temporary screenshot harness
+and its images are not part of the repository. Lint, typecheck, all 370 unit tests, all 25 browser
+tests, and the production build pass. The stale AI maintenance and landing screen-count browser
+assertions were aligned with the current UI and navigation data.
 
 The AI Assistant, Ask-AI Widget, LLM Provider, and Database Provider are explicitly deferred. They
 remain behind the maintenance notice while AI behavior is inaccurate in both the console and CLI.
