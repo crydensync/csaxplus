@@ -71,17 +71,17 @@ Rename `cryden icon.png` to `cryden-icon.png` (no space) and update references.
 ## 2. Commit and git rules
 
 - Use **Conventional Commits**: `feat(users): …`, `fix(secrets): …`, `docs(readme): …`, `chore(deps): …`, `test(webauthn): …`, `refactor(config): …`, `ci: …`.
-- **One commit per releasable step** — a step that builds, passes its gate, and could be tagged on its own. No giant "everything" commits, no "wip" commits on the main line.
+- Work on a named feature branch in each repository. Never commit to or push to `main`; keep CSAX+ and CSAG changes on their own matching feature branches. Push completed commits to those branches for the user's review. Do not merge or release unless the user asks.
+- Make commits small and frequent: one independently reviewable fix, screen, API contract, test group, or documentation change per commit. Prefer several verified commits over one broad commit. Do not create placeholder or unverified commits.
 - Subject ≤ 72 chars, imperative mood, lowercase after the type. Add a body when the *why* is not obvious.
-- **Do NOT add any `Co-authored-by:` trailer, and do not add "Generated with Claude Code" or any Anthropic/Claude attribution** to commit messages, PR text, README, or code comments. Make this hold in three ways:
-  1. First action of the project: create `.claude/settings.json` containing
-     ```json
-     { "includeCoAuthoredBy": false, "attribution": { "commit": "", "pr": "" } }
-     ```
-     (one of the two keys depends on the Claude Code version; keep both).
-  2. Add a `commit-msg` git hook (via `husky` or a plain `.githooks/commit-msg` with `git config core.hooksPath .githooks`) that **rejects** any message matching `Co-authored-by` or `Generated with`, and also enforces Conventional Commits (`commitlint` with `@commitlint/config-conventional`).
-  3. Before finishing each tier run: `git log --format=%B | grep -iE "co-authored|generated with" || echo clean` and expect `clean`. If not, fix with an interactive rebase.
+- Add both requested co-author trailers to every commit in both repositories:
+  ```text
+  Co-authored-by: CrydenSync Official <crydensync@gmail.com>
+  Co-authored-by: Raymond Proguy <devraymond24@gmail.com>
+  ```
+  The prior no-co-author setting and commit hook conflict with this user instruction. Update the hook/configuration as implementation work so it continues to enforce Conventional Commits while permitting these two trailers and rejecting unrelated generated-attribution text.
 - Tag at the end of each tier: `v0.1.0` (tier 1) … `v0.5.0` (tier 5), `v1.0.0` when the README, docs and all gates are complete.
+- Do not create tags or releases until the user explicitly approves them.
 - Never commit `.env*` (except `.env.example`), key files, SQLite files, or anything under `secrets/`.
 
 ---
@@ -214,7 +214,7 @@ and for any step touching UI or auth: `pnpm test:e2e`. Also, per step:
 - check keyboard navigation and focus-visible on new controls;
 - check a 375 px viewport (the prototype has a mobile sidebar; keep it);
 - grep the diff for secrets: `git diff --cached | grep -iE "sk-ant|postgresql://|re_[A-Za-z0-9]{10}|GOCSPX"` must be empty;
-- confirm no `Co-authored-by` / attribution in the message.
+- confirm both requested co-author trailers are present and no generated tool-attribution line is present.
 
 If a gate fails, fix it; never skip a hook with `--no-verify`.
 
@@ -250,7 +250,8 @@ Also add: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `docs/build/DE
 - **Session start:** before doing anything else, read `docs/build/PROGRESS.md` (if it exists) and continue from the first unchecked item. If it does not exist, create it with the full tier checklist (Tier 0 to Tier 5).
 - **Keep `docs/build/PROGRESS.md` current:** after every commit, tick the finished step. At the end of each tier, update it with: tier status, tag created, what shipped, what is fixture-only, what is blocked on the backend, and the exact next step. Commit it (`docs(build): update progress for tier N`). This file is how a new chat resumes the work.
 - **Docs layout:** `docs/guide/` holds user-facing docs (setup, configuration, secrets and biometric unlock, deployment, screenshots). `docs/build/` holds build-process docs (`PROGRESS.md`, `DECISIONS.md`, `BACKEND_GAPS.md`). Put screenshots in `docs/guide/screenshots/`.
-- At the end of each tier, print: what shipped, what is fixture-only, what is blocked on the backend, and the tag you created.
+- At the end of each tier, print: what shipped, what is fixture-only, what is blocked on the backend, and whether a tag was explicitly authorized and created.
+- The user's co-author trailers above are required. Check that both are present on every new commit; do not apply the old no-co-author check in this file.
 - Do not claim something works unless you ran it. If you could not run it (for example, a real Face ID prompt), say so and list the manual test steps.
 
 ---
@@ -262,7 +263,7 @@ Also add: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `docs/build/DE
 - Secrets are encrypted at rest, masked by default, revealed only after a real WebAuthn user-verification, re-masked server-side after 20 s, and every access is audited.
 - AI features are provably read-only (tests included).
 - CI is green; Docker image builds and runs from a clean checkout using only the README.
-- Git history is clean Conventional Commits with no co-author or tool attribution lines.
+- Git history uses Conventional Commits, the two requested co-author trailers on every commit, and no generated tool-attribution lines.
 
 ---
 
@@ -344,7 +345,7 @@ Rules for every endpoint:
 
 ### 11.6 Working in two repos
 
-- `api` (and `cryden` if needed) are separate git repos. Work on a branch `feat/console-admin-endpoints`. Do not push or open PRs unless asked.
-- The same commit rules apply there: Conventional Commits (`feat(admin): add sessions endpoints`), one commit per endpoint group, tests included, no co-author or attribution lines, no em or en dashes.
+- CSAG (`../_reference/csag`) and the active API instance (`../csaxplusapi`) are distinct from the console repository. Develop CSAG changes only in its feature branch in `../_reference/csag`; treat `../csaxplusapi` as the running instance, not the source repository. Do not commit API changes to the console repository.
+- The same branch, small-commit, push, and co-author rules apply in CSAG. Keep each API contract change in its own Conventional Commit with tests and both requested co-author trailers. Never push to `main` or merge branches here.
 - In the console, the commit that uses a new endpoint says which api commit it depends on, and `docs/build/PROGRESS.md` lists api endpoints as done, in progress, or pending.
 - Remove an item from `docs/build/BACKEND_GAPS.md` only when the endpoint exists and the console calls it for real.

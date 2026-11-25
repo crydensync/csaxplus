@@ -844,3 +844,25 @@ That timer is a screen-cleanup measure, not a way to revoke a value already deli
 The key-rotation command re-encrypts every vault row and its audit event in one database transaction.
 All console processes must be stopped during rotation and restarted only after the new key is
 configured.
+
+## D27. Dashboard always shows a current digest; history remains scheduled
+
+**Date:** 2026-11-25
+**Status:** accepted
+
+The Dashboard should not appear to have no digest merely because the weekly schedule has not yet
+written a history row. When a stored scheduled run exists, show the newest stored run. When history
+is empty, call CSAG's read-only `GET /v1/admin/digest` and show its current seven-day report with
+clear wording that it is a live report, not a stored run. Keep scheduled history on the Digest
+screen. Remove the manual "Generate report now" preview control there because it is easy to mistake
+for a persisted run. This behavior needs no CSAG write endpoint and must not manufacture history.
+
+## D28. Defer AI while finishing digest and console display
+
+**Date:** 2026-11-25
+**Status:** accepted
+
+AI work is paused because both console AI output and CLI AI output need accuracy investigation. The
+current build addresses digest display and existing-screen spacing only. Keep the AI Assistant,
+Ask-AI Widget, LLM Provider, and Database Provider maintenance notices in place. Record the AI and
+other contract gaps in `BACKEND_GAPS.md` for a later build; do not silently widen this scope.
