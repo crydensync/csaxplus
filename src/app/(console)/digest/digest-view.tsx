@@ -9,17 +9,13 @@ import { ErrorState, LoadingAnnouncement } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { formatCount, formatInstant } from "@/lib/format";
 import type { Section } from "@/server/cryden/section";
-import type { DigestHistory, DigestReport } from "@/server/cryden/admin";
+import type { DigestHistory } from "@/server/cryden/admin";
 import type { DigestPage } from "@/server/digest/report";
 
 export function DigestView() {
   const [report, setReport] = useState<DigestPage | null>(null);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reportNow, setReportNow] = useState<DigestReport | null>(null);
-  const [reportFailure, setReportFailure] = useState<ConsoleFailure | null>(null);
-  const [generating, setGenerating] = useState(false);
-
   const read = useCallback(async () => {
     setLoading(true);
     setFailure(null);
@@ -55,42 +51,6 @@ export function DigestView() {
   useEffect(() => {
     void read();
   }, [read]);
-
-  const generateNow = async () => {
-    setGenerating(true);
-    setReportFailure(null);
-    try {
-      const response = await fetch("/api/console/digest/report?window_days=7", {
-        credentials: "same-origin",
-        headers: { accept: "application/json" },
-      });
-      const payload: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        setReportFailure(failureFrom(payload, response.status));
-        return;
-      }
-      const result = dataFrom<DigestReport>(payload);
-      if (
-        result === null ||
-        typeof result.text !== "string" ||
-        typeof result.window_days !== "number"
-      ) {
-        setReportFailure({
-          message: "The API returned a digest report this screen does not recognise.",
-          code: "console_malformed",
-        });
-        return;
-      }
-      setReportNow(result);
-    } catch {
-      setReportFailure({
-        message: "The console could not reach its server.",
-        code: "console_unreachable",
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   if (loading && report === null) {
     return (
@@ -128,36 +88,6 @@ export function DigestView() {
 
   return (
     <div className="view anim digest-history-view">
-      <Card
-        title="Generate a report now"
-        hint="Build a read-only report for the last 7 days from CSAG audit data. This preview does not create a scheduled history entry or send email."
-      >
-        <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
-          <span className="hint">
-            Use this to check digest content without waiting for the weekly schedule.
-          </span>
-          <Button variant="primary" onClick={() => void generateNow()} disabled={generating}>
-            {generating ? "Generating…" : "Generate report"}
-          </Button>
-        </div>
-        {reportFailure ? (
-          <div style={{ marginTop: 16 }}>
-            <ErrorState
-              title="Digest report could not be generated"
-              description={reportFailure.message}
-              code={reportFailure.code ?? undefined}
-            />
-          </div>
-        ) : null}
-        {reportNow ? (
-          <pre
-            className="drawer-json"
-            style={{ marginTop: 16, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-          >
-            {reportNow.text}
-          </pre>
-        ) : null}
-      </Card>
       <Card title="Digest history" hint="Each report is the text stored when CSAG generated it.">
         <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
           <span className="hint">{formatCount(report.data.count)} stored runs</span>
@@ -177,7 +107,9 @@ export function DigestView() {
       ) : null}
       {report.data.runs.length === 0 ? (
         <Card title="No digests stored">
-          <p className="hint">The API returned an empty history.</p>
+          <p className="hint">
+            No scheduled digest has been stored yet. The Dashboard shows a current report separately.
+          </p>
         </Card>
       ) : (
         report.data.runs.map((run) => (

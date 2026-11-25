@@ -11,6 +11,64 @@ the prototype's `styles.css` plus React components (D1, no Tailwind and no CSS M
 Architecture (brief section 11): `browser -> Next.js BFF -> api (/v1/*, /v1/admin/*) -> engine -> Postgres|SQLite`.
 The console never holds the engine's primary credentials. Only `READONLY_DATABASE_URL` is an exception.
 
+## Current build: digest and screen display
+
+Work is on the console feature branch `feat/console-screen-parity`; the paired API source is
+`../_reference/csag`, while `../csaxplusapi` is the running instance and is not the API source repo.
+Keep this work on feature branches, use several small reviewable commits, push the branch, and do not
+merge to `main` or create a release/tag without the user's instruction. Every commit in either repo
+must include the two co-author trailers documented in `BUILD_NOTE.md`.
+
+This build is limited to the digest experience and visual/display corrections. Remove the misleading
+manual preview control from the Digest screen. Make the Dashboard always show a current seven-day
+digest using CSAG's read-only `GET /v1/admin/digest` report on every dashboard load; label it as a
+current report, not a stored run. Keep scheduled history distinct on the Digest screen. Verify
+schedule saving and history behavior against the current CSAG source and the running API contract
+before deciding whether any CSAG change is needed.
+Review existing screens at desktop and mobile widths, fix spacing/display defects without redesigning
+completed screens, and capture the exact screens and checks in the progress notes.
+
+Verified: the Dashboard reads the current seven-day report directly from
+`GET /v1/admin/digest`, independent of schedule history, and labels the report window. The Digest
+screen no longer offers the ephemeral manual-preview button; it remains the scheduled-history view.
+A temporary Playwright review covered all 25 console routes at 1440 px and 390 px. It found mobile
+document overflow on Logs only; setting `min-width: 0` on the spaced view grid and its cards fixes
+the 390 px overflow. The Logs route was rechecked after the fix. The temporary screenshot harness
+and its images are not part of the repository. Lint, typecheck, all 370 unit tests, all 25 browser
+tests, and the production build pass. The stale AI maintenance and landing screen-count browser
+assertions were aligned with the current UI and navigation data.
+
+The AI Assistant, Ask-AI Widget, LLM Provider, and Database Provider are explicitly deferred. They
+remain behind the maintenance notice while AI behavior is inaccurate in both the console and CLI.
+Do not spend this build on AI diagnosis or implementation. Full deferred gaps are tracked in
+`BACKEND_GAPS.md` for the next build.
+
+### Audited follow-up backlog
+
+- Users needs broader search than exact email, plus per-user sign-in provider, MFA state, last-seen
+  time, and linked OAuth identities. The current CSAG user list/detail contracts do not provide
+  those fields; CSAG and console work are both required.
+- Dashboard parity: add live active-session and recent-audit summaries using existing CSAG routes.
+  A true enrolled-user MFA percentage needs a CSAG contract that reports enrolled users rather than
+  event totals. OAuth provider linked-account counts also need a CSAG read endpoint.
+- Logs need a clear product boundary: runtime capture is bounded/process-local, the shipped archive
+  is local storage rather than a vendor connector, and startup/migration stdout is not represented.
+  External cloud logging remains future CSAG/host integration work.
+- Email delivery status, test sending, and product templates belong to the consuming application;
+  CSAG only reports auth email events and its own server-rendered samples. Keep these out of the
+  console unless a consuming-app contract is supplied.
+- Breached-password checking, password history, and a forced rehash control shown by the prototype
+  are not supported by the current CSAG engine/API. Do not show them as working settings.
+- Support-ticket escalation needs a host integration. Config Advisor needs typed proposals and
+  runtime settings APIs before any recommendation can safely prefill or apply a value.
+- The Database Inspector and all admin screens depend on Postgres; CSAG currently returns
+  `not_implemented_on_sqlite` for the admin surface.
+- Finish the systematic visual spacing/responsive audit, repeated step-up lockout hardening, and
+  packaging/CI work before calling the console complete.
+
+These are real contract or presentation gaps. The prototype also contains sample rows, fake counts,
+and toast-only buttons; those are not requirements to reproduce as live functionality.
+
 ### Completed follow-up: database inspector and logs
 
 Implemented on the paired `feat/database-inspector-runtime-logs` branches in CSAX+ and CSAG. The
@@ -209,10 +267,12 @@ existing session records retain their original `node` user-agent value.
 
 ## Working notes
 
-- Reference repos are cloned read-only into `../_reference/cryden` and `../_reference/api`.
+- CSAG source is `../_reference/csag`; `../csaxplusapi` is the running instance and may lag behind that branch. Keep those roles distinct when checking behavior.
 - No em dashes or en dashes anywhere. `tests/unit/no-forbidden-characters.test.ts` enforces this
   across every file we author, and the `commit-msg` hook rejects them in commit messages.
-- No `Co-authored-by:` and no tool attribution in commits.
+- Every commit includes the two user-requested `Co-authored-by` trailers listed in `BUILD_NOTE.md`;
+  do not add generated tool-attribution lines. The older no-co-author hook/config is known to
+  conflict and must be updated as implementation work before normal commits resume.
 - Playwright's Chromium is installed at `~/.cache/ms-playwright` (one-time, ~120 MB). The e2e gate
   needs it; `pnpm exec playwright install chromium` restores it on a fresh machine. CI must run the
   same command, since `playwright.config.ts` uses the bundled browser and no system Chrome channel.

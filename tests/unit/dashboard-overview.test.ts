@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  DIGEST_NONE_STORED_DETAIL,
-  DIGEST_NOT_SCHEDULED_DETAIL,
+  DIGEST_REPORT_UNAVAILABLE_DETAIL,
   NOT_OPERATOR_DETAIL,
   SQLITE_ADMIN_DETAIL,
 } from "@/lib/dashboard";
 import {
-  DIGEST_HISTORY_PATH,
+  DIGEST_REPORT_PATH,
   HASH_MIGRATION_PATH,
   MFA_ADOPTION_PATH,
   USERS_PATH,
@@ -93,7 +92,7 @@ function stubApi(
       | typeof USERS_PATH
       | typeof MFA_ADOPTION_PATH
       | typeof HASH_MIGRATION_PATH
-      | typeof DIGEST_HISTORY_PATH,
+      | typeof DIGEST_REPORT_PATH,
       () => Response
     >
   >,
@@ -146,20 +145,13 @@ const ALL_OK = {
         upgraded_events_in_window: 5,
       },
     }),
-  [DIGEST_HISTORY_PATH]: () =>
+  [DIGEST_REPORT_PATH]: () =>
     jsonResponse({
       data: {
-        runs: [
-          {
-            id: 9,
-            window_start: "2026-09-28T00:00:00Z",
-            window_end: "2026-10-05T00:00:00Z",
-            generated_at: "2026-10-05T00:00:03Z",
-            text: DIGEST_TEXT,
-          },
-        ],
-        count: 1,
-        limit: 1,
+        since: "2026-09-28T00:00:00Z",
+        until: "2026-10-05T00:00:03Z",
+        window_days: DASHBOARD_WINDOW_DAYS,
+        text: DIGEST_TEXT,
       },
     }),
 };
@@ -171,7 +163,7 @@ describe("gathering the dashboard", () => {
     await dashboardOverview(TOKEN);
 
     expect(asked.sort()).toEqual(
-      [USERS_PATH, MFA_ADOPTION_PATH, HASH_MIGRATION_PATH, DIGEST_HISTORY_PATH].sort(),
+      [USERS_PATH, MFA_ADOPTION_PATH, HASH_MIGRATION_PATH, DIGEST_REPORT_PATH].sort(),
     );
   });
 
@@ -219,6 +211,7 @@ describe("gathering the dashboard", () => {
     // The window is passed rather than assumed, and the reports echo it back, so
     // the copy beside a count describes the range the API actually used.
     expect(seen.filter((search) => search.includes("window_days"))).toEqual([
+      `?window_days=${DASHBOARD_WINDOW_DAYS}`,
       `?window_days=${DASHBOARD_WINDOW_DAYS}`,
       `?window_days=${DASHBOARD_WINDOW_DAYS}`,
     ]);
@@ -302,7 +295,7 @@ describe("a deployment with no admin surface", () => {
       [USERS_PATH]: sqlite,
       [MFA_ADOPTION_PATH]: sqlite,
       [HASH_MIGRATION_PATH]: sqlite,
-      [DIGEST_HISTORY_PATH]: sqlite,
+      [DIGEST_REPORT_PATH]: sqlite,
     });
 
     const overview = await dashboardOverview(TOKEN);
@@ -326,7 +319,7 @@ describe("an account the API does not recognise as an operator", () => {
       [USERS_PATH]: refused,
       [MFA_ADOPTION_PATH]: refused,
       [HASH_MIGRATION_PATH]: refused,
-      [DIGEST_HISTORY_PATH]: refused,
+      [DIGEST_REPORT_PATH]: refused,
     });
 
     const overview = await dashboardOverview(TOKEN);
@@ -350,65 +343,31 @@ describe("an account the API does not recognise as an operator", () => {
   });
 });
 
-describe("the digest", () => {
-  it("reads no schedule as an empty state, not as a failure", async () => {
+describe("the current digest", () => {
+  it("reads a live seven-day report without relying on scheduled history", async () => {
+    const asked = stubApi({ [DIGEST_REPORT_PATH]: ALL_OK[DIGEST_REPORT_PATH] });
+
+    const overview = await dashboardOverview(TOKEN);
+
+    expect(asked).toContain(DIGEST_REPORT_PATH);
+    expect(asked).not.toContain("/v1/admin/digest/history");
+    expect(overview.digest).toEqual({
+      state: "ok",
+      data: expect.objectContaining({ since: "2026-09-28T00:00:00Z", text: DIGEST_TEXT }),
+    });
+  });
+
+  it("shows an honest empty state when the API cannot generate a report", async () => {
     stubApi({
       ...ALL_OK,
-      [DIGEST_HISTORY_PATH]: () =>
-        jsonResponse({ error: { code: "not_configured", message: "no digest store" } }, 404),
+      [DIGEST_REPORT_PATH]: () =>
+        jsonResponse({ error: { code: "not_configured", message: "not configured" } }, 404),
     });
 
     const overview = await dashboardOverview(TOKEN);
 
-    expect(overview.digest).toEqual({ state: "empty", detail: DIGEST_NOT_SCHEDULED_DETAIL });
+    expect(overview.digest).toEqual({ state: "empty", detail: DIGEST_REPORT_UNAVAILABLE_DETAIL });
     expect(overview.accounts.state).toBe("ok");
-  });
-
-  it("reads a schedule that has not run yet as a different empty state", async () => {
-    stubApi({
-      ...ALL_OK,
-      [DIGEST_HISTORY_PATH]: () => jsonResponse({ data: { runs: [], count: 0, limit: 1 } }),
-    });
-
-    const overview = await dashboardOverview(TOKEN);
-
-    // "No schedule" and "a schedule with nothing in it" need different fixes,
-    // so they are different sentences rather than one empty state.
-    expect(overview.digest).toEqual({ state: "empty", detail: DIGEST_NONE_STORED_DETAIL });
-    expect(DIGEST_NONE_STORED_DETAIL).not.toBe(DIGEST_NOT_SCHEDULED_DETAIL);
-  });
-
-  it("shows the newest run when there is more than one", async () => {
-    stubApi({
-      ...ALL_OK,
-      [DIGEST_HISTORY_PATH]: () =>
-        jsonResponse({
-          data: {
-            runs: [
-              {
-                id: 10,
-                window_start: "a",
-                window_end: "b",
-                generated_at: "2026-10-05T00:00:00Z",
-                text: "newer",
-              },
-              {
-                id: 9,
-                window_start: "a",
-                window_end: "b",
-                generated_at: "2026-10-04T00:00:00Z",
-                text: "older",
-              },
-            ],
-            count: 2,
-            limit: 1,
-          },
-        }),
-    });
-
-    const overview = await dashboardOverview(TOKEN);
-    if (overview.digest.state !== "ok") throw new Error("expected a digest");
-    expect(overview.digest.data.text).toBe("newer");
   });
 
   it("does not become unavailable just because another section did", async () => {
@@ -421,7 +380,6 @@ describe("the digest", () => {
     });
 
     const overview = await dashboardOverview(TOKEN);
-    // Half a SQLite refusal is still a deployment with a digest store wired.
     expect(overview.accounts.state).toBe("unavailable");
     expect(overview.hashes.state).toBe("ok");
     expect(overview.digest.state).toBe("ok");

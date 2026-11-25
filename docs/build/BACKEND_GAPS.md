@@ -4,8 +4,42 @@ What the console needs but the backend does not provide yet, plus every place wh
 prototype's claims do not match the engine or the API. Remove an item only when the endpoint
 exists and the console calls it for real.
 
-Evidence comes from a read of `../_reference/api` (Go HTTP layer) and `../_reference/cryden`
-(Go engine library).
+Historical evidence below came from an earlier API/engine checkout. For current work, verify the
+Go HTTP contract in `../_reference/csag` and the Cryden engine version selected by that repository.
+
+## Current audited gaps (2026-11-25)
+
+This status section supersedes stale historical wording below where an endpoint is marked missing
+but is present in the current `../_reference/csag` source. The live instance at `../csaxplusapi`
+may still run an older binary; source support and instance support are separate checks.
+
+### Current console/API gaps
+
+| Area | Console gap | CSAG/API gap |
+|---|---|---|
+| Users | Exact-email-only search; no provider, per-user MFA, or last-seen columns; no linked identities in the detail view. | User browse/detail responses lack those fields and there is no admin read for linked OAuth identities. |
+| Dashboard | Does not show active sessions or recent audit activity even though read routes exist. MFA tiles count events, not enrolled users. | A true enrolled-user MFA count and per-provider linked-account counts are not exposed. |
+| Digest | Dashboard should always show a current report; scheduled history belongs on the Digest screen. Remove the manual preview control there. | `GET /v1/admin/digest` is deliberately read-only; schedule worker writes history at its configured time. No API write-now/history-insert operation exists or is needed for the dashboard's live report. |
+| Logs | Runtime events, shipped archive, audit history, and console activity are separate views; no single complete terminal log feed. | Runtime capture is bounded and process-local; startup/migration stdout is excluded. The shipped archive is local persistence, not a vendor cloud connector. |
+| Email | No real product delivery health, test-send, or product-template editing. | CSAG reports auth events and its standalone samples; sending and delivery records belong to the consuming application. |
+| Password policy | Prototype-only breach checks, password history, and forced rehash controls are not real settings. | No shipped breach checker, password-history feature, or forced-rehash setting/API. |
+| Support | No ticket escalation integration. | No Zendesk, Intercom, Freshdesk, or generic support-ticket adapter. |
+| Config Advisor | Recommendations cannot safely prefill or apply settings. | The API returns evidence/prose, not typed proposals; several targets are startup-only settings without runtime admin writes. |
+| SQLite | Console admin screens and database inspector are unavailable. | CSAG admin routes return `not_implemented_on_sqlite`; console administration requires Postgres. |
+
+### Deferred AI gaps
+
+AI is intentionally out of the current digest/display build. The console AI Assistant, widget,
+LLM Provider, and Database Provider remain behind a maintenance notice because the AI behavior is
+not reliable, and the CLI's output is also reported as inaccurate. The next AI pass must separately
+verify CSAG provider requests, read-only PostgreSQL access, query correctness/citations, widget
+availability, timeout behavior, and the CLI against real cases before re-enabling the console.
+
+### Visual and documentation gaps
+
+The console still needs a page-by-page desktop/mobile spacing and display review. This is a UI audit,
+not a redesign. Refresh this document's historical endpoint lists after each API branch is checked;
+do not treat the old sections below as an authoritative current route inventory.
 
 ---
 
