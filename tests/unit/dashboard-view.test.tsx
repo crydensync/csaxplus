@@ -414,7 +414,8 @@ describe("the digest's empty states", () => {
     );
 
     expect(text()).toContain("Nothing to report");
-    expect(text()).toContain("DIGEST_INTERVAL_HOURS");
+    expect(text()).toContain("enable a schedule in Digest settings");
+    expect(text()).not.toContain("DIGEST_INTERVAL_HOURS");
   });
 
   it("says a schedule exists and has not run yet, which needs a different fix", async () => {

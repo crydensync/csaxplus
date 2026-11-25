@@ -42,10 +42,13 @@ export async function POST(request: Request): Promise<Response> {
   if (!body.ok) return body.response;
 
   try {
-    const outcome = await signIn(body.value.email, body.value.password);
+    const userAgent = request.headers.get("user-agent")?.slice(0, 512);
+    const outcome = await signIn(body.value.email, body.value.password, userAgent);
 
     if (outcome.kind === "second-factor") {
-      const cookie = await pendingSetCookie(startPending(outcome.paused, body.value.email));
+      const cookie = await pendingSetCookie(
+        startPending(outcome.paused, body.value.email, userAgent),
+      );
       return withSetCookies(
         jsonOk({ secondFactorRequired: true, methods: outcome.paused.methods }),
         [cookie],

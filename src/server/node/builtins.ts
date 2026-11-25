@@ -16,6 +16,8 @@
 type FsModule = {
   readFileSync(path: string, encoding: "utf8"): string;
   mkdirSync(path: string, options: { recursive: true }): string | undefined;
+  readdirSync(path: string): string[];
+  existsSync(path: string): boolean;
 };
 
 type PathModule = {

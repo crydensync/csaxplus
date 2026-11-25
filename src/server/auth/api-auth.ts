@@ -77,6 +77,27 @@ const namedSessionSchema = z.object({
   ip: z.string(),
 });
 
+const apiKeySchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  prefix: z.string().min(1),
+  scopes: z.array(z.string()),
+  expires_at: z.string().datetime({ offset: true }).nullable(),
+  expired: z.boolean(),
+  created_at: z.string().datetime({ offset: true }),
+  last_used_at: z.string().datetime({ offset: true }).nullable(),
+});
+
+export type ApiKeyRecord = z.infer<typeof apiKeySchema>;
+
+const createdApiKeySchema = z.object({
+  key: z.string().min(1),
+  notice: z.string().min(1),
+  api_key: apiKeySchema,
+});
+
+export type CreatedApiKey = z.infer<typeof createdApiKeySchema>;
+
 function shapeFailure(what: string): CrydenError {
   return new CrydenError("malformed", `the API's ${what} answer was not in the expected shape`);
 }
@@ -101,11 +122,16 @@ function toMethods(raw: readonly string[]): SecondFactorMethod[] {
 }
 
 /** `POST /v1/login`. A correct password may answer with tokens or with a pause. */
-export async function signInWithPassword(email: string, password: string): Promise<SignInResult> {
+export async function signInWithPassword(
+  email: string,
+  password: string,
+  userAgent = "",
+): Promise<SignInResult> {
   const data = await apiRequest<unknown>({
     method: "POST",
     path: "/v1/login",
     body: { email, password },
+    userAgent,
   });
 
   const paused = pausedSchema.safeParse(data);
@@ -122,21 +148,31 @@ export async function signInWithPassword(email: string, password: string): Promi
 }
 
 /** `POST /v1/login/totp`. */
-export async function completeTotp(pendingToken: string, code: string): Promise<ApiTokens> {
+export async function completeTotp(
+  pendingToken: string,
+  code: string,
+  userAgent = "",
+): Promise<ApiTokens> {
   const data = await apiRequest<unknown>({
     method: "POST",
     path: "/v1/login/totp",
     body: { pending_token: pendingToken, code },
+    userAgent,
   });
   return toTokens(data);
 }
 
 /** `POST /v1/login/recovery-code`. Consumes one of the account's recovery codes. */
-export async function completeRecoveryCode(pendingToken: string, code: string): Promise<ApiTokens> {
+export async function completeRecoveryCode(
+  pendingToken: string,
+  code: string,
+  userAgent = "",
+): Promise<ApiTokens> {
   const data = await apiRequest<unknown>({
     method: "POST",
     path: "/v1/login/recovery-code",
     body: { pending_token: pendingToken, code },
+    userAgent,
   });
   return toTokens(data);
 }
@@ -208,4 +244,42 @@ export async function listSessions(accessToken: string): Promise<NamedSession[]>
     userAgent: session.user_agent,
     ip: session.ip,
   }));
+}
+
+/** `GET /v1/api-keys`. Keys are scoped to the signed-in account. */
+export async function listApiKeys(accessToken: string): Promise<ApiKeyRecord[]> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: "/v1/api-keys",
+    token: accessToken,
+  });
+  const parsed = z.array(apiKeySchema).safeParse(data);
+  if (!parsed.success) throw shapeFailure("API key list");
+  return parsed.data;
+}
+
+/** `POST /v1/api-keys`. The raw key is returned once and never stored by the console. */
+export async function createApiKey(
+  accessToken: string,
+  name: string,
+  expiresInDays: number,
+): Promise<CreatedApiKey> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: "/v1/api-keys",
+    token: accessToken,
+    body: { name, scopes: [], expires_in_days: expiresInDays },
+  });
+  const parsed = createdApiKeySchema.safeParse(data);
+  if (!parsed.success) throw shapeFailure("new API key");
+  return parsed.data;
+}
+
+/** `DELETE /v1/api-keys/{keyID}`. Ownership is checked by the API. */
+export async function revokeApiKey(accessToken: string, keyID: string): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `/v1/api-keys/${encodeURIComponent(keyID)}`,
+    token: accessToken,
+  });
 }

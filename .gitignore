@@ -17,6 +17,8 @@ next-env.d.ts
 csax.config.json
 !csax.config.example.json
 secrets/
+!src/server/secrets/
+!src/app/api/console/secrets/
 *.pem
 *.key
 *.p12

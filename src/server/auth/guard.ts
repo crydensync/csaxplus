@@ -266,3 +266,18 @@ export async function requireAdmin(request: Request): Promise<Authorized> {
   }
   return authorized;
 }
+
+/** Owner-only mutation guard for actions that alter console access. */
+export async function requireOwnerMutation(request: Request): Promise<Authorized> {
+  const authorized = await requireMutation(request);
+  if (!authorized.ok) return authorized;
+  if (authorized.role !== "owner") {
+    return {
+      ok: false,
+      response: authorized.respond(
+        jsonError(403, ERROR_CODES.forbidden, "Only an owner can change operator access."),
+      ),
+    };
+  }
+  return authorized;
+}

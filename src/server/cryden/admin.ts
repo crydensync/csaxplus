@@ -26,6 +26,30 @@ export const USERS_PATH = "/v1/admin/users";
 export const HASH_MIGRATION_PATH = "/v1/admin/security/hash-migration";
 export const MFA_ADOPTION_PATH = "/v1/admin/security/mfa-adoption";
 export const DIGEST_HISTORY_PATH = "/v1/admin/digest/history";
+export const DIGEST_SETTINGS_PATH = "/v1/admin/settings/digest";
+export const EMAIL_STATS_PATH = "/v1/admin/email/stats";
+export const EMAIL_TEMPLATES_PATH = "/v1/admin/settings/email-templates";
+export const PASSWORD_POLICY_PATH = "/v1/admin/settings/password-policy";
+export const ADMIN_SESSIONS_PATH = "/v1/admin/sessions";
+export const ADMIN_ANOMALIES_PATH = "/v1/admin/anomalies";
+export const ADMIN_AUDIT_PATH = "/v1/admin/audit";
+export const ADMIN_OPERATORS_PATH = "/v1/admin/operators";
+export const WEBHOOK_DELIVERIES_PATH = "/v1/admin/webhooks/deliveries";
+export const WEBHOOK_ENDPOINT_PATH = "/v1/admin/webhooks";
+export const JWT_CLAIMS_PATH = "/v1/admin/settings/jwt-claims";
+export const SHIPPED_LOGS_PATH = "/v1/admin/logging/recent";
+export const LOGGING_SETTINGS_PATH = "/v1/admin/settings/logging";
+export const LLM_PROVIDER_PATH = "/v1/admin/settings/llm-provider";
+export const DATABASE_PROVIDER_PATH = "/v1/admin/settings/database-provider";
+export const SUPPORT_DIAGNOSE_PATH = "/v1/admin/support/diagnose";
+export const CONFIG_TUNING_PATH = "/v1/admin/config-tuning";
+export const ASK_AI_WIDGET_PATH = "/v1/admin/settings/ask-ai-widget";
+export const ASK_AI_PATH = "/v1/ask-ai";
+export const ADMIN_AI_QUERY_PATH = "/v1/admin/ai/query";
+export const ADMIN_AI_LOGS_PATH = "/v1/admin/ai/logs";
+export const ADMIN_AI_ANOMALIES_PATH = "/v1/admin/ai/anomalies-scan";
+export const ADMIN_AI_AUDIT_PATH = "/v1/admin/ai/audit";
+export const ADMIN_AI_ASK_PATH = "/v1/admin/ai/ask";
 
 /**
  * One account's own routes. A function rather than a constant because the id is
@@ -183,9 +207,11 @@ export async function fetchUsers(options: {
 const auditEventSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
+  user_id: z.string().optional(),
+  email: z.string().email().optional(),
   ip: z.string().optional(),
   metadata: z.record(z.string(), z.string()).optional(),
-  created_at: z.string(),
+  created_at: z.string().datetime({ offset: true }),
 });
 
 /**
@@ -367,6 +393,38 @@ export async function fetchUserMetadata(options: {
 
   const parsed = userMetadataSchema.safeParse(data);
   if (!parsed.success) throw malformed("the account's metadata", path);
+  return parsed.data;
+}
+
+/** Set one custom claim value on an account. */
+export async function setUserMetadata(options: {
+  token: string;
+  userId: string;
+  key: string;
+  value: unknown;
+}): Promise<UserMetadata> {
+  const path = `${userMetadataPath(options.userId)}/${encodeURIComponent(options.key)}`;
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path,
+    token: options.token,
+    body: { value: options.value },
+  });
+  const parsed = userMetadataSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account's updated metadata", path);
+  return parsed.data;
+}
+
+/** Remove one custom claim value from an account. */
+export async function deleteUserMetadata(options: {
+  token: string;
+  userId: string;
+  key: string;
+}): Promise<UserMetadata> {
+  const path = `${userMetadataPath(options.userId)}/${encodeURIComponent(options.key)}`;
+  const data = await apiRequest<unknown>({ method: "DELETE", path, token: options.token });
+  const parsed = userMetadataSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the account's updated metadata", path);
   return parsed.data;
 }
 
@@ -582,9 +640,8 @@ export type DigestHistory = z.infer<typeof digestHistorySchema>;
 /**
  * The digests the schedule has stored, newest first. Admin token required.
  *
- * A deployment with no digest schedule answers 404 here, because the API's
- * digest store is only wired when `DIGEST_INTERVAL_HOURS` asked for one: with no
- * schedule there is no history to read, and an empty list would be a lie about a
+ * A deployment whose API has no digest store answers 404 here: with no store
+ * there is no history to read, and an empty list would be a lie about a
  * deployment that has never built a digest. That is why this function is allowed
  * to throw a 404 and why the caller treats it as a state rather than a fault.
  */
@@ -603,5 +660,1117 @@ export async function fetchDigestHistory(options: {
 
   const parsed = digestHistorySchema.safeParse(data);
   if (!parsed.success) throw malformed("the digest history", DIGEST_HISTORY_PATH);
+  return parsed.data;
+}
+
+const digestScheduleSchema = z.object({
+  enabled: z.boolean(),
+  day_of_week: z.enum([
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ]),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  timezone: z.string().min(1).max(64),
+  recipients: z.array(z.string().email()).max(20),
+  delivery_enabled: z.boolean(),
+  delivery_available: z.boolean(),
+  interval_hours: z.number().int().min(1).max(8760).optional(),
+});
+
+const digestScheduleInputSchema = digestScheduleSchema.omit({ delivery_available: true });
+export type DigestSchedule = z.infer<typeof digestScheduleSchema>;
+export type DigestScheduleInput = z.infer<typeof digestScheduleInputSchema>;
+
+export async function fetchDigestSchedule(options: { token: string }): Promise<DigestSchedule> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: DIGEST_SETTINGS_PATH,
+    token: options.token,
+  });
+  const parsed = digestScheduleSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the digest schedule", DIGEST_SETTINGS_PATH);
+  return parsed.data;
+}
+
+export async function saveDigestSchedule(options: {
+  token: string;
+  settings: DigestScheduleInput;
+}): Promise<DigestSchedule> {
+  const input = digestScheduleInputSchema.safeParse(options.settings);
+  if (!input.success) throw malformed("the digest schedule input", DIGEST_SETTINGS_PATH);
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: DIGEST_SETTINGS_PATH,
+    token: options.token,
+    body: input.data,
+  });
+  const parsed = digestScheduleSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the saved digest schedule", DIGEST_SETTINGS_PATH);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/admin/email/stats and /v1/admin/settings/email-templates
+// ---------------------------------------------------------------------------
+
+/** Counts recorded email-related events; these are requests, not deliveries. */
+const emailStatsSchema = z.object({
+  window_days: z.number().int(),
+  magic_links_requested: z.number().int(),
+  magic_links_requested_in_window: z.number().int(),
+  email_changes_requested: z.number().int(),
+  email_changes_requested_in_window: z.number().int(),
+  email_changes_confirmed: z.number().int(),
+  email_changes_confirmed_in_window: z.number().int(),
+});
+
+export type EmailStats = z.infer<typeof emailStatsSchema>;
+
+/** Read email activity recorded by the API's audit events. */
+export async function fetchEmailStats(options: { token: string }): Promise<EmailStats> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: EMAIL_STATS_PATH,
+    token: options.token,
+  });
+  const parsed = emailStatsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("email activity", EMAIL_STATS_PATH);
+  return parsed.data;
+}
+
+const emailTemplateKindSchema = z.object({
+  kind: z.enum(["verification", "magic_link"]),
+  filename: z.string().min(1),
+  configured: z.boolean(),
+  sample: z.string().optional(),
+  sample_error: z.string().optional(),
+});
+
+const emailTemplatesSchema = z.object({
+  configured: z.boolean(),
+  email_template_dir: z.string().optional(),
+  kinds: z.array(emailTemplateKindSchema),
+});
+
+export type EmailTemplateKind = z.infer<typeof emailTemplateKindSchema>;
+export type EmailTemplates = z.infer<typeof emailTemplatesSchema>;
+
+/** Read template status and server-rendered plain-text samples. */
+export async function fetchEmailTemplates(options: { token: string }): Promise<EmailTemplates> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: EMAIL_TEMPLATES_PATH,
+    token: options.token,
+  });
+  const parsed = emailTemplatesSchema.safeParse(data);
+  if (!parsed.success) throw malformed("email templates", EMAIL_TEMPLATES_PATH);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET and PUT /v1/admin/settings/password-policy
+// ---------------------------------------------------------------------------
+
+const passwordPolicySchema = z.object({
+  min_length: z.number().int().min(8).max(72),
+  max_length: z.number().int().min(8).max(72),
+  require_uppercase: z.boolean(),
+  require_lowercase: z.boolean(),
+  require_digit: z.boolean(),
+  require_symbol: z.boolean(),
+});
+
+export type PasswordPolicy = z.infer<typeof passwordPolicySchema>;
+
+/** Read the active policy enforced by CSAG for password writes. */
+export async function fetchPasswordPolicy(options: { token: string }): Promise<PasswordPolicy> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: PASSWORD_POLICY_PATH,
+    token: options.token,
+  });
+  const parsed = passwordPolicySchema.safeParse(data);
+  if (!parsed.success || parsed.data.max_length < parsed.data.min_length) {
+    throw malformed("the active password policy", PASSWORD_POLICY_PATH);
+  }
+  return parsed.data;
+}
+
+/** Replace the active policy. CSAG validates the limits and audits the change. */
+export async function updatePasswordPolicy(options: {
+  token: string;
+  policy: PasswordPolicy;
+}): Promise<PasswordPolicy> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: PASSWORD_POLICY_PATH,
+    token: options.token,
+    body: options.policy,
+  });
+  const parsed = passwordPolicySchema.safeParse(data);
+  if (!parsed.success || parsed.data.max_length < parsed.data.min_length) {
+    throw malformed("the saved password policy", PASSWORD_POLICY_PATH);
+  }
+  return parsed.data;
+}
+
+const adminSessionSchema = z.object({
+  id: z.string().min(1),
+  user_id: z.string().min(1),
+  email: z.string().email(),
+  ip: z.string(),
+  user_agent: z.string(),
+  device: z.string().min(1),
+  created_at: z.string().datetime({ offset: true }),
+});
+
+const adminSessionsSchema = z.object({
+  sessions: z.array(adminSessionSchema),
+  total: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+
+export type AdminSession = z.infer<typeof adminSessionSchema>;
+export type AdminSessions = z.infer<typeof adminSessionsSchema>;
+
+/** Read a page of active sessions across all accounts. */
+export async function fetchAdminSessions(options: {
+  token: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AdminSessions> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 25),
+    offset: String(options.offset ?? 0),
+  });
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${ADMIN_SESSIONS_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = adminSessionsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("active sessions", ADMIN_SESSIONS_PATH);
+  return parsed.data;
+}
+
+const adminOperatorSchema = z.object({
+  user_id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(["owner", "admin", "viewer"]),
+  created_at: z.string().datetime({ offset: true }),
+});
+
+const adminOperatorsSchema = z.object({
+  operators: z.array(adminOperatorSchema),
+  total: z.number().int().nonnegative(),
+});
+
+export type AdminOperator = z.infer<typeof adminOperatorSchema>;
+export type AdminOperators = z.infer<typeof adminOperatorsSchema>;
+
+/** Read the API's current operator roster. The API remains the role authority. */
+export async function fetchAdminOperators(options: { token: string }): Promise<AdminOperators> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: ADMIN_OPERATORS_PATH,
+    token: options.token,
+  });
+  const parsed = adminOperatorsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("operator roster", ADMIN_OPERATORS_PATH);
+  return parsed.data;
+}
+
+export type OperatorStepUpPurpose =
+  | "operator_role_change"
+  | "operator_remove"
+  | "operator_session_revoke"
+  | "operator_passkey_remove"
+  | "secret_reveal"
+  | "secret_mutation";
+const operatorStepUpOfferSchema = z.object({
+  public_key: z.object({
+    publicKey: z
+      .object({
+        challenge: z.string().min(1),
+        rpId: z.string().min(1),
+        allowCredentials: z.array(z.unknown()).optional(),
+        userVerification: z.enum(["required", "preferred", "discouraged"]).optional(),
+      })
+      .passthrough(),
+  }),
+  ceremony_token: z.string().min(32),
+});
+
+export async function beginOperatorStepUp(options: {
+  token: string;
+  purpose: OperatorStepUpPurpose;
+}) {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/begin`,
+    token: options.token,
+    body: { purpose: options.purpose },
+  });
+  const parsed = operatorStepUpOfferSchema.safeParse(data);
+  if (!parsed.success)
+    throw malformed("operator step-up options", `${ADMIN_OPERATORS_PATH}/step-up/begin`);
+  return { ...parsed.data, public_key: parsed.data.public_key.publicKey };
+}
+
+export async function finishOperatorStepUp(options: {
+  token: string;
+  purpose: OperatorStepUpPurpose;
+  ceremonyToken: string;
+  credential: unknown;
+}): Promise<string> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/finish`,
+    token: options.token,
+    body: {
+      purpose: options.purpose,
+      ceremony_token: options.ceremonyToken,
+      credential: options.credential,
+    },
+  });
+  const parsed = z.object({ grant: z.string().min(32) }).safeParse(data);
+  if (!parsed.success)
+    throw malformed("operator step-up grant", `${ADMIN_OPERATORS_PATH}/step-up/finish`);
+  return parsed.data.grant;
+}
+
+export async function consumeOperatorStepUp(options: {
+  token: string;
+  grant: string;
+  purpose: "secret_reveal" | "secret_mutation";
+}): Promise<void> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_OPERATORS_PATH}/step-up/consume`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+    body: { purpose: options.purpose },
+  });
+  if (!z.object({ consumed: z.literal(true) }).safeParse(data).success)
+    throw malformed("consumed operator step-up grant", `${ADMIN_OPERATORS_PATH}/step-up/consume`);
+}
+
+export async function changeOperatorRole(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  role: AdminOperator["role"];
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "PUT",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+    body: { role: options.role },
+  });
+}
+
+export async function removeOperator(options: {
+  token: string;
+  grant: string;
+  userID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
+const operatorSessionsSchema = z.object({
+  sessions: z.array(
+    z.object({
+      id: z.string().min(1),
+      ip: z.string(),
+      user_agent: z.string(),
+      device: z.string(),
+      created_at: z.string().datetime({ offset: true }),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  email: z.string().email(),
+});
+export type OperatorSessions = z.infer<typeof operatorSessionsSchema>;
+
+export async function fetchOperatorSessions(options: {
+  token: string;
+  userID: string;
+}): Promise<OperatorSessions> {
+  const path = `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions?limit=100&offset=0`;
+  const parsed = operatorSessionsSchema.safeParse(
+    await apiRequest<unknown>({ method: "GET", path, token: options.token }),
+  );
+  if (!parsed.success) throw malformed("operator sessions", path);
+  return parsed.data;
+}
+
+const operatorPasskeysSchema = z.object({
+  passkeys: z.array(
+    z.object({
+      credential_id: z.string().min(1),
+      nickname: z.string(),
+      created_at: z.string().datetime({ offset: true }),
+      last_used_at: z.string().datetime({ offset: true }).optional(),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+});
+export type OperatorPasskeys = z.infer<typeof operatorPasskeysSchema>;
+
+export async function fetchOperatorPasskeys(options: {
+  token: string;
+  userID: string;
+}): Promise<OperatorPasskeys> {
+  const path = `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/passkeys`;
+  const parsed = operatorPasskeysSchema.safeParse(
+    await apiRequest<unknown>({ method: "GET", path, token: options.token }),
+  );
+  if (!parsed.success) throw malformed("operator passkeys", path);
+  return parsed.data;
+}
+
+export async function revokeOperatorSession(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  sessionID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions/${encodeURIComponent(options.sessionID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
+export async function revokeOperatorSessions(options: {
+  token: string;
+  grant: string;
+  userID: string;
+}): Promise<number> {
+  const data = await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/sessions`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+  const parsed = z.object({ revoked: z.number().int().nonnegative() }).safeParse(data);
+  if (!parsed.success)
+    throw malformed(
+      "revoked operator sessions",
+      `${ADMIN_OPERATORS_PATH}/${options.userID}/sessions`,
+    );
+  return parsed.data.revoked;
+}
+
+export async function removeOperatorPasskey(options: {
+  token: string;
+  grant: string;
+  userID: string;
+  credentialID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_OPERATORS_PATH}/${encodeURIComponent(options.userID)}/passkeys/${encodeURIComponent(options.credentialID)}`,
+    token: options.token,
+    headers: { "X-CSAG-Operator-Grant": options.grant },
+  });
+}
+
+/** Revoke one active session by its ID. */
+export async function revokeAdminSession(options: {
+  token: string;
+  sessionID: string;
+}): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `${ADMIN_SESSIONS_PATH}/${encodeURIComponent(options.sessionID)}`,
+    token: options.token,
+  });
+}
+
+/** Revoke every active session on the deployment. */
+export async function revokeAllAdminSessions(options: { token: string }): Promise<number> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${ADMIN_SESSIONS_PATH}/revoke-all`,
+    token: options.token,
+  });
+  const parsed = z
+    .object({ status: z.string(), revoked: z.number().int().nonnegative() })
+    .safeParse(data);
+  if (!parsed.success) throw malformed("revoked sessions", `${ADMIN_SESSIONS_PATH}/revoke-all`);
+  return parsed.data.revoked;
+}
+
+const anomalyReviewSchema = z.object({
+  status: z.enum(["unreviewed", "confirmed", "dismissed"]),
+  note: z.string(),
+  reviewer_id: z.string().optional(),
+  updated_at: z.string().datetime({ offset: true }).optional(),
+});
+
+const anomalySchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["anomaly_detected", "credential_stuffing_detected"]),
+  user_id: z.string().optional(),
+  ip: z.string().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
+  created_at: z.string().datetime({ offset: true }),
+  review: anomalyReviewSchema,
+});
+
+const anomalyListSchema = z.object({
+  anomalies: z.array(anomalySchema),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+  status: z.string().optional(),
+  has_more: z.boolean(),
+});
+
+export type Anomaly = z.infer<typeof anomalySchema>;
+export type AnomalyList = z.infer<typeof anomalyListSchema>;
+export type AnomalyStatus = "unreviewed" | "confirmed" | "dismissed";
+
+/** Read a page from CSAG's persisted anomaly review queue. */
+export async function fetchAnomalies(options: {
+  token: string;
+  limit?: number;
+  offset?: number;
+  status?: AnomalyStatus;
+}): Promise<AnomalyList> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 25),
+    offset: String(options.offset ?? 0),
+  });
+  if (options.status !== undefined) params.set("status", options.status);
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${ADMIN_ANOMALIES_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = anomalyListSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the anomaly review queue", ADMIN_ANOMALIES_PATH);
+  return parsed.data;
+}
+
+/** Save a human decision about one flagged event. This does not act on accounts. */
+export async function reviewAnomaly(options: {
+  token: string;
+  eventID: string;
+  status: AnomalyStatus;
+  note: string;
+}): Promise<Anomaly["review"]> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: `${ADMIN_ANOMALIES_PATH}/${encodeURIComponent(options.eventID)}`,
+    token: options.token,
+    body: { status: options.status, note: options.note },
+  });
+  const parsed = anomalyReviewSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the anomaly review", ADMIN_ANOMALIES_PATH);
+  return parsed.data;
+}
+
+const auditEventsSchema = z.object({
+  events: z.array(auditEventSchema),
+  limit: z.number().int().positive(),
+  has_more: z.boolean(),
+  next_cursor: z.string(),
+});
+
+export type AuditEvents = z.infer<typeof auditEventsSchema>;
+export type AuditFilters = {
+  eventType?: string;
+  userID?: string;
+  since?: string;
+  until?: string;
+};
+
+/** Read a cursor page of audit events with the server's filters applied. */
+export async function fetchAuditEvents(options: {
+  token: string;
+  filters?: AuditFilters;
+  cursor?: string;
+  limit?: number;
+}): Promise<AuditEvents> {
+  const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
+  if (options.cursor) params.set("cursor", options.cursor);
+  if (options.filters?.eventType) params.set("event_type", options.filters.eventType);
+  if (options.filters?.userID) params.set("user_id", options.filters.userID);
+  if (options.filters?.since) params.set("since", options.filters.since);
+  if (options.filters?.until) params.set("until", options.filters.until);
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${ADMIN_AUDIT_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = auditEventsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the audit log", ADMIN_AUDIT_PATH);
+  return parsed.data;
+}
+
+const webhookStatusSchema = z.enum(["pending", "in_flight", "delivered", "failed"]);
+const webhookDeliverySchema = z.object({
+  id: z.number().int(),
+  event_id: z.string(),
+  event_type: z.string(),
+  user_id: z.string().optional(),
+  ip: z.string().optional(),
+  payload: z.record(z.string(), z.unknown()),
+  status: webhookStatusSchema,
+  attempts: z.number().int(),
+  response_code: z.number().int().optional(),
+  error: z.string().optional(),
+  duration_ms: z.number().int(),
+  created_at: z.string().datetime({ offset: true }),
+  next_attempt_at: z.string().datetime({ offset: true }),
+  delivered_at: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+const webhookDeliveriesSchema = z.object({
+  deliveries: z.array(webhookDeliverySchema),
+  count: z.number().int().nonnegative(),
+  status: webhookStatusSchema.optional(),
+  statuses: z.array(webhookStatusSchema),
+});
+
+export type WebhookStatus = z.infer<typeof webhookStatusSchema>;
+export type WebhookDelivery = z.infer<typeof webhookDeliverySchema>;
+export type WebhookDeliveries = z.infer<typeof webhookDeliveriesSchema>;
+
+const webhookEndpointSchema = z.object({ url: z.string(), secret_set: z.boolean() });
+export type WebhookEndpoint = z.infer<typeof webhookEndpointSchema>;
+
+export async function fetchWebhookEndpoint(options: { token: string }): Promise<WebhookEndpoint> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
+  });
+  const parsed = webhookEndpointSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook endpoint settings", WEBHOOK_ENDPOINT_PATH);
+  return parsed.data;
+}
+
+export async function saveWebhookEndpoint(options: {
+  token: string;
+  url: string;
+  secret?: string;
+}): Promise<WebhookEndpoint> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
+    body: { url: options.url, secret: options.secret },
+  });
+  const parsed = webhookEndpointSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook endpoint settings", WEBHOOK_ENDPOINT_PATH);
+  return parsed.data;
+}
+
+export async function clearWebhookEndpoint(options: { token: string }): Promise<WebhookEndpoint> {
+  const data = await apiRequest<unknown>({
+    method: "DELETE",
+    path: WEBHOOK_ENDPOINT_PATH,
+    token: options.token,
+  });
+  const parsed = webhookEndpointSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook endpoint settings", WEBHOOK_ENDPOINT_PATH);
+  return parsed.data;
+}
+
+export async function queueWebhookTest(options: {
+  token: string;
+}): Promise<{ queued: boolean; event_id: string }> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${WEBHOOK_ENDPOINT_PATH}/test`,
+    token: options.token,
+  });
+  const parsed = z.object({ queued: z.boolean(), event_id: z.string() }).safeParse(data);
+  if (!parsed.success) throw malformed("webhook test delivery", `${WEBHOOK_ENDPOINT_PATH}/test`);
+  return parsed.data;
+}
+
+const jwtClaimMappingSchema = z.object({ claim: z.string(), source: z.string() });
+const jwtClaimsSchema = z.object({
+  mappings: z.array(jwtClaimMappingSchema),
+  reserved_claim_names: z.array(z.string()),
+});
+export type JWTClaimMapping = z.infer<typeof jwtClaimMappingSchema>;
+export type JWTClaimsConfig = z.infer<typeof jwtClaimsSchema>;
+
+export async function fetchJWTClaims(options: { token: string }): Promise<JWTClaimsConfig> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: JWT_CLAIMS_PATH,
+    token: options.token,
+  });
+  const parsed = jwtClaimsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("JWT claim mappings", JWT_CLAIMS_PATH);
+  return parsed.data;
+}
+
+export async function saveJWTClaims(options: {
+  token: string;
+  mappings: JWTClaimMapping[];
+}): Promise<JWTClaimsConfig> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: JWT_CLAIMS_PATH,
+    token: options.token,
+    body: { mappings: options.mappings },
+  });
+  const parsed = jwtClaimsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("JWT claim mappings", JWT_CLAIMS_PATH);
+  return parsed.data;
+}
+
+export async function previewJWTClaims(options: { token: string; userId: string }): Promise<{
+  user_id: string;
+  email: string;
+  claims: Record<string, unknown>;
+  signed: boolean;
+}> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${JWT_CLAIMS_PATH}/preview`,
+    token: options.token,
+    body: { user_id: options.userId },
+  });
+  const schema = z.object({
+    user_id: z.string(),
+    email: z.string(),
+    claims: z.record(z.string(), z.unknown()),
+    signed: z.boolean(),
+  });
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) throw malformed("JWT claim preview", `${JWT_CLAIMS_PATH}/preview`);
+  return parsed.data;
+}
+
+/** Read the API's webhook delivery log. */
+export async function fetchWebhookDeliveries(options: {
+  token: string;
+  status?: WebhookStatus;
+  limit?: number;
+}): Promise<WebhookDeliveries> {
+  const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
+  if (options.status) params.set("status", options.status);
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${WEBHOOK_DELIVERIES_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = webhookDeliveriesSchema.safeParse(data);
+  if (!parsed.success) throw malformed("webhook delivery log", WEBHOOK_DELIVERIES_PATH);
+  return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/admin/logging/recent
+// ---------------------------------------------------------------------------
+
+const shippedLogEventSchema = z.object({
+  id: z.number().int(),
+  level: z.string(),
+  message: z.string(),
+  fields: z.record(z.string(), z.string()).optional(),
+  sink: z.string(),
+  shipped_at: z.string().datetime({ offset: true }),
+});
+
+const shippedLogsSchema = z.object({
+  events: z.array(shippedLogEventSchema),
+  count: z.number().int().nonnegative(),
+  level: z.string().optional(),
+  levels: z.array(z.string()),
+});
+
+export type ShippedLogEvent = z.infer<typeof shippedLogEventSchema>;
+export type ShippedLogs = z.infer<typeof shippedLogsSchema>;
+
+const loggingSettingsSchema = z.object({
+  enabled: z.boolean(),
+  min_level: z.enum(["debug", "info", "warn", "error"]),
+  redaction: z.enum(["mask", "hash"]),
+  hash_key_set: z.boolean(),
+});
+export type LoggingSettings = z.infer<typeof loggingSettingsSchema>;
+
+export async function fetchLoggingSettings(options: { token: string }): Promise<LoggingSettings> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: LOGGING_SETTINGS_PATH,
+    token: options.token,
+  });
+  const parsed = loggingSettingsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("cloud logging settings", LOGGING_SETTINGS_PATH);
+  return parsed.data;
+}
+
+export async function saveLoggingSettings(options: {
+  token: string;
+  enabled: boolean;
+  minLevel: LoggingSettings["min_level"];
+}): Promise<LoggingSettings> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: LOGGING_SETTINGS_PATH,
+    token: options.token,
+    body: { enabled: options.enabled, min_level: options.minLevel },
+  });
+  const parsed = loggingSettingsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("cloud logging settings", LOGGING_SETTINGS_PATH);
+  return parsed.data;
+}
+
+/** Read the API's redacted cloud-shipping log. */
+export async function fetchShippedLogs(options: {
+  token: string;
+  level?: string;
+  limit?: number;
+}): Promise<ShippedLogs> {
+  const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
+  if (options.level) params.set("level", options.level);
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${SHIPPED_LOGS_PATH}?${params}`,
+    token: options.token,
+  });
+  const parsed = shippedLogsSchema.safeParse(data);
+  if (!parsed.success) throw malformed("shipped log events", SHIPPED_LOGS_PATH);
+  return parsed.data;
+}
+
+const llmProviderSchema = z.object({
+  kind: z.string(),
+  model: z.string(),
+  base_url: z.string().default(""),
+  max_tokens: z.number().int(),
+  temperature: z.number().default(0.2),
+  rpm: z.number().int().default(60),
+  api_key_set: z.boolean(),
+  configured: z.boolean(),
+});
+
+export type LLMProvider = z.infer<typeof llmProviderSchema>;
+export type LLMProviderInput = {
+  kind: "anthropic" | "openai-compatible";
+  model: string;
+  api_key: string;
+  base_url?: string;
+  max_tokens: number;
+  temperature: number;
+  rpm: number;
+};
+export type LLMProviderTestInput = Omit<LLMProviderInput, "api_key"> & { api_key?: string };
+
+/** Read the encrypted LLM setting in its redacted form. */
+export async function fetchLLMProvider(options: { token: string }): Promise<LLMProvider> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: LLM_PROVIDER_PATH,
+    token: options.token,
+  });
+  const parsed = llmProviderSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the LLM provider settings", LLM_PROVIDER_PATH);
+  return parsed.data;
+}
+
+export async function saveLLMProvider(options: {
+  token: string;
+  input: LLMProviderInput;
+}): Promise<LLMProvider> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: LLM_PROVIDER_PATH,
+    token: options.token,
+    body: options.input,
+  });
+  const parsed = llmProviderSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the saved LLM provider settings", LLM_PROVIDER_PATH);
+  return parsed.data;
+}
+
+export async function testLLMProvider(options: {
+  token: string;
+  input: LLMProviderTestInput;
+}): Promise<{ status: string; kind: string; model: string }> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: `${LLM_PROVIDER_PATH}/test`,
+    token: options.token,
+    body: options.input,
+    timeoutMs: 25_000,
+  });
+  const parsed = z
+    .object({ status: z.string(), kind: z.string(), model: z.string() })
+    .safeParse(data);
+  if (!parsed.success) throw malformed("the LLM provider test result", `${LLM_PROVIDER_PATH}/test`);
+  return parsed.data;
+}
+
+export async function fetchLLMModels(options: {
+  token: string;
+  api_key?: string;
+  base_url: string;
+}): Promise<string[]> {
+  const path = `${LLM_PROVIDER_PATH}/models`;
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path,
+    token: options.token,
+    body: { api_key: options.api_key, base_url: options.base_url },
+    timeoutMs: 15_000,
+  });
+  const parsed = z.object({ models: z.array(z.string()) }).safeParse(data);
+  if (!parsed.success) throw malformed("the LLM provider model list", path);
+  return parsed.data.models;
+}
+
+const llmUsageSchema = z.object({
+  scope: z.string(),
+  providers: z.array(
+    z.object({
+      kind: z.string(),
+      model: z.string(),
+      requests: z.number(),
+      succeeded: z.number(),
+      failed: z.number(),
+      rate_limited: z.number(),
+      last_request_at: z.string().optional(),
+      average_ms: z.number(),
+    }),
+  ),
+});
+export type LLMUsage = z.infer<typeof llmUsageSchema>;
+
+export async function fetchLLMUsage(options: { token: string }): Promise<LLMUsage> {
+  const path = `${LLM_PROVIDER_PATH}/usage`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = llmUsageSchema.safeParse(data);
+  if (!parsed.success) throw malformed("LLM usage statistics", path);
+  return parsed.data;
+}
+
+const databaseProviderSchema = z.object({
+  label: z.string(),
+  max_rows: z.number().int(),
+  dsn_set: z.boolean(),
+  host: z.string(),
+  database: z.string(),
+  configured: z.boolean(),
+});
+
+export type DatabaseProvider = z.infer<typeof databaseProviderSchema>;
+
+export type DatabaseProviderInput = { label: string; dsn: string; max_rows: number };
+
+/** Read database settings without receiving the DSN or its credentials. */
+export async function fetchDatabaseProvider(options: { token: string }): Promise<DatabaseProvider> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: DATABASE_PROVIDER_PATH,
+    token: options.token,
+  });
+  const parsed = databaseProviderSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the database provider settings", DATABASE_PROVIDER_PATH);
+  return parsed.data;
+}
+
+/** Save a read-only connection; CSAG verifies the role by attempting a write before storing it. */
+export async function saveDatabaseProvider(options: {
+  token: string;
+  input: DatabaseProviderInput;
+}): Promise<DatabaseProvider> {
+  const data = await apiRequest<unknown>({
+    method: "PUT",
+    path: DATABASE_PROVIDER_PATH,
+    token: options.token,
+    body: options.input,
+    timeoutMs: 15_000,
+  });
+  const parsed = databaseProviderSchema.safeParse(data);
+  if (!parsed.success)
+    throw malformed("the saved database provider settings", DATABASE_PROVIDER_PATH);
+  return parsed.data;
+}
+
+const supportDiagnosisSchema = z.object({
+  email: z.string().email(),
+  text: z.string(),
+});
+
+export type SupportDiagnosis = z.infer<typeof supportDiagnosisSchema>;
+
+/** Read the API's account login diagnosis for an exact email address. */
+export async function fetchSupportDiagnosis(options: {
+  token: string;
+  email: string;
+}): Promise<SupportDiagnosis> {
+  const params = new URLSearchParams({ email: options.email });
+  const path = `${SUPPORT_DIAGNOSE_PATH}?${params}`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = supportDiagnosisSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the support diagnosis", SUPPORT_DIAGNOSE_PATH);
+  return parsed.data;
+}
+
+const tuningSuggestionSchema = z.object({
+  area: z.string(),
+  finding: z.string(),
+  suggestion: z.string(),
+});
+
+const configTuningSchema = z.object({
+  since: z.string().datetime({ offset: true }),
+  until: z.string().datetime({ offset: true }),
+  window_days: z.number().int(),
+  counts: z.record(z.string(), z.number().int()),
+  suggestions: z.array(tuningSuggestionSchema),
+});
+
+export type TuningSuggestion = z.infer<typeof tuningSuggestionSchema>;
+export type ConfigTuning = z.infer<typeof configTuningSchema>;
+
+/** Read evidence-backed recommendations from the API. */
+export async function fetchConfigTuning(options: {
+  token: string;
+  windowDays?: number;
+}): Promise<ConfigTuning> {
+  const params = new URLSearchParams({ window_days: String(options.windowDays ?? 30) });
+  const path = `${CONFIG_TUNING_PATH}?${params}`;
+  const data = await apiRequest<unknown>({ method: "GET", path, token: options.token });
+  const parsed = configTuningSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the config tuning report", CONFIG_TUNING_PATH);
+  return parsed.data;
+}
+
+const askAIWidgetSchema = z.object({
+  enabled: z.boolean(),
+  allowed_origins: z.array(z.string()),
+  entities: z.array(z.string()),
+  greeting: z.string(),
+  placeholder: z.string(),
+});
+
+export type AskAIWidgetConfig = z.infer<typeof askAIWidgetSchema>;
+
+/** Read the widget's non-secret configuration. */
+export async function fetchAskAIWidget(options: { token: string }): Promise<AskAIWidgetConfig> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: ASK_AI_WIDGET_PATH,
+    token: options.token,
+  });
+  const parsed = askAIWidgetSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the Ask-AI Widget settings", ASK_AI_WIDGET_PATH);
+  return parsed.data;
+}
+
+const askAIAnswerSchema = z.object({
+  answer: z.string(),
+  row_count: z.number().int().nonnegative(),
+});
+
+export type AskAIAnswer = z.infer<typeof askAIAnswerSchema>;
+
+/** Ask the authenticated account about its own data. The API derives identity from the token. */
+export async function askAI(options: { token: string; question: string }): Promise<AskAIAnswer> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path: ASK_AI_PATH,
+    token: options.token,
+    body: { question: options.question },
+  });
+  const parsed = askAIAnswerSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the Ask-AI response", ASK_AI_PATH);
+  return parsed.data;
+}
+
+const adminAIQuerySchema = z.object({
+  entity: z.enum(["users", "sessions", "audit_events"]),
+  columns: z.array(z.string()),
+  rows: z.array(z.array(z.string())),
+  row_count: z.number().int(),
+});
+export type AdminAIQuery = z.infer<typeof adminAIQuerySchema>;
+
+export async function queryAdminAI(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIQuery> {
+  return readAdminAIQuery(options, ADMIN_AI_QUERY_PATH);
+}
+
+const adminAIAnswerSchema = z.object({
+  answer: z.string(),
+  source_entity: z.enum(["shipped_logs", "anomalies", "users", "sessions", "audit_events"]),
+  row_count: z.number().int().nonnegative(),
+  since: z.enum(["1h", "24h", "7d", "30d"]).optional(),
+});
+export type AdminAIAnswer = z.infer<typeof adminAIAnswerSchema>;
+
+async function readAdminAIAnswer(
+  path: string,
+  token: string,
+  body: unknown,
+): Promise<AdminAIAnswer> {
+  const data = await apiRequest<unknown>({ method: "POST", path, token, body });
+  const parsed = adminAIAnswerSchema.safeParse(data);
+  if (!parsed.success) throw malformed("admin AI answer", path);
+  return parsed.data;
+}
+
+export function summarizeAdminLogs(token: string): Promise<AdminAIAnswer> {
+  return readAdminAIAnswer(ADMIN_AI_LOGS_PATH, token, {});
+}
+
+export function scanAdminAnomalies(token: string, since: "1h" | "24h" | "7d" | "30d") {
+  return readAdminAIAnswer(ADMIN_AI_ANOMALIES_PATH, token, { since });
+}
+
+export async function queryAdminAudit(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIQuery> {
+  return readAdminAIQuery(options, ADMIN_AI_AUDIT_PATH);
+}
+
+export async function askAdminAI(options: {
+  token: string;
+  question: string;
+}): Promise<AdminAIAnswer> {
+  return readAdminAIAnswer(ADMIN_AI_ASK_PATH, options.token, { question: options.question });
+}
+
+async function readAdminAIQuery(
+  options: { token: string; question: string },
+  path: string,
+): Promise<AdminAIQuery> {
+  const data = await apiRequest<unknown>({
+    method: "POST",
+    path,
+    token: options.token,
+    body: { question: options.question },
+  });
+  const parsed = adminAIQuerySchema.safeParse(data);
+  if (!parsed.success) throw malformed("admin AI query result", path);
   return parsed.data;
 }

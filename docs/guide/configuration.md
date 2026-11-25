@@ -136,26 +136,9 @@ itself is not configured here: passkeys are credentials on the operator's accoun
 the API's own `WEBAUTHN_RP_ID` and `WEBAUTHN_RP_ORIGINS` decide them and must cover the origin the
 browser is actually on.
 
-### Email
-
-| Key | Required | Default | Secret |
-|---|---|---|---|
-| `RESEND_API_KEY` | no | none | **yes** |
-
-Used by the Email screen for delivery stats and its test send. Optional: with no key the screen
-reports it as absent rather than pretending delivery works. The engine itself sends no email at
-all, so what this key drives is the console's own integration and not something the engine provides.
-
 ### AI provider
 
-| Key | Required | Default | Secret |
-|---|---|---|---|
-| `LLM_PROVIDER` | no | none | no |
-| `ANTHROPIC_API_KEY` | no | none | **yes** |
-| `OPENAI_API_KEY` | no | none | **yes** |
-
-`LLM_PROVIDER` is `anthropic`, `openai`, `azure-openai` or `openai-compatible`. Keys are read
-through the secrets layer and are never sent to the browser.
+Provider settings are configured in the authenticated LLM Provider screen and encrypted by CSAG. The console does not need an LLM vendor key in its environment. CSAG supports Anthropic and any endpoint implementing the OpenAI-compatible chat-completions protocol.
 
 Every AI feature is read-only, always. See
 [the guarantee](secrets-and-passkeys.md#the-read-only-guarantee) and

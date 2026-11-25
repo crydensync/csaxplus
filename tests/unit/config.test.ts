@@ -209,6 +209,13 @@ describe("describeConfig", () => {
 
     const logLevel = entries.find((entry) => entry.key === "LOG_LEVEL");
     expect(logLevel?.source).toBe("default");
+
+    process.env.READONLY_DATABASE_URL = "";
+    resetConfigCache();
+    const readonlyDatabase = describeConfig().find(
+      (entry) => entry.key === "READONLY_DATABASE_URL",
+    );
+    expect(readonlyDatabase?.source).toBe("unset");
   });
 
   it("marks the settings that must never be shown", () => {

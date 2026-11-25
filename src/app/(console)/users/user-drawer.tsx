@@ -3,12 +3,16 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Drawer } from "@/components/Drawer";
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
 import { SectionState } from "@/components/section-state";
 import { EmptyState, ErrorState, LoadingAnnouncement, Skeleton } from "@/components/states";
 import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-response";
 import { formatCount, formatInstant } from "@/lib/format";
 import { METADATA_CLAIMS_DETAIL } from "@/lib/users";
+import { auditEventTone } from "@/lib/audit-events";
 import type { AdminUser, AuditEvent } from "@/server/cryden/admin";
+import type { UserMetadata } from "@/server/cryden/admin";
 import type { UserDetail } from "@/server/users/browse";
 
 import { AccountActions } from "./account-actions";
@@ -169,7 +173,6 @@ function AccountDetail({
   // as the GET saw it and is not rendered again after that. The session count
   // and the activity are the read's, because an action's answer carries neither.
   const { active_sessions: sessions, recent_activity: activity } = detail.data;
-  const keys = metadata.state === "ok" ? Object.keys(metadata.data.metadata) : [];
 
   return (
     <>
@@ -208,17 +211,23 @@ function AccountDetail({
       <p className="hint">{METADATA_CLAIMS_DETAIL}</p>
       {metadata.state !== "ok" ? (
         <SectionState section={metadata} onRetry={retry} />
-      ) : keys.length === 0 ? (
-        <EmptyState
-          bare
-          title="No metadata"
-          description="This account carries no metadata, so its tokens are minted with its registered claims alone."
-        />
       ) : (
-        // Serialised rather than laid out in rows: metadata is arbitrary JSON
-        // that feeds JWT claims, and a panel that guessed at its shape would
-        // drop whatever did not fit the guess.
-        <pre className="drawer-json">{JSON.stringify(metadata.data.metadata, null, 2)}</pre>
+        <MetadataClaimsEditor
+          userId={userId}
+          email={account.email}
+          csrf={csrf}
+          value={metadata.data}
+          onChange={(next) =>
+            setLoad((current) =>
+              current.kind === "ok"
+                ? {
+                    ...current,
+                    detail: { ...current.detail, metadata: { state: "ok", data: next } },
+                  }
+                : current,
+            )
+          }
+        />
       )}
       {metadata.state === "ok" && metadata.data.reserved_claim_names.length > 0 ? (
         <p className="hint">
@@ -243,6 +252,245 @@ function AccountDetail({
       )}
     </>
   );
+}
+
+function MetadataClaimsEditor({
+  userId,
+  email,
+  csrf,
+  value,
+  onChange,
+}: {
+  userId: string;
+  email: string;
+  csrf: string;
+  value: UserMetadata;
+  onChange: (value: UserMetadata) => void;
+}) {
+  const [key, setKey] = useState("");
+  const [json, setJson] = useState('""');
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const reserved = new Set(value.reserved_claim_names);
+  const keyIsValid = /^[A-Za-z_][A-Za-z0-9_.-]{0,63}$/.test(key);
+  let parsedValue: unknown;
+  let jsonIsValid = true;
+  try {
+    parsedValue = JSON.parse(json);
+  } catch {
+    jsonIsValid = false;
+  }
+
+  const save = async () => {
+    if (!keyIsValid || reserved.has(key) || !jsonIsValid || saving) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/console/users/${encodeURIComponent(userId)}/metadata/${encodeURIComponent(key)}`,
+        {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+            "x-csrf-token": csrf,
+          },
+          body: JSON.stringify({ value: parsedValue }),
+        },
+      );
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessage(failureFrom(payload, response.status).message);
+        return;
+      }
+      const next = dataFrom<UserMetadata>(payload);
+      if (next === null || typeof next.metadata !== "object" || next.metadata === null) {
+        setMessage("The API returned an unrecognised metadata response.");
+        return;
+      }
+      onChange(next);
+      setMessage("Claim saved. It appears in newly issued access tokens.");
+      setKey("");
+      setJson('""');
+    } catch {
+      setMessage("The console could not reach its server.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (claim: string) => {
+    if (saving) return;
+    if (pendingDelete !== claim) {
+      setPendingDelete(claim);
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/console/users/${encodeURIComponent(userId)}/metadata/${encodeURIComponent(claim)}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { accept: "application/json", "x-csrf-token": csrf },
+        },
+      );
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessage(failureFrom(payload, response.status).message);
+        return;
+      }
+      const next = dataFrom<UserMetadata>(payload);
+      if (next === null || typeof next.metadata !== "object" || next.metadata === null) {
+        setMessage("The API returned an unrecognised metadata response.");
+        return;
+      }
+      onChange(next);
+      setPendingDelete(null);
+      setMessage("Claim removed. Newly issued access tokens will no longer include it.");
+    } catch {
+      setMessage("The console could not reach its server.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const claims = value.metadata;
+  const payload = { sub: userId, email, ...claims };
+  const preview = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url(payload)}.`;
+
+  return (
+    <>
+      {Object.entries(claims).length === 0 ? (
+        <EmptyState
+          bare
+          title="No custom claims"
+          description="New access tokens for this account contain only the claims issued by CSAG."
+        />
+      ) : (
+        <div className="detail-list">
+          {Object.entries(claims).map(([claim, claimValue]) => (
+            <div className="detail-row" key={claim}>
+              <dt className="mono">{claim}</dt>
+              <dd>
+                <pre className="drawer-json">{JSON.stringify(claimValue, null, 2)}</pre>
+                <div className="actions-row" style={{ marginTop: 8 }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setKey(claim);
+                      setJson(JSON.stringify(claimValue, null, 2));
+                      setMessage(null);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="danger-ghost"
+                    disabled={saving}
+                    onClick={() => void remove(claim)}
+                  >
+                    {pendingDelete === claim ? "Confirm remove" : "Remove"}
+                  </Button>
+                  {pendingDelete === claim ? (
+                    <Button size="small" onClick={() => setPendingDelete(null)}>
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </dd>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Card
+        title={key && Object.hasOwn(claims, key) ? `Edit ${key}` : "Add a custom claim"}
+        style={{ marginTop: 14 }}
+      >
+        <label className="field-label" htmlFor={`claim-key-${userId}`}>
+          Claim name
+        </label>
+        <input
+          id={`claim-key-${userId}`}
+          className="text-input"
+          autoComplete="off"
+          value={key}
+          onChange={(event) => setKey(event.target.value)}
+          placeholder="plan"
+        />
+        {reserved.has(key) ? <p className="hint">CSAG reserves this claim name: {key}.</p> : null}
+        <label className="field-label" htmlFor={`claim-value-${userId}`} style={{ marginTop: 10 }}>
+          JSON value
+        </label>
+        <textarea
+          id={`claim-value-${userId}`}
+          className="text-input"
+          rows={4}
+          spellCheck={false}
+          value={json}
+          onChange={(event) => setJson(event.target.value)}
+        />
+        {!jsonIsValid ? (
+          <p className="hint">
+            Enter one valid JSON value, such as a string, number, boolean, array, or object.
+          </p>
+        ) : null}
+        <div className="actions-row" style={{ marginTop: 10 }}>
+          <Button
+            variant="primary"
+            disabled={!keyIsValid || reserved.has(key) || !jsonIsValid || saving}
+            onClick={() => void save()}
+          >
+            {saving ? "Saving…" : "Save claim"}
+          </Button>
+          {key ? (
+            <Button
+              disabled={saving}
+              onClick={() => {
+                setKey("");
+                setJson('""');
+              }}
+            >
+              Clear
+            </Button>
+          ) : null}
+        </div>
+        {message ? (
+          <p className="hint" role="status">
+            {message}
+          </p>
+        ) : null}
+      </Card>
+
+      <Card title="Unsigned sample preview" style={{ marginTop: 14 }}>
+        <p className="hint">
+          This sample uses the account&apos;s current metadata and is not signed or accepted as an
+          access token. Changes appear in tokens CSAG issues after the account signs in again.
+        </p>
+        <Button size="small" onClick={() => setPreviewOpen((open) => !open)}>
+          {previewOpen ? "Hide preview" : "Preview sample token"}
+        </Button>
+        {previewOpen ? (
+          <pre className="drawer-json" style={{ marginTop: 10, overflowWrap: "anywhere" }}>
+            {preview}
+          </pre>
+        ) : null}
+      </Card>
+    </>
+  );
+}
+
+function base64Url(value: unknown): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 /** One `dt`/`dd` pair, so the list above reads as data rather than as layout. */
@@ -270,7 +518,10 @@ function ActivityRow({ event }: { event: AuditEvent }) {
   return (
     <div className="activity-row">
       <div className="activity-head">
-        <span className="audit-event">{event.type}</span>
+        <span className="audit-event-cell">
+          <span className={`audit-dot ${auditEventTone(event.type)}`} aria-hidden="true" />
+          <span className="audit-event">{event.type}</span>
+        </span>
         <span className="activity-when">{formatInstant(event.created_at)}</span>
       </div>
       {event.ip === undefined && entries.length === 0 ? null : (

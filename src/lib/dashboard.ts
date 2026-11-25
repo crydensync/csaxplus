@@ -16,9 +16,12 @@
 export const SQLITE_ADMIN_DETAIL =
   "This deployment runs the API on SQLite, and every admin route is Postgres-only there. The console's screens need a deployment with DATABASE_URL set.";
 
-/** Shown in place of the digest when the API reports no digest schedule. */
+/** Stable API response code for the SQLite deployment state. */
+export const NOT_IMPLEMENTED_ON_SQLITE = "not_implemented_on_sqlite";
+
+/** Shown when the API has no digest history store wired. */
 export const DIGEST_NOT_SCHEDULED_DETAIL =
-  "No digest schedule is configured on this deployment, so none has ever been stored. Set DIGEST_INTERVAL_HOURS on the API to have one written regularly.";
+  "This API has no digest history store configured. On a CSAG build with weekly digest support, enable a schedule in Digest settings to start recording runs.";
 
 /** Shown when a digest schedule exists but has not produced a run yet. */
 export const DIGEST_NONE_STORED_DETAIL =

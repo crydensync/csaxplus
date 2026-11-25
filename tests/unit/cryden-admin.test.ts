@@ -4,18 +4,38 @@ import {
   DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
   DIGEST_HISTORY_PATH,
+  DIGEST_SETTINGS_PATH,
+  ADMIN_AI_LOGS_PATH,
+  ADMIN_AI_ANOMALIES_PATH,
+  ADMIN_AI_AUDIT_PATH,
+  ADMIN_AI_ASK_PATH,
   HASH_MIGRATION_PATH,
   MFA_ADOPTION_PATH,
   OAUTH_PROVIDERS_PATH,
   USERS_PATH,
   fetchDigestHistory,
+  fetchDigestSchedule,
+  saveDigestSchedule,
   fetchHashMigration,
   fetchMfaAdoption,
   fetchOAuthProviders,
   fetchUserDetail,
   fetchUserMetadata,
   fetchUsers,
+  beginOperatorStepUp,
+  finishOperatorStepUp,
+  changeOperatorRole,
+  removeOperator,
+  summarizeAdminLogs,
+  scanAdminAnomalies,
+  queryAdminAudit,
+  askAdminAI,
   testOAuthProvider,
+  LLM_PROVIDER_PATH,
+  fetchLLMModels,
+  fetchLLMUsage,
+  saveLLMProvider,
+  testLLMProvider,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
 import { resetConfigCache } from "@/server/config/index";
@@ -55,7 +75,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-type Seen = { path: string; search: string; method?: string; authorization: string | null };
+type Seen = {
+  path: string;
+  search: string;
+  method?: string;
+  body?: BodyInit | null;
+  authorization: string | null;
+  operatorGrant?: string | null;
+};
 
 /** Records the requests the console made, and answers each with `handler`'s reply. */
 function stubApi(handler: () => Response): Seen[] {
@@ -67,7 +94,9 @@ function stubApi(handler: () => Response): Seen[] {
       path: url.pathname,
       search: url.search,
       method: init?.method,
+      body: init?.body,
       authorization: new Headers(init?.headers).get("authorization"),
+      operatorGrant: new Headers(init?.headers).get("X-CSAG-Operator-Grant"),
     });
     return handler();
   });
@@ -495,6 +524,42 @@ describe("reading the digest history", () => {
   });
 });
 
+describe("digest schedule settings", () => {
+  const schedule = {
+    enabled: true,
+    day_of_week: "friday" as const,
+    time: "16:30",
+    timezone: "Africa/Casablanca",
+    recipients: ["security@example.com"],
+    delivery_enabled: false,
+    delivery_available: false,
+  };
+
+  it("reads persisted schedule and sender availability", async () => {
+    const seen = stubApi(() => jsonResponse({ data: schedule }));
+
+    await expect(fetchDigestSchedule({ token: TOKEN })).resolves.toEqual(schedule);
+    expect(seen[0]?.path).toBe(DIGEST_SETTINGS_PATH);
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("saves schedule fields without trusting client-supplied sender availability", async () => {
+    const seen = stubApi(() => jsonResponse({ data: schedule }));
+    const { delivery_available: _readOnly, ...input } = schedule;
+
+    await expect(saveDigestSchedule({ token: TOKEN, settings: input })).resolves.toEqual(schedule);
+    expect(seen[0]?.path).toBe(DIGEST_SETTINGS_PATH);
+    expect(seen[0]?.method).toBe("PUT");
+    expect(seen[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(seen[0]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("refuses a response that names an unknown timezone-independent schedule field", async () => {
+    stubApi(() => jsonResponse({ data: { ...schedule, delivery_available: "false" } }));
+    await expect(fetchDigestSchedule({ token: TOKEN })).rejects.toThrow(DIGEST_SETTINGS_PATH);
+  });
+});
+
 describe("reading the OAuth provider list", () => {
   it("asks for the provider list without probing anything, and sends the operator's token", async () => {
     const seen = stubApi(() => jsonResponse({ data: A_PROVIDER_LIST }));
@@ -577,6 +642,219 @@ describe("testing one OAuth provider", () => {
 
     await expect(testOAuthProvider({ token: TOKEN, provider: "google" })).rejects.toThrow(
       "/v1/admin/oauth/google/test",
+    );
+  });
+});
+
+describe("operator mutation requests", () => {
+  it("unwraps the API WebAuthn options and retains the ceremony token server side", async () => {
+    const seen = stubApi(() =>
+      jsonResponse({
+        data: {
+          public_key: {
+            publicKey: {
+              challenge: "challenge",
+              rpId: "localhost",
+              userVerification: "required",
+            },
+          },
+          ceremony_token: "c".repeat(40),
+        },
+      }),
+    );
+    const offer = await beginOperatorStepUp({ token: TOKEN, purpose: "operator_role_change" });
+    expect(offer.public_key).toEqual({
+      challenge: "challenge",
+      rpId: "localhost",
+      userVerification: "required",
+    });
+    expect(seen[0]?.path).toBe("/v1/admin/operators/step-up/begin");
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({ purpose: "operator_role_change" });
+  });
+
+  it("forwards an assertion and sends a one-use grant only on operator writes", async () => {
+    const assertion = { id: "credential" };
+    let seen = stubApi(() => jsonResponse({ data: { grant: "g".repeat(40) } }));
+    await expect(
+      finishOperatorStepUp({
+        token: TOKEN,
+        purpose: "operator_remove",
+        ceremonyToken: "c".repeat(40),
+        credential: assertion,
+      }),
+    ).resolves.toBe("g".repeat(40));
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({
+      purpose: "operator_remove",
+      ceremony_token: "c".repeat(40),
+      credential: assertion,
+    });
+
+    const target = "01a1d782-0635-7e41-bd60-50e1cfef5fc8";
+    seen = stubApi(() => jsonResponse({ data: { updated: true } }));
+    await changeOperatorRole({
+      token: TOKEN,
+      grant: "g".repeat(40),
+      userID: target,
+      role: "viewer",
+    });
+    expect(seen[0]?.operatorGrant).toBe("g".repeat(40));
+    expect(JSON.parse(String(seen[0]?.body))).toEqual({ role: "viewer" });
+
+    seen = stubApi(() => jsonResponse({ data: { removed: true } }));
+    await removeOperator({ token: TOKEN, grant: "g".repeat(40), userID: target });
+    expect(seen[0]?.path).toBe(`/v1/admin/operators/${target}`);
+    expect(seen[0]?.operatorGrant).toBe("g".repeat(40));
+  });
+});
+
+describe("admin AI modes", () => {
+  it("calls each read-only mode with its endpoint and validates the returned citation", async () => {
+    const replies: unknown[] = [
+      { data: { answer: "No repeated errors.", source_entity: "shipped_logs", row_count: 2 } },
+      {
+        data: {
+          answer: "One flagged event.",
+          source_entity: "anomalies",
+          row_count: 1,
+          since: "24h",
+        },
+      },
+      { data: { entity: "audit_events", columns: ["type"], rows: [["login"]], row_count: 1 } },
+      { data: { answer: "Three users matched.", source_entity: "users", row_count: 3 } },
+    ];
+    const seen: Seen[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      seen.push({
+        path: url.pathname,
+        search: url.search,
+        method: init?.method,
+        body: init?.body,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      return jsonResponse(replies.shift());
+    });
+
+    await expect(summarizeAdminLogs(TOKEN)).resolves.toMatchObject({
+      source_entity: "shipped_logs",
+      row_count: 2,
+    });
+    await expect(scanAdminAnomalies(TOKEN, "24h")).resolves.toMatchObject({
+      source_entity: "anomalies",
+      since: "24h",
+    });
+    await expect(
+      queryAdminAudit({ token: TOKEN, question: "recent logins" }),
+    ).resolves.toMatchObject({ entity: "audit_events" });
+    await expect(
+      askAdminAI({ token: TOKEN, question: "who has locked accounts?" }),
+    ).resolves.toMatchObject({ source_entity: "users" });
+
+    expect(seen.map((item) => item.path)).toEqual([
+      ADMIN_AI_LOGS_PATH,
+      ADMIN_AI_ANOMALIES_PATH,
+      ADMIN_AI_AUDIT_PATH,
+      ADMIN_AI_ASK_PATH,
+    ]);
+    expect(
+      seen.every((item) => item.method === "POST" && item.authorization === `Bearer ${TOKEN}`),
+    ).toBe(true);
+    expect(seen.map((item) => item.body)).toEqual([
+      JSON.stringify({}),
+      JSON.stringify({ since: "24h" }),
+      JSON.stringify({ question: "recent logins" }),
+      JSON.stringify({ question: "who has locked accounts?" }),
+    ]);
+  });
+});
+
+describe("LLM provider operations", () => {
+  const input = {
+    kind: "openai-compatible" as const,
+    model: "model-x",
+    api_key: "provider-secret",
+    base_url: "https://provider.example/v1",
+    max_tokens: 2048,
+    temperature: 0.2,
+    rpm: 60,
+  };
+
+  it("saves settings and accepts only a redacted response", async () => {
+    const seen = stubApi(() =>
+      jsonResponse({
+        data: {
+          kind: input.kind,
+          model: input.model,
+          base_url: input.base_url,
+          max_tokens: input.max_tokens,
+          temperature: input.temperature,
+          rpm: input.rpm,
+          api_key_set: true,
+          configured: true,
+        },
+      }),
+    );
+    await expect(saveLLMProvider({ token: TOKEN, input })).resolves.toMatchObject({
+      configured: true,
+      api_key_set: true,
+    });
+    expect(seen[0]).toMatchObject({
+      path: LLM_PROVIDER_PATH,
+      method: "PUT",
+      authorization: `Bearer ${TOKEN}`,
+      body: JSON.stringify(input),
+    });
+  });
+
+  it("tests, discovers models, and reads usage from their CSAG endpoints", async () => {
+    const seen: Seen[] = [];
+    const replies: unknown[] = [
+      { data: { status: "ok", kind: input.kind, model: input.model } },
+      { data: { models: ["model-x", "model-y"] } },
+      {
+        data: {
+          scope: "since_process_start",
+          providers: [
+            {
+              kind: input.kind,
+              model: input.model,
+              requests: 4,
+              succeeded: 3,
+              failed: 1,
+              rate_limited: 0,
+              average_ms: 120,
+            },
+          ],
+        },
+      },
+    ];
+    vi.stubGlobal("fetch", async (url: RequestInfo | URL, init?: RequestInit) => {
+      const parsed = new URL(String(url));
+      seen.push({
+        path: parsed.pathname,
+        search: parsed.search,
+        method: init?.method,
+        body: init?.body,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      return jsonResponse(replies.shift());
+    });
+
+    await expect(testLLMProvider({ token: TOKEN, input })).resolves.toMatchObject({ status: "ok" });
+    await expect(
+      fetchLLMModels({ token: TOKEN, api_key: input.api_key, base_url: input.base_url }),
+    ).resolves.toEqual(["model-x", "model-y"]);
+    await expect(fetchLLMUsage({ token: TOKEN })).resolves.toMatchObject({
+      scope: "since_process_start",
+    });
+    expect(seen.map((request) => request.path)).toEqual([
+      `${LLM_PROVIDER_PATH}/test`,
+      `${LLM_PROVIDER_PATH}/models`,
+      `${LLM_PROVIDER_PATH}/usage`,
+    ]);
+    expect(seen.every((request) => request.authorization === `Bearer ${TOKEN}`)).toBe(true);
+    expect(seen[1]?.body).toBe(
+      JSON.stringify({ api_key: input.api_key, base_url: input.base_url }),
     );
   });
 });

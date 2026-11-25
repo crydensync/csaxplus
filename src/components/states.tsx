@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { NOT_IMPLEMENTED_ON_SQLITE, SQLITE_ADMIN_DETAIL } from "@/lib/dashboard";
+
 import { IconAlertTriangle, IconRefresh } from "./icons";
 
 export type EmptyStateProps = {
@@ -43,6 +45,16 @@ export function ErrorState({
   retryLabel = "Try again",
   bare = false,
 }: ErrorStateProps) {
+  if (code === NOT_IMPLEMENTED_ON_SQLITE) {
+    return (
+      <EmptyState
+        bare={bare}
+        title="This console section requires PostgreSQL"
+        description={SQLITE_ADMIN_DETAIL}
+      />
+    );
+  }
+
   return (
     <div className={bare ? "state-block error bare" : "state-block error"} role="alert">
       <IconAlertTriangle />

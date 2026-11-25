@@ -122,8 +122,9 @@ describe("reading an access token", () => {
     });
   });
 
-  it("reads anything that is not the literal admin role as a viewer", () => {
-    // The API recognises one value; every other account is a console viewer.
+  it("reads owner and admin roles and treats unknown roles as viewers", () => {
+    expect(decodeAccessToken(accessToken({ sub: "u", role: "owner" }))?.role).toBe("owner");
+    expect(decodeAccessToken(accessToken({ sub: "u", role: "admin" }))?.role).toBe("admin");
     expect(decodeAccessToken(accessToken({ sub: "u", role: "superadmin" }))?.role).toBe("viewer");
     expect(decodeAccessToken(accessToken({ sub: "u", role: null }))?.role).toBe("viewer");
     expect(decodeAccessToken(accessToken({ sub: "u" }))?.role).toBe("viewer");

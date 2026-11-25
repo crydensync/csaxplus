@@ -277,7 +277,7 @@ start one.
 ## D10. The console reads the API's one role bit, and leaves `owner` unreachable
 
 **Date:** 2026-10-04
-**Status:** accepted, pending an API endpoint
+**Status:** superseded by D24
 
 The console has three roles, `owner`, `admin` and `viewer` (BUILD_NOTE 5). The
 API has one: a row in `operators(user_id, role)` whose only meaningful value is
@@ -285,15 +285,10 @@ the literal `"admin"`, which is what `RequireAdmin` tests for; an ordinary user
 carries no `role` claim at all. So the console maps `role === "admin"` to
 `admin` and everything else, including a missing claim, to `viewer`.
 
-`owner` is not reachable yet, and no code path can produce it. It is meant for
-whoever may manage other operators, and the endpoint that would answer that
-question, `GET /v1/admin/operators`, does not exist in the API. The alternative
-was a console-side list of owner ids in configuration, which would be a second
-source of truth for a fact the API owns, and would disagree with the API from the
-moment a role changed there. Mapping one bit to two roles and leaving the third
-unreachable keeps the API the only authority, at the cost of a role that exists
-in the type system and in no session. Recorded in BACKEND_GAPS.md as the
-endpoint that would make it reachable.
+At the time, `owner` was not reachable and `GET /v1/admin/operators` did not
+exist. The decision against a console-side list of owner ids remains valid: the
+API owns roles and reports the live roster. D25 records the API-backed owner role
+and the step-up boundary for operator management.
 
 The console does not verify the access token's signature and holds no signing
 key: `JWT_SECRET` is the API's, and BUILD_NOTE 11.1 forbids the console holding
@@ -590,10 +585,11 @@ the page. That hop is also the reason the four states can be tested at all: the 
 cannot intercept a server-side API call, and it can intercept this one.
 
 **Four sections, not one result.** `dashboardOverview` returns a `Section<T>` per report instead of
-throwing or returning a single value. A deployment can have accounts and no digest schedule
-(`DIGEST_INTERVAL_HOURS` unset means the API's digest store is not wired, and the route answers 404
-`not_configured`), or a working digest and a hasher that a future API version renames out from under
-the console. One combined failure would blank three reports that arrived.
+throwing or returning a single value. A deployment can have accounts and no digest schedule, or a
+working digest and a hasher that a future API version renames out from under the console. One
+combined failure would blank three reports that arrived. Digest storage is now wired independently
+of the legacy interval environment variable; the weekly schedule is configured through the admin
+settings endpoint.
 
 **The state is chosen by the API's code, not by the status.** `not_implemented_on_sqlite` becomes
 `unavailable`, `not_operator` becomes `forbidden`, `not_configured` becomes `empty` with a sentence
@@ -777,3 +773,74 @@ still the value its mutation origin check compares against and renaming it would
 Two consequences to state plainly. Migration `0002` drops any passkey enrolled through the console
 during step 1.2b testing, and a local `.env` may still carry the two removed keys, which are ignored
 rather than fatal. Both are one-time and neither affects the API's own data.
+
+## D23. Config Advisor suggestions do not invent setting values
+
+**Date:** 2026-11-13
+**Status:** accepted
+
+CSAG's `/v1/admin/config-tuning` returns evidence and prose for five rule families. Several
+suggestions name alternatives such as raising a threshold or shortening a duration, without
+choosing a value. Others describe an integration choice, such as replacing the in-memory limiter
+with Redis, or recommend a breach checker for which CSAG ships no implementation. The report
+therefore cannot safely be translated into a single field and value by parsing its wording.
+
+The settings those suggestions concern are read from process configuration when CSAG starts.
+There are no admin write endpoints or console controls for most of them. Prefill will only be added
+when CSAG provides an explicit typed proposal and the console has a real owner-managed control for
+that setting. It will populate a draft for review; it will never apply the setting. Until both
+parts exist, the Config Advisor remains a read-only evidence and recommendation screen.
+
+## D24. AI provider choice is protocol based
+
+**Date:** 2026-11-13
+**Status:** accepted
+
+The provider form offers the existing Anthropic adapter and a generic OpenAI-compatible chat
+completions adapter. The latter takes a base URL, API key and model id, so hosted and self-hosted
+providers that implement that protocol need no vendor-specific settings or branch. A different
+wire protocol still needs an adapter. CSAG keeps the API key encrypted and never returns it to the
+console. Model discovery, a real test call and in-process usage counters are server-side operations.
+Usage counters report request outcomes and latency, not token billing data. This step keeps one
+active endpoint and credential, so it does not add automatic fallback to a second model or vendor.
+Failover requires a separately configured target and will be a later explicit setting.
+
+The console saves settings only from a human guarded action. AI features remain read-only and hold
+no reference to these settings mutation handlers. The database choice remains PostgreSQL because
+CSAG's only query store is Postgres; database writes in the console wait for the step-up requirement.
+
+## D25. Operator management uses the API roster and API-enforced step-up
+
+**Date:** 2026-11-14
+**Status:** accepted
+
+The console does not keep a second operator or owner list. CSAG's `operator.Store` is the source of
+roles, and the admin guard checks the live stored role as well as the token, so a role change or
+revocation takes effect immediately for admin requests. `GET /v1/admin/operators` and the console
+screen expose that roster.
+
+Role changes and removal now require a fresh WebAuthn assertion verified by CSAG with user
+verification. The API stores only hashes of short-lived challenge and grant tokens; grants are
+single-use and bound to the owner, exact access token and action. The console keeps those opaque
+values inside its encrypted HttpOnly session. Owner-only routes expose only active session
+metadata and passkey labels, timestamps and credential IDs. Revocation and passkey removal each
+consume a purpose-bound grant; CSAG rejects removal of the final passkey. Invitation sending
+remains future work because email delivery belongs to the consuming application. The existing
+account-owned passkey contract is unchanged.
+
+## D26. The secrets vault belongs to the console and uses CSAG step-up grants
+
+**Date:** 2026-11-14
+**Status:** accepted
+
+Vault values live only in the console store, encrypted with AES-256-GCM under the deployment's
+`CSAX_VAULT_KEY`; environment and mounted-file entries remain read-only. The browser receives
+masked metadata on list requests. Reveal, create, edit and delete each require a fresh passkey
+assertion verified by CSAG. CSAG stores only the one-use grant hash and consumes that grant before
+the console handles the local secret. The API never receives the secret value.
+
+The reveal response is `no-store`; the browser clears its display after 20 seconds or when hidden.
+That timer is a screen-cleanup measure, not a way to revoke a value already delivered to the person.
+The key-rotation command re-encrypts every vault row and its audit event in one database transaction.
+All console processes must be stopped during rotation and restarted only after the new key is
+configured.

@@ -56,45 +56,102 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       plus a follow-up commit (b3d5e81): the table's provider cells carry the prototype's
       brand marks, which had been ported into `brand-icons.tsx` but never wired in
 - [x] 1.4 MFA & Passkeys: real adoption stats; force-disable requires re-verification
-- [ ] 1.5 Email & Magic Link: real delivery stats, SSR + sanitised template preview, send test
-- [ ] 1.6 Password Policy: read/write real policy, stable violation codes, hash-migration bar
+- [x] 1.5 Email & Magic Link: the console reads CSAG's email-event stats and server-rendered
+      template samples. The host product provides the `EmailSender` and `MagicLinkSender` that
+      deliver real messages; CSAG's standalone sender is a development stand-in. A local
+      consuming-app demo now relays CSAG magic-link and verification messages through Resend with
+      its key held only by the consumer, and completes the magic-link callback against CSAG.
+      Delivery reporting and product-sender testing stay with the host integration (see
+      BACKEND_GAPS 1 and 2.7). No provider key belongs in this console.
+- [x] 1.6 Password Policy: the console shows hash migration and reads/updates the active policy
+      through CSAG's persistent admin endpoints. Signup, account password changes and
+      admin-created accounts enforce the live policy. The API implementation is on the local
+      `feat/console-admin-endpoints` branch; see BACKEND_GAPS 1 and 2.4 for the updated contract.
 - [ ] 1.7 Tag v0.1.0 and write the tier summary below
 
 ## Tier 2 - Security (tag v0.2.0)
 
-- [ ] 2.1 Sessions: real list, named devices, revoke one / revoke all, sidebar badge from real count
-- [ ] 2.2 Anomalies: six signal codes + credential stuffing, "Mark reviewed" persists a note
-- [ ] 2.3 Audit Log: filters (event, user, range), cursor pagination, CSV export (admin+)
+- [x] 2.1 Sessions: paginated all-account list with named devices, revoke one / revoke all, and
+      sidebar badge from the live count. CSAG routes are on the local feature branch; global revoke
+      also clears the acting operator's console cookie.
+- [x] 2.2 Anomalies: real flagged login and credential-stuffing events, signal codes, status filters,
+      and persisted review decisions with an optional note. Reviews do not trigger account actions.
+- [x] 2.3 Audit Log: server-side event, user and date filters, cursor pagination, and filtered CSV export. The API route is on the local CSAG feature branch.
 - [ ] 2.4 Tag v0.2.0 and write the tier summary below
 
 ## Tier 3 - Developer (tag v0.3.0)
 
-- [ ] 3.1 API Keys: create (shown once, hash stored), list with prefix + last used, revoke
-- [ ] 3.2 Webhooks: CRUD, signing secret shown once, test delivery, delivery log
-- [ ] 3.3 JWT Claims: editor refusing the seven registered claims, real preview token
-- [ ] 3.4 Cloud Logging: provider toggles, vault-held credentials, real shipped events
+- [x] 3.1 API Keys: create a user-owned key shown once, list its prefix, expiry and last-used time, and revoke with confirmation. Creation sends no invented scopes.
+- [x] 3.2 Webhooks: one runtime destination, encrypted signing secret, queued test delivery, and history are managed through CSAG. The console protects endpoint changes and test delivery with its standard CSRF and same-origin guard. Multi-endpoint CRUD remains.
+- [x] 3.3 JWT Claims: global source mappings, reserved-name validation, and CSAG-computed per-user claim preview. Preview shows additional claims and is intentionally unsigned.
+- [x] 3.4 Cloud Logging: redacted local archive, runtime enable/pause, severity threshold, and history are wired to CSAG. External vendor connectors remain outside this API.
 - [ ] 3.5 Tag v0.3.0 and write the tier summary below
 
 ## Tier 4 - AI admin, read-only (tag v0.4.0)
 
-- [ ] 4.1 `src/server/ai/`: allowlisted read-only query templates on `READONLY_DATABASE_URL` + test
-- [ ] 4.2 AI Assistant modes (query, logs, anomalies scan, audit, ask) with citation chips
-- [ ] 4.3 Weekly Digest: schedule, recipients, delivery, history
-- [ ] 4.4 Support Assistant: scoped lookup, escalation, ticketing interface
-- [ ] 4.5 Config Advisor: 30-day evidence, suggestions pre-fill a field, human saves
-- [ ] 4.6 Ask-AI Widget: embeddable script, verified token, unconditional identity substitution,
-      adversarial test suite
-- [ ] 4.7 LLM Provider + Database Provider: real abstraction, usage counters, connection test
+- [x] 4.1 Admin questions are converted to typed query intents and validated against cryden's allowlist before reaching the configured read-only database.
+- [x] 4.2 The AI page offers self-scoped Ask-AI, validated admin queries, redacted log summaries,
+      bounded anomaly scans, audit-only queries, and composed admin answers. CSAG generates each
+      citation from the source rows and keeps all operations read-only. The new API routes are on
+      the CSAG feature branch and can be used by building and running that branch locally; no
+      merge to `main` is needed for local use.
+- [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
+      scheduled reports, and exposes the settings through the console BFF. Delivery is available
+      only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
+      and refuses delivery enablement.
+- [x] 4.4 Support Assistant: exact-email login diagnosis is wired to CSAG and can be copied into
+      the operator's existing workflow. Integrated escalation and ticketing need API support.
+- [x] 4.5 Config Advisor: evidence-backed recommendations are wired to CSAG. Its five rule
+      families return prose without exact proposed values, and most targets have no runtime admin
+      setting path or console control. Prefill must wait for both contracts; recommendations remain
+      read-only (D23).
+- [x] 4.6 Ask-AI Widget: the console serves an embeddable script and generated install snippet;
+      the host provides the signed-in user's token, the browser sends only the question, and CSAG
+      derives identity from the verified token, enforces the configured origin, and limits each
+      verified user to 10 questions per minute by default. Browser rendering, token handoff,
+      identity injection, and limiter behavior are covered by tests.
+- [x] 4.7 LLM Provider + Database Provider: the LLM path is implemented and verified locally.
+      CSAG supports Anthropic plus a generic OpenAI-compatible chat-completions adapter configured
+      by base URL, API key and model. The console has guarded test, model-list and save operations
+      plus process-lifetime usage stats; credentials remain redacted and encrypted by CSAG. Saved
+      provider credentials can now be tested and used for model discovery without returning them to
+      the browser. The Database Provider page can save a separate PostgreSQL DSN only after CSAG
+      verifies that its role cannot write. It may point to the local auth database, but needs a
+      read-only database role; `DATABASE_URL` is not reused automatically. Console typecheck, lint,
+      formatting, all 349 console tests, the production build, focused CSAG handler tests, and a
+      CSAG executable build pass for these changes.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
 - [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
-- [ ] 5.2 Secrets: providers (env/file/vault), AES-256-GCM vault, masked list, step-up reveal,
-      key rotation, audit
-- [ ] 5.3 Config view (source of each setting, redacted)
-- [ ] 5.4 SQLite mode: honest 501 state instead of broken screens
+- In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
+  step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
+  action; final-owner protection remains in the operator store. The console keeps ceremony state
+-  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
+  lists, session revocation, and passkey removal are implemented and verified, including
+  target-operator checks and the final-passkey guard. Invitation sending remains unavailable
+  because CSAG has no invitation contract or consuming-app sender integration, so Tier 5.1 stays
+  in progress.
+- [x] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
+      passkey step-up, 20-second reveal masking, audited mutations/copy, and a key-rotation command.
+      Implemented and verified: all 349 console tests, typecheck, lint, and production build pass;
+      all CSAG tests pass, and the local CSAG executable builds successfully. Secret provider values
+      are returned only after the API consumes a one-use passkey grant.
+- [x] 5.3 Config view (source of each setting, redacted). A server-rendered table reports
+      environment, environment-file, config-file, built-in-default, or unset provenance and never
+      includes values. It explicitly distinguishes the console's own store and optional AI query
+      connection from CSAG's authentication database.
+- [x] 5.4 SQLite mode: the documented `not_implemented_on_sqlite` API response is rendered as an
+      informational deployment state across console error surfaces, with no generic failure
+      alert or retry action. The existing dashboard and MFA section states keep their matching
+      deployment-level explanation.
 - [ ] 5.5 Hardening: CSP, security headers, rate limiting, lockout, /healthz, /readyz, JSON logs
+- In progress: nonce-based CSP and baseline browser security headers are applied by middleware;
+  `/healthz` reports process liveness and `/readyz` checks the console store without leaking
+  connection details. Password login and passkey step-up continue to use CSAG's upstream rate
+  limits rather than a duplicate console limiter. Console boot events now use structured JSON
+  stdout logs filtered by `LOG_LEVEL`. Dedicated repeated step-up lockout remains to be built.
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
 - [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete
@@ -212,6 +269,11 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   topbar, so the tag cannot be forgotten and cannot be a constant: it is a server component that
   asks the API on every render, with a 3 s timeout rather than the transport's 10 s. There is
   deliberately no cache, because a cached tag describes a connection that may already be gone.
+- **Per-user claim metadata (step 1.2).** The Users drawer now reads and edits one account's
+  metadata through CSAG's existing per-key routes, displays the API's reserved claim names, and
+  previews an unsigned sample built from that account's current subject, email and metadata. It is
+  not the global JWT source-mapping/settings editor in step 3.3; that editor now maps user fields and
+  metadata through CSAG's runtime claims provider.
 - `/v1/health` answers `{"status": "ok"}` or 503 `db_unreachable`, and nothing else. So the tag
   can say `api-client` and cannot repeat the prototype's "connected, production db". BACKEND_GAPS
   4.5 and 4.6 (the handler's documented nil-DB behaviour is not implemented: it panics).
@@ -301,10 +363,10 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
   `error` collapses only when all four sentences are identical, since four different failures are
   four different things to fix.
 - The API's `not_configured` code is shared by every feature whose store was never wired, so the
-  sentence for it is supplied per section: an unconfigured digest says to set
-  `DIGEST_INTERVAL_HOURS`, and an unconfigured anything else says the report has no store. The
-  wording lives in `src/lib/dashboard.ts`, imported by both the server and the browser, so a
-  failure cannot be worded two ways.
+  sentence for it is supplied per section. A digest without a store points to a CSAG build with
+  weekly digest support; an unconfigured anything else says the report has no store. The wording
+  lives in `src/lib/dashboard.ts`, imported by both the server and browser, so a failure cannot be
+  worded two ways.
 - `formatInstant` formats on UTC and names the zone. These timestamps are read beside API counts and
   against logs, both of which are UTC, and one clock is also what keeps a server render and a
   browser render identical.

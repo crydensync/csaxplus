@@ -140,7 +140,7 @@ Three statuses, and they mean exactly this:
 | Design system | done | the prototype's tokens and components, ported to React |
 | Landing page | done | static, and its claims are generated from the console's own navigation |
 | Operator passkeys | done | register, list and remove at `/account`, reached from the sidebar's operator chip; the credential belongs to the operator's account at the API (`/v1/passkeys`), so it works wherever that account signs in, and removing one asks for the current password |
-| Secrets vault | planned | tier 5, step 5.2 |
+| Secrets vault | built | tier 5, step 5.2; values are encrypted in the console store and revealed only after API-verified passkey step-up |
 | Hardening and deployment | planned | tier 5, steps 5.5 and 5.6 |
 
 ### 3.2 Screens
@@ -150,28 +150,28 @@ The six sidebar groups, and all 21 screens in them.
 | Group | Screen | Status | Arrives in |
 |---|---|---|---|
 | Overview | Dashboard | done | tier 1, step 1.1 |
-| Identity | Users | partial | tier 1, step 1.2. The list, the exact-address search, the pager and the detail drawer read the API for real; the account actions need six endpoints the API does not have yet |
-| Identity | OAuth Providers | planned | tier 1, step 1.3 |
-| Identity | MFA & Passkeys | planned | tier 1, step 1.4 |
-| Identity | Email & Magic Link | planned | tier 1, step 1.5 |
-| Identity | Password Policy | planned | tier 1, step 1.6 |
-| Security | Sessions | planned | tier 2, step 2.1 |
-| Security | Anomalies | planned | tier 2, step 2.2 |
-| Security | Audit Log | planned | tier 2, step 2.3 |
-| Security | AI Assistant (read-only) | planned | tier 4, step 4.2 |
-| Developer | API Keys | planned | tier 3, step 3.1 |
-| Developer | Webhooks | planned | tier 3, step 3.2 |
-| Developer | JWT Claims | planned | tier 3, step 3.3 |
-| Developer | Cloud Logging | planned | tier 3, step 3.4 |
-| AI Admin | Weekly Digest | planned | tier 4, step 4.3 |
-| AI Admin | Support Assistant (read-only) | planned | tier 4, step 4.4 |
-| AI Admin | Config Advisor (read-only) | planned | tier 4, step 4.5 |
-| AI Admin | Ask-AI Widget (read-only) | planned | tier 4, step 4.6 |
-| Configuration | LLM Provider | planned | tier 4, step 4.7 |
-| Configuration | Database Provider | planned | tier 4, step 4.7 |
+| Identity | Users | partial | tier 1, step 1.2. The detail drawer edits per-user JWT metadata; linked-provider actions need a linked-identity list endpoint |
+| Identity | OAuth Providers | done | tier 1, step 1.3 |
+| Identity | MFA & Passkeys | done | tier 1, step 1.4 |
+| Identity | Email & Magic Link | partial | tier 1, step 1.5; CSAG event counts and API template samples only. Actual delivery belongs to the host product |
+| Identity | Password Policy | done | tier 1, step 1.6; active policy is persisted and enforced by CSAG |
+| Security | Sessions | built locally | tier 2, step 2.1; all-account session admin endpoints are on the local CSAG feature branch |
+| Security | Anomalies | done | tier 2, step 2.2; flagged events and saved review notes come from CSAG |
+| Security | Audit Log | built locally | tier 2, step 2.3; cursor API is on the local CSAG feature branch |
+| Security | AI Assistant (read-only) | partial | tier 4, step 4.2; self-scoped Ask-AI and admin read-only queries are live; log, anomaly, audit, and composed-answer modes remain |
+| Developer | API Keys | done | tier 3, step 3.1; user-owned keys are created, listed and revoked through CSAG |
+| Developer | Webhooks | partial | tier 3, step 3.2; one runtime destination, encrypted secret, test delivery, and history are managed in CSAG; multi-endpoint support remains |
+| Developer | JWT Claims | built locally | tier 3, step 3.3; global source mappings and account-specific claim preview are backed by CSAG |
+| Developer | Cloud Logging | built locally | tier 3, step 3.4; runtime archive toggle and severity threshold are live; redaction mode remains CSAG deployment configuration and no external vendor connector is included |
+| AI Admin | Weekly Digest | partial | tier 4, step 4.3; schedules and stored reports are live; email delivery needs a host-provided sender |
+| AI Admin | Support Assistant (read-only) | partial | tier 4, step 4.4; login diagnosis can be copied for manual escalation; integrated ticketing needs API support |
+| AI Admin | Config Advisor (read-only) | partial | tier 4, step 4.5; evidence and prose recommendations are live; safe prefill needs typed CSAG proposals and real owner-managed settings controls |
+| AI Admin | Ask-AI Widget (read-only) | built locally | tier 4, step 4.6; the console serves an embeddable script and generated install snippet, with token-derived identity and a per-user API limit |
+| Configuration | LLM Provider | built locally | tier 4, step 4.7; Anthropic and generic OpenAI-compatible settings, model discovery, connection test and process-lifetime usage stats are on the CSAG feature branch |
+| Configuration | Database Provider | built locally | tier 4, step 4.7; PostgreSQL DSN is stored by CSAG after it verifies the role is read-only; use a separate read-only role, even when querying the local auth database |
 | Configuration | Settings & Secrets | planned | tier 5, step 5.2 |
 
-Several of those need endpoints the API does not have yet. Every one is listed in
+Several of those still need endpoints the API does not have yet. Every one is listed in
 [docs/build/BACKEND_GAPS.md](docs/build/BACKEND_GAPS.md) with the evidence for it, and a screen
 whose endpoint is missing shows a specific "not available in this deployment" state rather than an
 empty table.
@@ -297,10 +297,6 @@ naming the key and the reason and never the value.
 | `CSAX_SESSION_SECRET` | yes | `CSAX_SESSION_SECRET` | none, required | **yes** |
 | `CSAX_VAULT_KEY` | yes | `CSAX_VAULT_KEY` | none, required | **yes** |
 | `WEBAUTHN_ORIGIN` | yes | `WEBAUTHN_ORIGIN` | none, required | no |
-| `RESEND_API_KEY` | yes | `RESEND_API_KEY` | none | **yes** |
-| `LLM_PROVIDER` | yes | `LLM_PROVIDER` | none | no |
-| `ANTHROPIC_API_KEY` | yes | `ANTHROPIC_API_KEY` | none | **yes** |
-| `OPENAI_API_KEY` | yes | `OPENAI_API_KEY` | none | **yes** |
 | `LOG_LEVEL` | yes | `LOG_LEVEL` | `info` | no |
 | `SKIP_AUTO_MIGRATE` | yes | `SKIP_AUTO_MIGRATE` | `0` | no |
 | `CSAX_CONFIG_FILE` | n/a | n/a | `csax.config.json` | no |
@@ -327,9 +323,7 @@ is.
   The relying party for passkeys is not here: it belongs to the API, whose own `WEBAUTHN_RP_ID` and
   `WEBAUTHN_RP_ORIGINS` decide it, because a passkey is a credential on the operator's account
   there rather than on this console.
-- **`RESEND_API_KEY`.** For the Email screen's delivery stats and test send. Optional; the Email
-  screen reports the key as absent rather than pretending.
-- **`LLM_PROVIDER`.** `anthropic`, `openai`, `azure-openai` or `openai-compatible`.
+- **LLM provider settings.** Configure them on the authenticated LLM Provider screen. CSAG stores the provider key encrypted; the console does not need vendor-specific environment variables.
 - **`LOG_LEVEL`.** `error`, `warn`, `info` or `debug`. Validated and carried today; the logger that
   consumes it arrives in step 5.5.
 - **`SKIP_AUTO_MIGRATE`.** Stops the console applying its own store migrations on boot.
@@ -390,28 +384,41 @@ design.
 
 ### 8.1 The read-only AI guarantee
 
-> **Status: the guarantee is a design rule today, and code tomorrow.** The AI layer arrives in
-> tier 4. What exists now is the rule itself, and the one place it is already visible: the landing
-> page's console map tags the four AI screens `read-only`, from a flag on the navigation entry
-> rather than from a hand-written label.
+> **Status: implemented.** The AI screens use read-only query paths, and the Ask-AI widget replaces
+> model-produced identity filters with the caller id verified from the bearer token.
 
 **No AI feature may hold a reference to any write path.** Not a method it declines to call, not a
-tool with a disabled flag: no reference at all. Concretely, when tier 4 lands:
+tool with a disabled flag: no reference at all. Concretely:
 
 - The AI layer reaches data through `READONLY_DATABASE_URL`, a SELECT-only role, and through
   allowlisted query templates rather than generated SQL.
 - It gets its own API client, a different module from the one the console's own screens use, and
   the mutation methods are **absent** from it rather than present and discouraged.
-- The LLM Provider screen's write toggle is locked off and stays locked off.
+- The LLM Provider screen's human settings form is guarded by the normal role, CSRF and origin checks. AI features have no reference to its mutation paths and cannot save settings themselves.
 - The Ask-AI widget **discards any identity filter the model produces and substitutes the verified
   user id from the caller's token, unconditionally.** A model that is asked about one user cannot
   answer about another, because its output never carries the filter in the first place.
-- The invariant is held by tests, including an adversarial suite that tries to talk the widget into
-  acting on another account. Step 4.6 is where that suite is written.
+- The invariant is held by API and cryden tests, including adversarial prompts that try to make the
+  widget act on another account. The browser widget sends only the question and renders the answer
+  as text.
 
 The read-only flag lives on the navigation entry (`NavItem.readOnly` in `src/lib/nav.ts`) so that
-the tag has one source and cannot be added to a screen that is not read-only, or forgotten on one
-that is. The sidebar will draw it when the AI screens are built.
+the tag has one source and is not forgotten on an AI screen.
+
+### Embedding the Ask-AI widget
+
+The Ask-AI Widget screen generates an install snippet when CSAG has enabled and configured the
+widget. It loads `csax-widget.js` and its stylesheet from the console deployment. The embedding
+application must define `window.csaxGetUserAccessToken` to return the current signed-in end user's
+access token. The snippet contains no token or user id; each request sends only `{ question }` to
+`POST /v1/ask-ai`, with the token in the Bearer header. CSAG verifies that token and derives the
+user identity server-side.
+
+Add each exact embedding origin to both CSAG's `allowed_origins` widget setting and the API's
+`CORS_ORIGINS`. A site's Content Security Policy must allow the console deployment in `script-src`
+and `style-src`, and the API deployment in `connect-src`. CSAG limits Ask-AI to 10 questions per
+verified user per minute by default; `ASK_AI_RATE_LIMIT` changes the count. The limit is in memory
+per API process.
 
 ### 8.2 What is logged, and what never is
 

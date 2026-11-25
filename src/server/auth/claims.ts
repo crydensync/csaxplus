@@ -15,8 +15,9 @@ import { type Role } from "./roles";
  * claims are read only to decide which console screens to show.
  */
 
-/** The one role value the API's `RequireAdmin` recognises (httpapi/middleware.go). */
+/** Role values returned by the API's operator store. */
 export const API_ADMIN_ROLE = "admin";
+export const API_OWNER_ROLE = "owner";
 
 export type AccessTokenClaims = {
   userId: string;
@@ -28,18 +29,11 @@ export type AccessTokenClaims = {
 /**
  * The console's role for an operator, from the API's single `role` claim.
  *
- * The API carries no roles beyond the literal `"admin"`: `/v1/admin/*` treats
- * every other value, and no value at all, as not-an-operator. So the console
- * reads it as one bit and maps it to two of its three roles.
- *
- * `owner` is not reachable yet. It is reserved for whoever may manage other
- * operators, and the endpoint that would say so, `GET /v1/admin/operators`, does
- * not exist. Inventing a second source of truth for it in the meantime, a
- * config list of ids, would put the answer in two places and disagree with the
- * API the moment a role changes there. Recorded in DECISIONS.md D10 and
- * BACKEND_GAPS.md.
+ * The API operator store is the authority. Admin and owner claims may use the
+ * admin read surface; only owner-specific BFF guards may manage operators.
  */
 export function consoleRoleFromClaim(claim: unknown): Role {
+  if (claim === API_OWNER_ROLE) return "owner";
   return claim === API_ADMIN_ROLE ? "admin" : "viewer";
 }
 

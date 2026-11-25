@@ -482,7 +482,7 @@ describe("the account drawer", () => {
       rows()[0]?.click();
     });
 
-    expect(text()).toContain("No metadata");
+    expect(text()).toContain("No custom claims");
     expect(document.querySelector(".drawer-json")).toBeNull();
   });
 
