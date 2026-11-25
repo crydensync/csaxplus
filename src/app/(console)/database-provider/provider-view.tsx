@@ -143,7 +143,7 @@ export function DatabaseProviderView({ csrf }: { csrf: string }) {
       ) : null}
       <Card
         title="Read-only database"
-        hint="This is the data source for AI queries. It can be on the same local PostgreSQL server as auth, but must use a separate read-only database role. CSAG verifies that role before saving."
+        hint="This is the data source for AI queries. It can share the auth PostgreSQL database, but use a separate login with SELECT only on crydensync_auth.users, sessions and audit_events. CSAG pins its queries to that schema and verifies table grants before saving."
       >
         <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
           <div>
@@ -211,8 +211,9 @@ export function DatabaseProviderView({ csrf }: { csrf: string }) {
             </label>
           </div>
           <p className="hint">
-            The auth database URL is not reused automatically. Use a PostgreSQL role with read
-            access only; CSAG rejects this save if the supplied role can write.
+            The auth database URL is not reused automatically. Use a PostgreSQL login with SELECT
+            only on the CrydenSync auth tables. CSAG ignores database TEMP privileges and rejects
+            the save if the role can modify those tables.
           </p>
           {saveFailure ? (
             <div style={{ marginTop: 12 }}>

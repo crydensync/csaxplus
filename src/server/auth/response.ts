@@ -48,6 +48,8 @@ export const ERROR_CODES = {
   loginExpired: "login_expired",
   /** The console could not reach the API at all: nothing was attempted. */
   apiUnreachable: "api_unreachable",
+  /** The API did not finish before the console's request deadline. */
+  apiTimeout: "api_timeout",
   /** The API answered, in a shape this console does not understand. */
   apiMalformed: "api_malformed",
   upstream: "upstream_error",

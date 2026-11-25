@@ -200,11 +200,13 @@ export async function finishPasskey(
   pendingToken: string,
   ceremonyToken: string,
   credential: unknown,
+  userAgent = "",
 ): Promise<ApiTokens> {
   const data = await apiRequest<unknown>({
     method: "POST",
     path: "/v1/login/passkey/finish",
     body: { pending_token: pendingToken, ceremony_token: ceremonyToken, credential },
+    userAgent,
   });
   return toTokens(data);
 }

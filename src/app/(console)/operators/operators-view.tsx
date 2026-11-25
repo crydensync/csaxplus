@@ -17,6 +17,7 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
 import { CSRF_HEADER } from "@/lib/csrf-header";
+import type { OperatorInvitation } from "@/server/cryden/admin";
 
 function isRoster(value: unknown): value is AdminOperators {
   if (
@@ -56,6 +57,60 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
   const [operatorSessions, setOperatorSessions] = useState<OperatorSessions | null>(null);
   const [operatorPasskeys, setOperatorPasskeys] = useState<OperatorPasskeys | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "viewer">("viewer");
+  const [invitation, setInvitation] = useState<OperatorInvitation | null>(null);
+  const [invitationURL, setInvitationURL] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const invite = useCallback(async () => {
+    setBusy("invite");
+    setInviteError(null);
+    setInvitation(null);
+    setInvitationURL("");
+    try {
+      const purpose = "operator_invite" as const;
+      const begin = await fetch("/api/console/operators/step-up/begin", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+        body: JSON.stringify({ purpose }),
+      });
+      const beginPayload: unknown = await begin.json().catch(() => null);
+      if (!begin.ok) throw new Error(failureFrom(beginPayload, begin.status).message);
+      const offer = dataFrom<{ public_key: PublicKeyCredentialRequestOptionsJSON }>(beginPayload);
+      if (!offer) throw new Error("CSAG returned invalid passkey options.");
+      const credential = await startAuthentication({ optionsJSON: offer.public_key });
+      const finish = await fetch("/api/console/operators/step-up/finish", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+        body: JSON.stringify({ purpose, credential }),
+      });
+      const finishPayload: unknown = await finish.json().catch(() => null);
+      if (!finish.ok) throw new Error(failureFrom(finishPayload, finish.status).message);
+      const response = await fetch("/api/console/operators/invitations", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+      const created = dataFrom<OperatorInvitation>(payload);
+      if (!created?.token) throw new Error("CSAG did not return the one-time invitation link.");
+      setInvitation(created);
+      setInvitationURL(
+        `${window.location.origin}/invite?token=${encodeURIComponent(created.token!)}`,
+      );
+      setInviteEmail("");
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Could not create the invitation.");
+    } finally {
+      setBusy(null);
+    }
+  }, [csrf, inviteEmail, inviteRole]);
 
   const read = useCallback(async () => {
     setLoading(true);
@@ -317,6 +372,79 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
 
   return (
     <div className="view anim">
+      {owner ? (
+        <Card
+          title="Invite an operator"
+          hint="Create a one-time link for an existing or future CrydenSync account."
+        >
+          <p className="hint" style={{ margin: "0 0 16px" }}>
+            A fresh passkey confirmation is required. CSAG does not send email. The recipient must
+            register in the consuming app first, then accept this link while signed in with the
+            invited email. Links expire after seven days.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "end" }}>
+            <label style={{ flex: "1 1 260px" }}>
+              Email address
+              <input
+                type="email"
+                autoComplete="email"
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+                placeholder="person@example.com"
+              />
+            </label>
+            <label>
+              Role
+              <select
+                value={inviteRole}
+                onChange={(event) => setInviteRole(event.target.value as "admin" | "viewer")}
+              >
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <Button
+              variant="primary"
+              disabled={busy !== null || !inviteEmail.trim()}
+              onClick={() => void invite()}
+            >
+              {busy === "invite" ? "Confirming…" : "Create invite link"}
+            </Button>
+          </div>
+          {inviteError ? (
+            <p className="error-text" role="alert" style={{ marginTop: 12 }}>
+              {inviteError}
+            </p>
+          ) : null}
+          {invitation ? (
+            <div style={{ marginTop: 18 }}>
+              <p role="status">
+                Invite created for {invitation.email} as {invitation.role}. Expires{" "}
+                {formatInstant(invitation.expires_at)}.
+              </p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  aria-label="One-time invitation link"
+                  readOnly
+                  value={invitationURL}
+                  style={{ flex: "1 1 320px" }}
+                />
+                <Button
+                  onClick={() =>
+                    void navigator.clipboard.writeText(invitationURL).then(() => setCopied(true))
+                  }
+                >
+                  {copied ? "Copied" : "Copy link"}
+                </Button>
+              </div>
+              <p className="hint">
+                This bearer link is shown once. Copy and deliver it securely; creating another link
+                for this email invalidates it.
+              </p>
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
       <Card
         title="Console operators"
         hint="Roles are read from CSAG on each request."
@@ -332,8 +460,8 @@ export function OperatorsView({ owner, csrf }: { owner: boolean; csrf: string })
           </p>
         ) : null}
         <p className="hint" style={{ margin: "12px 0 16px" }}>
-          {roster ? `${formatCount(roster.total)} operators` : ""}. Access changes, session
-          revocation and passkey removal require a fresh passkey confirmation.
+          {roster ? `${formatCount(roster.total)} operators` : ""}. Invitations, access changes,
+          session revocation and passkey removal require a fresh passkey confirmation.
         </p>
         <DataTable
           caption="Console operators"

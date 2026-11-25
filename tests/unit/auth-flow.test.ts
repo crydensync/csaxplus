@@ -83,8 +83,13 @@ type Handler = (request: Request) => Response | Promise<Response>;
  * would have to interpret.
  */
 function stubApi(routes: Record<string, Handler>) {
-  const seen: Array<{ method: string; path: string; body: unknown; authorization: string | null }> =
-    [];
+  const seen: Array<{
+    method: string;
+    path: string;
+    body: unknown;
+    authorization: string | null;
+    userAgent: string | null;
+  }> = [];
 
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -95,6 +100,7 @@ function stubApi(routes: Record<string, Handler>) {
       path: url.pathname,
       body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
       authorization: new Headers(init?.headers).get("authorization"),
+      userAgent: new Headers(init?.headers).get("user-agent"),
     });
 
     const handler = routes[key];
@@ -106,8 +112,8 @@ function stubApi(routes: Record<string, Handler>) {
 }
 
 /** A paused login, as the API's pause answer describes it. */
-function pausedLogin(methods: SecondFactorMethod[] = ["totp"]) {
-  return startPending({ pendingToken: "pending-token", methods }, "op@example.invalid");
+function pausedLogin(methods: SecondFactorMethod[] = ["totp"], userAgent?: string) {
+  return startPending({ pendingToken: "pending-token", methods }, "op@example.invalid", userAgent);
 }
 
 describe("reading an access token", () => {
@@ -468,6 +474,29 @@ describe("signing in", () => {
       pending_token: "pending-token",
       ceremony_token: "from-the-cookie",
     });
+  });
+
+  it("preserves the browser User-Agent through passkey second-factor completion", async () => {
+    const seen = stubApi({
+      "GET /v1/sessions": () => jsonResponse({ data: [] }),
+      "POST /v1/login/passkey/finish": () =>
+        jsonResponse({
+          data: {
+            access_token: accessToken({ sub: "u", role: "admin", exp: NOW_SECONDS + 900 }),
+            refresh_token: "r",
+          },
+        }),
+    });
+
+    await sessionFromPasskey(
+      pausedLogin(["webauthn"], "Mozilla/5.0 (X11; Linux x86_64) Chrome/136.0.0.0 Safari/537.36"),
+      "ceremony",
+      { id: "cred" },
+    );
+
+    expect(seen[0]?.userAgent).toBe(
+      "Mozilla/5.0 (X11; Linux x86_64) Chrome/136.0.0.0 Safari/537.36",
+    );
   });
 });
 

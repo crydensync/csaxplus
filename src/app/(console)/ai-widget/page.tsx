@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { readSession } from "@/server/auth/guard";
-import { getConfig } from "@/server/config";
+import { AIWorkInProgress } from "@/components/AIWorkInProgress";
 
 import { ConsoleTopbar } from "../console-topbar";
 import { SignOutButton } from "../sign-out-button";
-import { WidgetView } from "./widget-view";
 
 export const metadata: Metadata = { title: "Ask-AI Widget" };
 
@@ -20,7 +19,7 @@ export default async function AskAIWidgetPage() {
         subtitle="Configure the signed-in user’s AI widget and its allowed embedding sites."
         actions={<SignOutButton csrf={session.csrf} />}
       />
-      <WidgetView apiBaseUrl={getConfig().api.url} csrf={session.csrf} />
+      <AIWorkInProgress />
     </>
   );
 }

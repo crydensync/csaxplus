@@ -22,6 +22,25 @@ from table previews. CSAG queries `crydensync_auth` explicitly, independent of P
 `search_path`. Full test suites and production/build checks passed before pushing; neither branch
 is merged to `main` here.
 
+### Completed follow-up: operator invitations and AI database role verification
+
+On paired `feat/operator-invites` branches, CSAG adds the `admin invite` command and one-time
+operator invitation endpoints while CSAX+ adds an owner-only invite form and acceptance page.
+CSAG stores only a token hash and does not send mail; the owner copies the seven-day link to the
+recipient. The database provider verifier is also being corrected: PostgreSQL's default TEMP
+privilege caused it to reject SELECT-only roles, so CSAG now checks effective data-write grants on
+the AI query tables and pins both checks and reads to `crydensync_auth`. Implementation and tests
+are complete: console typecheck, lint, 370 unit tests and production build pass; CSAG's full Go test
+suite and `go build -o csag .` pass. Changes are committed in focused commits on both feature
+branches; both branches are pushed and track their corresponding GitHub refs.
+
+The `csaxplusapi/csag` binary was inspected during follow-up troubleshooting and is from CSAG
+commit `aba1548` (2026-11-17), before the database-inspector and invite API work. It does not serve
+the runtime-log route and still has the old TEMP-table readonly verifier; deploy the executable
+built from the matching `_reference/csag` feature branch to use those changes. Passkey second-factor
+completion now also forwards the browser User-Agent so new API sessions are labeled correctly;
+existing session records retain their original `node` user-agent value.
+
 ---
 
 ## Tier 0 - Foundation (tag v0.0.1, then v0.0.2 for step 0.10)
@@ -108,6 +127,14 @@ is merged to `main` here.
       merge to `main` is needed for local use. These AI query features need both an LLM provider
       and a separately configured, verified read-only PostgreSQL provider; the widget's origin
       and entity settings do not configure that database connection.
+      The console allows 130 seconds for model-backed AI requests because CSAG's provider can spend
+      60 seconds on each model call and composed answers make two sequential calls. LLM test calls
+      allow 70 seconds. Console timeouts now report `api_timeout` separately from connection
+      failures, so a slow model is not mislabeled as an unreachable API.
+      On 2026-11-25, the Assistant, Ask-AI Widget settings, LLM Provider and Database Provider
+      screens were temporarily locked behind a shared maintenance notice while these paths are
+      being verified. This console-only gate does not alter CSAG settings or disable consuming-app
+      widget requests.
 - [x] 4.3 Weekly Digest: CSAG persists a weekly schedule and recipients, generates and stores
       scheduled reports, and exposes the settings through the console BFF. Delivery is available
       only when the embedding host injects a digest sender; standalone CSAG reports it unavailable
@@ -141,15 +168,18 @@ is merged to `main` here.
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
 
-- [ ] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
-- In progress: the CSAG feature branch now exposes the live roster and API-enforced WebAuthn
+- [x] 5.1 Operators: invite, role change, remove, passkey management, operator sessions
+- Implemented on the paired CSAG and CSAX+ feature branches: live roster and API-enforced WebAuthn
   step-up for owner role changes and removal. One-use grants bind the owner, bearer token and
   action; final-owner protection remains in the operator store. The console keeps ceremony state
 -  and grants in its encrypted HttpOnly session. Owner-only per-operator active session and passkey
   lists, session revocation, and passkey removal are implemented and verified, including
-  target-operator checks and the final-passkey guard. Invitation sending remains unavailable
-  because CSAG has no invitation contract or consuming-app sender integration, so Tier 5.1 stays
-  in progress.
+  target-operator checks and the final-passkey guard. CSAG has expiring, single-use operator invitations and
+  `csag admin invite`; CSAX+ has owner-only passkey confirmation, a copyable link, sign-in return
+  flow, account-email-bound acceptance, and a switch-account action. CSAG does not send email; the
+  owner delivers the link. CSAG stores only a token hash and invalidates an older unused invite for
+  the same address. Both branches pass their build and test checks and are pushed; no changes are
+  merged to `main`.
 - [x] 5.2 Secrets: env/file/vault providers, AES-256-GCM encrypted vault, masked list, API-verified
       passkey step-up, 20-second reveal masking, audited mutations/copy, and a key-rotation command.
       Implemented and verified: all 349 console tests, typecheck, lint, and production build pass;

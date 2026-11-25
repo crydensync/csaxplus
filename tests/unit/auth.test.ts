@@ -11,6 +11,8 @@ import {
   type Session,
 } from "@/server/auth/session";
 import { resetConfigCache } from "@/server/config/index";
+import { responseForFailure } from "@/server/auth/failures";
+import { ERROR_CODES } from "@/server/auth/response";
 import { CrydenError, apiRequest, statusFromError } from "@/server/cryden/http";
 
 const SESSION_SECRET = Buffer.alloc(32, 1).toString("base64");
@@ -275,7 +277,18 @@ describe("the API transport", () => {
       (e: unknown) => e,
     );
     expect((error as CrydenError).kind).toBe("timeout");
+    expect((error as CrydenError).message).toContain("20 ms");
     expect(statusFromError(error)).toBe("offline");
+  });
+
+  it("reports an API timeout separately from a connection failure", async () => {
+    const timeout = responseForFailure(new CrydenError("timeout", "timed out"));
+    expect(timeout.status).toBe(504);
+    expect((await timeout.json()).error).toMatchObject({ code: ERROR_CODES.apiTimeout });
+
+    const unreachable = responseForFailure(new CrydenError("network", "connection refused"));
+    expect(unreachable.status).toBe(503);
+    expect((await unreachable.json()).error).toMatchObject({ code: ERROR_CODES.apiUnreachable });
   });
 
   it("refuses an answer that is not the envelope", async () => {

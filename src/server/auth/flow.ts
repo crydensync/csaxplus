@@ -142,7 +142,7 @@ export async function sessionFromPasskey(
   credential: unknown,
 ): Promise<Session> {
   return sessionFromTokens(
-    await finishPasskey(pending.pendingToken, ceremonyToken, credential),
+    await finishPasskey(pending.pendingToken, ceremonyToken, credential, pending.userAgent),
     pending.email,
   );
 }

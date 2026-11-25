@@ -10,12 +10,19 @@ import { ERROR_CODES, jsonError } from "./response";
  * they are written for the person reading them ("invalid email or password",
  * "this login attempt has expired"), the UI switches on the code, and
  * `mapError` on the API's side is a single site that never lets an internal
- * string out. What the console adds is the two cases the API cannot report
- * about itself, because in both of them it never answered.
+ * string out. What the console adds is the distinction between a failed
+ * connection and a request that connected but exceeded its deadline.
  */
 export function responseForFailure(error: unknown): Response {
   if (error instanceof CrydenError) {
-    if (error.kind === "network" || error.kind === "timeout") {
+    if (error.kind === "timeout") {
+      return jsonError(
+        504,
+        ERROR_CODES.apiTimeout,
+        "The CrydenSync API took too long to answer. The request may still be processing; try again shortly.",
+      );
+    }
+    if (error.kind === "network") {
       return jsonError(
         503,
         ERROR_CODES.apiUnreachable,
