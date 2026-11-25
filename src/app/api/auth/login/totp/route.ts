@@ -4,6 +4,7 @@ import { responseForFailure } from "@/server/auth/failures";
 import { sessionFromTotp } from "@/server/auth/flow";
 import { requireSameOrigin, withSetCookies } from "@/server/auth/guard";
 import { ERROR_CODES, jsonError, jsonOk } from "@/server/auth/response";
+import { recordConsoleActivity } from "@/server/logging/activity";
 import {
   clearedPendingSetCookie,
   pendingFromRequest,
@@ -44,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const session = await sessionFromTotp(pending, body.value.code);
+    await recordConsoleActivity({ actor: session.operator, action: "operator_login" });
     return withSetCookies(jsonOk(sessionSummary(session)), [
       await sessionSetCookie(session),
       clearedPendingSetCookie(),

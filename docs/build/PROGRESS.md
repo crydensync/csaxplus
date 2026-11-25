@@ -11,6 +11,17 @@ the prototype's `styles.css` plus React components (D1, no Tailwind and no CSS M
 Architecture (brief section 11): `browser -> Next.js BFF -> api (/v1/*, /v1/admin/*) -> engine -> Postgres|SQLite`.
 The console never holds the engine's primary credentials. Only `READONLY_DATABASE_URL` is an exception.
 
+### Completed follow-up: database inspector and logs
+
+Implemented on the paired `feat/database-inspector-runtime-logs` branches in CSAX+ and CSAG. The
+Database Inspector combines CSAG auth-schema migrations and reviewed read-only table previews
+with the separate console-store migration history. The existing Logs screen now presents CSAG's
+bounded, redacted structured runtime events and console activity alongside the separate shipped
+log archive. Credential material, secret values, opaque settings, and digest text are omitted
+from table previews. CSAG queries `crydensync_auth` explicitly, independent of PostgreSQL's
+`search_path`. Full test suites and production/build checks passed before pushing; neither branch
+is merged to `main` here.
+
 ---
 
 ## Tier 0 - Foundation (tag v0.0.1, then v0.0.2 for step 0.10)

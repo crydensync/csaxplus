@@ -6,6 +6,8 @@ import {
   DIGEST_HISTORY_PATH,
   DIGEST_REPORT_PATH,
   DIGEST_SETTINGS_PATH,
+  DATABASE_MIGRATIONS_PATH,
+  DATABASE_TABLES_PATH,
   ADMIN_AI_LOGS_PATH,
   ADMIN_AI_ANOMALIES_PATH,
   ADMIN_AI_AUDIT_PATH,
@@ -16,6 +18,9 @@ import {
   USERS_PATH,
   fetchDigestHistory,
   fetchDigestReport,
+  fetchAPIMigrationStatus,
+  fetchDatabaseCatalog,
+  fetchDatabaseRows,
   fetchDigestSchedule,
   saveDigestSchedule,
   fetchHashMigration,
@@ -550,6 +555,52 @@ describe("generating a digest report", () => {
   it("rejects a malformed report", async () => {
     stubApi(() => jsonResponse({ data: { text: "missing dates" } }));
     await expect(fetchDigestReport({ token: TOKEN })).rejects.toThrow(DIGEST_REPORT_PATH);
+  });
+});
+
+describe("reading the auth database", () => {
+  it("reads applied and pending migrations from CSAG", async () => {
+    const status = {
+      schema: "crydensync_auth",
+      current: "017_operator_stepup_purposes.up.sql",
+      applied: [
+        { name: "017_operator_stepup_purposes.up.sql", applied_at: "2026-11-17T12:00:00Z" },
+      ],
+      pending: [],
+    };
+    const seen = stubApi(() => jsonResponse({ data: status }));
+
+    expect(await fetchAPIMigrationStatus({ token: TOKEN })).toEqual(status);
+    expect(seen[0]?.path).toBe(DATABASE_MIGRATIONS_PATH);
+  });
+
+  it("reads the table catalog and URL-encodes the selected table", async () => {
+    const catalog = {
+      schema: "crydensync_auth",
+      tables: [
+        {
+          name: "users",
+          columns: [{ name: "email", type: "text", nullable: false, readable: true }],
+        },
+      ],
+    };
+    const seen = stubApi(() => jsonResponse({ data: catalog }));
+    expect(await fetchDatabaseCatalog({ token: TOKEN })).toEqual(catalog);
+    expect(seen[0]?.path).toBe(DATABASE_TABLES_PATH);
+
+    const rows = {
+      schema: "crydensync_auth",
+      table: "users",
+      columns: ["email"],
+      rows: [{ email: "admin@example.test" }],
+      total: 1,
+      limit: 25,
+      offset: 0,
+    };
+    const rowRequests = stubApi(() => jsonResponse({ data: rows }));
+    expect(await fetchDatabaseRows({ token: TOKEN, table: "users" })).toEqual(rows);
+    expect(rowRequests[0]?.path).toBe(`${DATABASE_TABLES_PATH}/users`);
+    expect(rowRequests[0]?.search).toBe("?limit=25&offset=0");
   });
 });
 

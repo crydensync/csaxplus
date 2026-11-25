@@ -28,6 +28,8 @@ Confirmed present and usable today, including routes on the local `feat/console-
 - `GET|PUT|DELETE /v1/admin/users/{userID}/metadata[/{key}]`
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
 - `GET /v1/admin/webhooks/deliveries`, `GET /v1/admin/logging/recent`
+- `GET /v1/admin/logging/runtime`, `GET /v1/admin/database/migrations`, and read-only
+  `/v1/admin/database/tables[/{table}]` (local CSAG feature branch)
 - `GET /v1/admin/digest`, `GET /v1/admin/digest/history`, `GET|PUT /v1/admin/settings/digest`
 - `GET /v1/admin/email/stats`, `GET /v1/admin/settings/email-templates`
 - `GET|PUT /v1/admin/settings/password-policy`
