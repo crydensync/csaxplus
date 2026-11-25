@@ -26,6 +26,7 @@ export const USERS_PATH = "/v1/admin/users";
 export const HASH_MIGRATION_PATH = "/v1/admin/security/hash-migration";
 export const MFA_ADOPTION_PATH = "/v1/admin/security/mfa-adoption";
 export const DIGEST_HISTORY_PATH = "/v1/admin/digest/history";
+export const DIGEST_REPORT_PATH = "/v1/admin/digest";
 export const DIGEST_SETTINGS_PATH = "/v1/admin/settings/digest";
 export const EMAIL_STATS_PATH = "/v1/admin/email/stats";
 export const EMAIL_TEMPLATES_PATH = "/v1/admin/settings/email-templates";
@@ -636,6 +637,31 @@ const digestHistorySchema = z.object({
 
 export type DigestRun = z.infer<typeof digestRunSchema>;
 export type DigestHistory = z.infer<typeof digestHistorySchema>;
+
+const digestReportSchema = z.object({
+  since: z.string().datetime({ offset: true }),
+  until: z.string().datetime({ offset: true }),
+  window_days: z.number().int().min(1).max(365),
+  text: z.string(),
+});
+export type DigestReport = z.infer<typeof digestReportSchema>;
+
+/** Build a read-only report now; CSAG does not add this preview to scheduled history. */
+export async function fetchDigestReport(options: {
+  token: string;
+  windowDays?: number;
+}): Promise<DigestReport> {
+  const params = new URLSearchParams();
+  params.set("window_days", String(options.windowDays ?? 7));
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: `${DIGEST_REPORT_PATH}?${params.toString()}`,
+    token: options.token,
+  });
+  const parsed = digestReportSchema.safeParse(data);
+  if (!parsed.success) throw malformed("the on-demand digest report", DIGEST_REPORT_PATH);
+  return parsed.data;
+}
 
 /**
  * The digests the schedule has stored, newest first. Admin token required.
