@@ -123,6 +123,9 @@ The console never holds the engine's primary credentials. Only `READONLY_DATABAS
       read-only database role; `DATABASE_URL` is not reused automatically. Console typecheck, lint,
       formatting, all 349 console tests, the production build, focused CSAG handler tests, and a
       CSAG executable build pass for these changes.
+- System Status follow-up: aggregate authentication counts, database and migration diagnostics, and
+  applied, pending, or unknown API migrations are available in the CSAG feature branch and rendered
+  in a read-only console screen. These reports contain no connection details or account rows.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)

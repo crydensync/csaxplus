@@ -23,6 +23,7 @@ Confirmed present and usable today, including routes on the local `feat/console-
 - `/v1/admin/oauth/health`, `GET /v1/admin/oauth/providers`,
   `POST /v1/admin/oauth/{provider}/test`, `/v1/admin/security/hash-migration`,
   `/v1/admin/security/mfa-adoption`
+- `GET /v1/admin/stats`, `/v1/admin/doctor`, `/v1/admin/migrations/status` (local system-status branch)
 - `GET /v1/admin/users`, `GET /v1/admin/users/{userID}`
 - `GET|PUT|DELETE /v1/admin/users/{userID}/metadata[/{key}]`
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
@@ -51,8 +52,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | Support escalation | No CSAG endpoint or ticketing adapter exists. The console can copy the read-only diagnosis into an operator's existing workflow; Zendesk, Intercom and Freshdesk integrations remain unavailable. |
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
-| 4 | System page | `GET /v1/admin/stats`, `/doctor`, `/migrations/status` |
-| 5 | Operators | Built on the CSAG feature branch: live roster, API-enforced WebAuthn step-up, owner-only role/removal, per-operator sessions and passkeys, and persistent lockout after repeated failed step-up. Invitations still need an explicit API contract and consuming-app email sender. |
+| 5 | Operators | Built on the CSAG feature branch: live roster, API-enforced WebAuthn step-up, owner-only role/removal, `GET /v1/admin/operators/{userID}/sessions`, `DELETE .../sessions[/{sessionID}]`, `GET /v1/admin/operators/{userID}/passkeys`, and `DELETE .../passkeys/{credentialID}`. Invitations still need an explicit API contract and consuming-app email sender. |
 | 5 | Secrets | The vault lives in the console's own store. CSAG accepts `secret_reveal` and `secret_mutation` step-up purposes and consumes their one-use grants; no secret value is sent to the API. |
 
 Until an endpoint exists, the screen either shows an honest "not available in this deployment"
@@ -336,9 +336,8 @@ no version, no build, no database engine, no migration state, no uptime.
 
 Action: the prototype's topbar tag read "connected, production db". The console cannot honestly
 say the second half, so its tag says `api-client` and the sentence behind it claims only that
-the API answered and reported itself healthy. Do not add a database or environment claim to the
-console until the endpoint reports one. A `version` and a `database` field here would also give
-the System page (tier 4) something real to show.
+the API answered and reported itself healthy. The System Status screen reads separate admin
+diagnostics and migration endpoints; `/v1/health` still reports only API health.
 
 ### 4.6 The health handler's documented nil behaviour is not implemented
 
