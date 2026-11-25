@@ -1,16 +1,15 @@
 import "server-only";
 
-import { DIGEST_NONE_STORED_DETAIL, DIGEST_NOT_SCHEDULED_DETAIL } from "@/lib/dashboard";
+import { DIGEST_REPORT_UNAVAILABLE_DETAIL } from "@/lib/dashboard";
 
 import {
-  DASHBOARD_DIGEST_LIMIT,
   DASHBOARD_USER_LIMIT,
-  fetchDigestHistory,
+  fetchDigestReport,
   fetchHashMigration,
   fetchMfaAdoption,
   fetchUsers,
   type AdminUser,
-  type DigestRun,
+  type DigestReport,
   type HashMigration,
   type MfaAdoption,
 } from "../cryden/admin";
@@ -58,7 +57,7 @@ export type DashboardOverview = {
   accounts: Section<AccountsSection>;
   factors: Section<MfaAdoption>;
   hashes: Section<HashMigration>;
-  digest: Section<DigestRun>;
+  digest: Section<DigestReport>;
 };
 
 /**
@@ -66,7 +65,7 @@ export type DashboardOverview = {
  * reaching into this module's server-only neighbours. Type-only: nothing here
  * becomes a value in the browser's bundle.
  */
-export type { AdminUser, DigestRun, HashMigration, MfaAdoption };
+export type { AdminUser, DigestReport, HashMigration, MfaAdoption };
 
 /**
  * Every section of the dashboard for one operator's token.
@@ -109,14 +108,14 @@ export async function dashboardOverview(token: string): Promise<DashboardOvervie
       }
     })(),
 
-    (async (): Promise<Section<DigestRun>> => {
+    (async (): Promise<Section<DigestReport>> => {
       try {
-        const history = await fetchDigestHistory({ token, limit: DASHBOARD_DIGEST_LIMIT });
-        const newest = history.runs[0];
-        if (newest === undefined) return { state: "empty", detail: DIGEST_NONE_STORED_DETAIL };
-        return { state: "ok", data: newest };
+        return {
+          state: "ok",
+          data: await fetchDigestReport({ token, windowDays: DASHBOARD_WINDOW_DAYS }),
+        };
       } catch (error) {
-        return sectionFailure(error, "the digest", DIGEST_NOT_SCHEDULED_DETAIL);
+        return sectionFailure(error, "the current digest", DIGEST_REPORT_UNAVAILABLE_DETAIL);
       }
     })(),
   ]);

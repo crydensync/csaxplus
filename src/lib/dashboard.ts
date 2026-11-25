@@ -19,13 +19,9 @@ export const SQLITE_ADMIN_DETAIL =
 /** Stable API response code for the SQLite deployment state. */
 export const NOT_IMPLEMENTED_ON_SQLITE = "not_implemented_on_sqlite";
 
-/** Shown when the API has no digest history store wired. */
-export const DIGEST_NOT_SCHEDULED_DETAIL =
-  "This API has no digest history store configured. On a CSAG build with weekly digest support, enable a schedule in Digest settings to start recording runs.";
-
-/** Shown when a digest schedule exists but has not produced a run yet. */
-export const DIGEST_NONE_STORED_DETAIL =
-  "The digest schedule is configured but has not stored a run yet. The first one appears here once it has.";
+/** Shown when the API says it cannot generate a current digest report. */
+export const DIGEST_REPORT_UNAVAILABLE_DETAIL =
+  "This API cannot generate a current security digest report on this deployment.";
 
 /**
  * Shown when the API refuses an admin read with `not_operator`.

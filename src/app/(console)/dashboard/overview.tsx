@@ -20,7 +20,7 @@ import type {
   AccountsSection,
   AdminUser,
   DashboardOverview,
-  DigestRun,
+  DigestReport,
   MfaAdoption,
   Section,
 } from "@/server/dashboard/overview";
@@ -316,32 +316,33 @@ function FactorSection({
   );
 }
 
-/** The latest stored digest, or the reason there is not one. */
-function DigestCard({ section, onRetry }: { section: Section<DigestRun>; onRetry: () => void }) {
+/** The current read-only seven-day digest, or the reason it could not load. */
+function DigestCard({ section, onRetry }: { section: Section<DigestReport>; onRetry: () => void }) {
   if (section.state !== "ok") {
     return (
       <div className="digest">
         <div className="digest-head">
           <IconSparkle />
-          <b>Stored digest</b>
+          <b>Current seven-day digest</b>
         </div>
         <SectionState section={section} onRetry={onRetry} />
       </div>
     );
   }
 
-  const run = section.data;
+  const report = section.data;
   return (
     <div className="digest">
       <div className="digest-head">
         <IconSparkle />
-        <b>Latest stored digest</b>
-        <span className="dim">generated {formatInstant(run.generated_at)}</span>
+        <b>Current seven-day digest</b>
+        <span className="dim">as of {formatInstant(report.until)}</span>
       </div>
-      {/* The engine's own report, rendered as text and never as markup. It is
-          also the one place a dash this console did not write can reach the
-          screen: this is the API's prose, passed through rather than restyled. */}
-      <pre className="digest-text">{run.text}</pre>
+      <p className="hint">
+        {formatInstant(report.since)} to {formatInstant(report.until)}
+      </p>
+      {/* The engine's own report is rendered as text, never as markup. */}
+      <pre className="digest-text">{report.text}</pre>
     </div>
   );
 }
@@ -410,7 +411,7 @@ function LoadingDashboard() {
       <div className="digest">
         <div className="digest-head">
           <IconSparkle />
-          <b>Stored digest</b>
+          <b>Current seven-day digest</b>
         </div>
         <Skeleton variant="text" width="70%" />
       </div>

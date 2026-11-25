@@ -850,12 +850,11 @@ configured.
 **Date:** 2026-11-25
 **Status:** accepted
 
-The Dashboard should not appear to have no digest merely because the weekly schedule has not yet
-written a history row. When a stored scheduled run exists, show the newest stored run. When history
-is empty, call CSAG's read-only `GET /v1/admin/digest` and show its current seven-day report with
-clear wording that it is a live report, not a stored run. Keep scheduled history on the Digest
-screen. Remove the manual "Generate report now" preview control there because it is easy to mistake
-for a persisted run. This behavior needs no CSAG write endpoint and must not manufacture history.
+The Dashboard should always show a current seven-day report independently of the schedule. Call
+CSAG's read-only `GET /v1/admin/digest` on each dashboard load and label the result as a current
+report, never as a stored run. Keep persisted scheduled history on the Digest screen. Remove the
+manual "Generate report now" preview control there because it is easy to mistake for a persisted
+run. This behavior needs no CSAG write endpoint and must not manufacture history.
 
 ## D28. Defer AI while finishing digest and console display
 

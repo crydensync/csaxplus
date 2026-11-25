@@ -6,8 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardOverview } from "@/app/(console)/dashboard/overview";
 import {
-  DIGEST_NONE_STORED_DETAIL,
-  DIGEST_NOT_SCHEDULED_DETAIL,
+  DIGEST_REPORT_UNAVAILABLE_DETAIL,
   NOT_OPERATOR_DETAIL,
   SQLITE_ADMIN_DETAIL,
 } from "@/lib/dashboard";
@@ -132,10 +131,9 @@ const OK = {
   digest: {
     state: "ok",
     data: {
-      id: 9,
-      window_start: "2026-09-28T00:00:00Z",
-      window_end: "2026-10-05T00:00:00Z",
-      generated_at: "2026-10-05T00:00:03Z",
+      since: "2026-09-28T00:00:00Z",
+      until: "2026-10-05T00:00:03Z",
+      window_days: 7,
       text: "Security digest\n\nNothing needs attention.\n",
     },
   },
@@ -208,9 +206,11 @@ describe("when the reports arrive", () => {
     expect(digest?.querySelector("b")).toBeNull();
   });
 
-  it("shows the digest's own generation time beside it", async () => {
+  it("labels the current digest with its report window", async () => {
     await renderDashboard(() => jsonResponse({ data: OK }));
-    expect(text()).toContain("generated 5 Oct 2026, 00:00 UTC");
+    expect(text()).toContain("Current seven-day digest");
+    expect(text()).toContain("as of 5 Oct 2026, 00:00 UTC");
+    expect(text()).toContain("28 Sept 2026, 00:00 UTC to 5 Oct 2026, 00:00 UTC");
   });
 });
 
@@ -405,28 +405,15 @@ describe("when every report fails the same way", () => {
   });
 });
 
-describe("the digest's empty states", () => {
-  it("says no schedule is configured, and how to configure one", async () => {
+describe("when a current digest cannot be generated", () => {
+  it("shows the API's honest unavailable detail", async () => {
     await renderDashboard(() =>
       jsonResponse({
-        data: { ...OK, digest: { state: "empty", detail: DIGEST_NOT_SCHEDULED_DETAIL } },
+        data: { ...OK, digest: { state: "empty", detail: DIGEST_REPORT_UNAVAILABLE_DETAIL } },
       }),
     );
 
-    expect(text()).toContain("Nothing to report");
-    expect(text()).toContain("enable a schedule in Digest settings");
-    expect(text()).not.toContain("DIGEST_INTERVAL_HOURS");
-  });
-
-  it("says a schedule exists and has not run yet, which needs a different fix", async () => {
-    await renderDashboard(() =>
-      jsonResponse({
-        data: { ...OK, digest: { state: "empty", detail: DIGEST_NONE_STORED_DETAIL } },
-      }),
-    );
-
-    expect(text()).toContain("has not stored a run yet");
-    expect(text()).not.toContain("DIGEST_INTERVAL_HOURS");
+    expect(text()).toContain(DIGEST_REPORT_UNAVAILABLE_DETAIL);
   });
 
   it("says there are no accounts yet rather than showing an empty table", async () => {
