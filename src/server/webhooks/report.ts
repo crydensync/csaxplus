@@ -13,6 +13,7 @@ export type WebhookPage = Section<WebhookDeliveries>;
 export async function readWebhookDeliveries(options: {
   token: string;
   status?: WebhookStatus;
+  destinationID?: string;
 }): Promise<WebhookPage> {
   try {
     return { state: "ok", data: await fetchWebhookDeliveries(options) };

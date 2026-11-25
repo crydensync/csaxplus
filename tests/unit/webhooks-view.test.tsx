@@ -46,11 +46,24 @@ describe("webhook settings mutations", () => {
       if (method !== "GET") {
         mutations.push({ method, csrf: new Headers(init?.headers).get("x-csrf-token") });
       }
-      if (url.searchParams.get("view") === "endpoint") {
-        return jsonResponse({ data: { url: "https://hooks.example.test", secret_set: true } });
+      if (url.pathname.endsWith("/endpoints") && method === "GET") {
+        return jsonResponse({
+          data: {
+            endpoints: [
+              {
+                id: "endpoint-1",
+                name: "Test",
+                url: "https://hooks.example.test",
+                secret_set: true,
+              },
+            ],
+          },
+        });
       }
-      if (method === "POST") {
-        return jsonResponse({ data: { queued: true, event_id: "evt-test" } });
+      if (method === "POST" && url.pathname.endsWith("/test")) {
+        return jsonResponse({
+          data: { queued: true, event_id: "evt-test", destination_id: "endpoint-1" },
+        });
       }
       if (method === "GET") {
         return jsonResponse({
@@ -67,8 +80,13 @@ describe("webhook settings mutations", () => {
       return jsonResponse({
         data:
           method === "DELETE"
-            ? { url: "", secret_set: false }
-            : { url: "https://hooks.example.test", secret_set: true },
+            ? { removed: true }
+            : {
+                id: "endpoint-1",
+                name: "Test",
+                url: "https://hooks.example.test",
+                secret_set: true,
+              },
       });
     });
 
@@ -80,28 +98,12 @@ describe("webhook settings mutations", () => {
       0 as unknown as ReturnType<typeof window.setTimeout>,
     );
 
-    const save = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Save endpoint",
-    );
-    expect(save).toBeDefined();
-    await act(async () => save?.click());
-
     const sendTest = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Send test event",
+      (button) => button.textContent === "Test",
     );
     expect(sendTest).toBeDefined();
     await act(async () => sendTest?.click());
 
-    const clear = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Clear runtime endpoint",
-    );
-    expect(clear).toBeDefined();
-    await act(async () => clear?.click());
-
-    expect(mutations).toEqual([
-      { method: "PUT", csrf: "the-session-csrf-token" },
-      { method: "POST", csrf: "the-session-csrf-token" },
-      { method: "DELETE", csrf: "the-session-csrf-token" },
-    ]);
+    expect(mutations).toEqual([{ method: "POST", csrf: "the-session-csrf-token" }]);
   });
 });

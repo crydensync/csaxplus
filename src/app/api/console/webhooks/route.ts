@@ -28,12 +28,14 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
   const rawStatus = params.get("status") ?? "";
+  const destinationID = params.get("destination_id") ?? "";
   if (rawStatus !== "" && !statuses.includes(rawStatus as WebhookStatus)) {
     return authorized.respond(jsonError(400, "invalid_request", "Choose a valid delivery status."));
   }
   const report = await readWebhookDeliveries({
     token: authorized.session.api.accessToken,
     status: rawStatus === "" ? undefined : (rawStatus as WebhookStatus),
+    destinationID: destinationID || undefined,
   });
   return authorized.respond(jsonOk(report));
 }

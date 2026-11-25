@@ -12,8 +12,13 @@ import { dataFrom, failureFrom, type ConsoleFailure } from "@/lib/console-respon
 import { CSRF_HEADER } from "@/lib/csrf-header";
 import { formatCount, formatInstant } from "@/lib/format";
 import type { Section } from "@/server/cryden/section";
-import type { WebhookDeliveries, WebhookDelivery, WebhookStatus } from "@/server/cryden/admin";
-import type { WebhookEndpoint } from "@/server/cryden/admin";
+import type {
+  WebhookDeliveries,
+  WebhookDelivery,
+  WebhookDestination,
+  WebhookEndpointList,
+  WebhookStatus,
+} from "@/server/cryden/admin";
 import type { WebhookPage } from "@/server/webhooks/report";
 
 const STATUS_TONES: Record<WebhookStatus, "green" | "red" | "amber" | "neutral"> = {
@@ -28,7 +33,10 @@ export function WebhooksView({ csrf }: { csrf: string }) {
   const [report, setReport] = useState<WebhookPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<ConsoleFailure | null>(null);
-  const [endpoint, setEndpoint] = useState<WebhookEndpoint | null>(null);
+  const [destinationID, setDestinationID] = useState("");
+  const [endpoints, setEndpoints] = useState<WebhookDestination[]>([]);
+  const [editingID, setEditingID] = useState<string | null>(null);
+  const [endpointName, setEndpointName] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [endpointSecret, setEndpointSecret] = useState("");
   const [endpointMessage, setEndpointMessage] = useState("");
@@ -37,16 +45,26 @@ export function WebhooksView({ csrf }: { csrf: string }) {
 
   const readEndpoint = useCallback(async () => {
     try {
-      const response = await fetch("/api/console/webhooks?view=endpoint", {
+      const response = await fetch("/api/console/webhooks/endpoints", {
         credentials: "same-origin",
       });
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
-      const value = dataFrom<WebhookEndpoint>(payload);
-      if (value === null || typeof value.url !== "string" || typeof value.secret_set !== "boolean")
+      const value = dataFrom<WebhookEndpointList>(payload);
+      if (
+        value === null ||
+        !Array.isArray(value.endpoints) ||
+        value.endpoints.some(
+          (item) =>
+            typeof item.id !== "string" ||
+            typeof item.name !== "string" ||
+            typeof item.url !== "string" ||
+            typeof item.secret_set !== "boolean",
+        )
+      ) {
         throw new Error("The endpoint settings response was not recognised.");
-      setEndpoint(value);
-      setEndpointUrl(value.url);
+      }
+      setEndpoints(value.endpoints);
     } catch (error) {
       setEndpointMessage(
         error instanceof Error ? error.message : "Endpoint settings could not be loaded.",
@@ -58,23 +76,36 @@ export function WebhooksView({ csrf }: { csrf: string }) {
     setEndpointBusy(true);
     setEndpointMessage("");
     try {
-      const response = await fetch("/api/console/webhooks", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
-        body: JSON.stringify({
-          url: endpointUrl,
-          ...(endpointSecret ? { secret: endpointSecret } : {}),
-        }),
-      });
+      const response = await fetch(
+        editingID
+          ? `/api/console/webhooks/endpoints/${encodeURIComponent(editingID)}`
+          : "/api/console/webhooks/endpoints",
+        {
+          method: editingID ? "PUT" : "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json", [CSRF_HEADER]: csrf },
+          body: JSON.stringify({
+            name: endpointName,
+            url: endpointUrl,
+            ...(endpointSecret ? { secret: endpointSecret } : {}),
+          }),
+        },
+      );
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
-      const value = dataFrom<WebhookEndpoint>(payload);
-      if (value === null) throw new Error("The API did not confirm the saved endpoint.");
-      setEndpoint(value);
-      setEndpointUrl(value.url);
+      const value = dataFrom<WebhookDestination>(payload);
+      if (value === null || typeof value.id !== "string")
+        throw new Error("The API did not confirm the saved endpoint.");
+      setEndpoints((current) =>
+        editingID
+          ? current.map((endpoint) => (endpoint.id === value.id ? value : endpoint))
+          : [...current, value],
+      );
+      setEditingID(null);
+      setEndpointName("");
       setEndpointSecret("");
-      setEndpointMessage("Webhook endpoint saved.");
+      setEndpointUrl("");
+      setEndpointMessage(editingID ? "Webhook destination updated." : "Webhook destination added.");
     } catch (error) {
       setEndpointMessage(
         error instanceof Error ? error.message : "Endpoint settings could not be saved.",
@@ -82,39 +113,48 @@ export function WebhooksView({ csrf }: { csrf: string }) {
     } finally {
       setEndpointBusy(false);
     }
-  }, [csrf, endpointSecret, endpointUrl]);
+  }, [csrf, editingID, endpointName, endpointSecret, endpointUrl]);
 
-  const clearEndpoint = useCallback(async () => {
-    setEndpointBusy(true);
-    setEndpointMessage("");
-    try {
-      const response = await fetch("/api/console/webhooks", {
-        method: "DELETE",
-        credentials: "same-origin",
-        headers: { [CSRF_HEADER]: csrf },
-      });
-      const payload: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
-      setEndpoint(dataFrom<WebhookEndpoint>(payload));
-      setEndpointUrl("");
-      setEndpointSecret("");
-      setEndpointMessage(
-        "Runtime endpoint cleared. Environment settings will be used if configured.",
-      );
-    } catch (error) {
-      setEndpointMessage(
-        error instanceof Error ? error.message : "Endpoint settings could not be cleared.",
-      );
-    } finally {
-      setEndpointBusy(false);
-    }
-  }, [csrf]);
+  const clearEndpoint = useCallback(
+    async (id: string) => {
+      if (!window.confirm("Remove this webhook destination?")) return;
+      setEndpointBusy(true);
+      setEndpointMessage("");
+      try {
+        const response = await fetch(`/api/console/webhooks/endpoints/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { [CSRF_HEADER]: csrf },
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+        setEndpoints((current) => current.filter((endpoint) => endpoint.id !== id));
+        if (editingID === id) {
+          setEditingID(null);
+          setEndpointName("");
+          setEndpointUrl("");
+          setEndpointSecret("");
+        }
+        setEndpointMessage("Webhook destination removed.");
+      } catch (error) {
+        setEndpointMessage(
+          error instanceof Error ? error.message : "Endpoint settings could not be cleared.",
+        );
+      } finally {
+        setEndpointBusy(false);
+      }
+    },
+    [csrf, editingID],
+  );
 
-  const read = useCallback(async (filter: WebhookStatus | "") => {
+  const read = useCallback(async (filter: WebhookStatus | "", destinationFilter: string) => {
     setLoading(true);
     setFailure(null);
-    const query = filter ? `?status=${encodeURIComponent(filter)}` : "";
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    if (destinationFilter) params.set("destination_id", destinationFilter);
     try {
+      const query = params.size > 0 ? `?${params.toString()}` : "";
       const response = await fetch(`/api/console/webhooks${query}`, {
         credentials: "same-origin",
         headers: { accept: "application/json" },
@@ -134,6 +174,7 @@ export function WebhooksView({ csrf }: { csrf: string }) {
       }
       setReport(result);
       setStatus(filter);
+      setDestinationID(destinationFilter);
     } catch {
       setFailure({
         message: "The console could not reach its server.",
@@ -144,41 +185,59 @@ export function WebhooksView({ csrf }: { csrf: string }) {
     }
   }, []);
 
-  const sendTest = useCallback(async () => {
-    setTestBusy(true);
-    setEndpointMessage("");
-    try {
-      const response = await fetch("/api/console/webhooks", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { [CSRF_HEADER]: csrf },
-      });
-      const payload: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
-      const value = dataFrom<{ queued: boolean; event_id: string }>(payload);
-      if (value === null || !value.queued)
-        throw new Error("The API did not confirm the test delivery.");
-      setEndpointMessage(
-        `Test event queued (${value.event_id}). Check delivery history for its result.`,
-      );
-      window.setTimeout(() => void read(status), 400);
-    } catch (error) {
-      setEndpointMessage(
-        error instanceof Error ? error.message : "Test delivery could not be queued.",
-      );
-    } finally {
-      setTestBusy(false);
-    }
-  }, [csrf, read, status]);
+  const sendTest = useCallback(
+    async (id: string) => {
+      setTestBusy(true);
+      setEndpointMessage("");
+      try {
+        const response = await fetch(
+          `/api/console/webhooks/endpoints/${encodeURIComponent(id)}/test`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { [CSRF_HEADER]: csrf },
+          },
+        );
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(failureFrom(payload, response.status).message);
+        const value = dataFrom<{ queued: boolean; event_id: string; destination_id: string }>(
+          payload,
+        );
+        if (value === null || !value.queued)
+          throw new Error("The API did not confirm the test delivery.");
+        setEndpointMessage(
+          `Test event queued (${value.event_id}). Check delivery history for its result.`,
+        );
+        window.setTimeout(() => void read(status, destinationID), 400);
+      } catch (error) {
+        setEndpointMessage(
+          error instanceof Error ? error.message : "Test delivery could not be queued.",
+        );
+      } finally {
+        setTestBusy(false);
+      }
+    },
+    [csrf, destinationID, read, status],
+  );
 
   useEffect(() => {
-    void read("");
+    void read("", "");
     void readEndpoint();
   }, [read, readEndpoint]);
 
   const columns = useMemo<Column<WebhookDelivery>[]>(
     () => [
       { key: "when", header: "Queued", cell: (item) => formatInstant(item.created_at) },
+      {
+        key: "destination",
+        header: "Destination",
+        cell: (item) => (
+          <>
+            <span>{item.destination_name}</span>
+            <div className="hint mono">{item.destination_id}</div>
+          </>
+        ),
+      },
       {
         key: "event",
         header: "Event",
@@ -235,7 +294,7 @@ export function WebhooksView({ csrf }: { csrf: string }) {
             title="Webhook deliveries did not load"
             description={failure.message}
             code={failure.code ?? undefined}
-            onRetry={() => void read(status)}
+            onRetry={() => void read(status, destinationID)}
           />
         </Card>
       </div>
@@ -247,7 +306,7 @@ export function WebhooksView({ csrf }: { csrf: string }) {
         <Card>
           <SectionState
             section={report ?? { state: "error", detail: "No report was returned.", code: null }}
-            onRetry={() => void read(status)}
+            onRetry={() => void read(status, destinationID)}
           />
         </Card>
       </div>
@@ -268,7 +327,9 @@ export function WebhooksView({ csrf }: { csrf: string }) {
             <select
               className="text-input"
               value={status}
-              onChange={(event) => void read(event.target.value as WebhookStatus | "")}
+              onChange={(event) =>
+                void read(event.target.value as WebhookStatus | "", destinationID)
+              }
             >
               <option value="">All statuses</option>
               {options.map((item) => (
@@ -278,9 +339,24 @@ export function WebhooksView({ csrf }: { csrf: string }) {
               ))}
             </select>
           </label>
+          <label className="field-label">
+            Destination
+            <select
+              className="text-input"
+              value={destinationID}
+              onChange={(event) => void read(status, event.target.value)}
+            >
+              <option value="">All destinations</option>
+              {endpoints.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="actions-row">
             <span className="hint">{formatCount(data.count)} rows</span>
-            <Button onClick={() => void read(status)} disabled={loading}>
+            <Button onClick={() => void read(status, destinationID)} disabled={loading}>
               {loading ? "Refreshing…" : "Refresh"}
             </Button>
           </div>
@@ -292,7 +368,7 @@ export function WebhooksView({ csrf }: { csrf: string }) {
             title="Webhook deliveries could not refresh"
             description={failure.message}
             code={failure.code ?? undefined}
-            onRetry={() => void read(status)}
+            onRetry={() => void read(status, destinationID)}
           />
         </Card>
       ) : null}
@@ -309,12 +385,68 @@ export function WebhooksView({ csrf }: { csrf: string }) {
         }
         minWidthPx={1100}
       />
-      <Card title="Webhook endpoint" style={{ marginTop: 18 }}>
+      <Card title="Webhook destinations" style={{ marginTop: 18 }}>
         <p className="hint">
-          One runtime destination receives CSAG webhook events. The signing secret is encrypted at
-          rest and never shown again.
+          Each active event is queued separately for every destination, with its own retry history.
+          Signing secrets are encrypted at rest and never shown again. Removing a destination waits
+          until its queued deliveries finish.
         </p>
+        {endpoints.length === 0 ? (
+          <p className="hint" style={{ marginTop: 12 }}>
+            No runtime destinations are configured. An environment destination may still be active.
+          </p>
+        ) : (
+          <div className="system-checks" style={{ marginTop: 14 }}>
+            {endpoints.map((item) => (
+              <div className="row-between system-check" key={item.id}>
+                <div style={{ minWidth: 0 }}>
+                  <b>{item.name}</b>
+                  <p className="hint mono" style={{ overflowWrap: "anywhere" }}>
+                    {item.url}
+                  </p>
+                  <Pill tone={item.secret_set ? "green" : "amber"}>
+                    {item.secret_set ? "Signing enabled" : "Signing unavailable"}
+                  </Pill>
+                </div>
+                <div className="actions-row">
+                  <Button
+                    onClick={() => {
+                      setEditingID(item.id);
+                      setEndpointName(item.name);
+                      setEndpointUrl(item.url);
+                      setEndpointSecret("");
+                      setEndpointMessage("");
+                    }}
+                    disabled={endpointBusy}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => void sendTest(item.id)}
+                    disabled={testBusy || !item.secret_set}
+                  >
+                    {testBusy ? "Queueing…" : "Test"}
+                  </Button>
+                  <Button onClick={() => void clearEndpoint(item.id)} disabled={endpointBusy}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ display: "grid", gap: 12, marginTop: 14, maxWidth: 640 }}>
+          <h3>{editingID ? "Edit destination" : "Add destination"}</h3>
+          <label className="field-label">
+            Destination name
+            <input
+              className="text-input"
+              value={endpointName}
+              onChange={(event) => setEndpointName(event.target.value)}
+              maxLength={80}
+              placeholder="Billing notifications"
+            />
+          </label>
           <label className="field-label">
             HTTPS endpoint URL
             <input
@@ -326,41 +458,41 @@ export function WebhooksView({ csrf }: { csrf: string }) {
           </label>
           <label className="field-label">
             Signing secret
-            {endpoint?.secret_set ? (
-              <span className="hint"> · saved; leave blank to keep it</span>
-            ) : null}
+            {editingID ? <span className="hint"> · saved; leave blank to keep it</span> : null}
             <input
               className="text-input"
               type="password"
               autoComplete="new-password"
               value={endpointSecret}
               onChange={(event) => setEndpointSecret(event.target.value)}
-              placeholder={
-                endpoint?.secret_set ? "Saved secret is hidden" : "Enter a signing secret"
-              }
+              placeholder={editingID ? "Saved secret is hidden" : "Enter a signing secret"}
             />
           </label>
           <div className="actions-row">
             <Button
               onClick={() => void saveEndpoint()}
-              disabled={endpointBusy || !endpointUrl.trim()}
+              disabled={
+                endpointBusy ||
+                !endpointName.trim() ||
+                !endpointUrl.trim() ||
+                (!editingID && !endpointSecret)
+              }
             >
-              {endpointBusy ? "Saving…" : "Save endpoint"}
+              {endpointBusy ? "Saving…" : editingID ? "Save changes" : "Add destination"}
             </Button>
-            <Button
-              onClick={() => void clearEndpoint()}
-              disabled={endpointBusy || (!endpoint?.secret_set && !endpoint?.url)}
-            >
-              Clear runtime endpoint
-            </Button>
-            <Button onClick={() => void sendTest()} disabled={testBusy || !endpoint?.secret_set}>
-              {testBusy ? "Queueing…" : "Send test event"}
-            </Button>
-            {endpoint?.secret_set ? (
-              <Pill tone="green">Signing enabled</Pill>
-            ) : (
-              <Pill tone="amber">No saved endpoint</Pill>
-            )}
+            {editingID ? (
+              <Button
+                onClick={() => {
+                  setEditingID(null);
+                  setEndpointName("");
+                  setEndpointUrl("");
+                  setEndpointSecret("");
+                }}
+                disabled={endpointBusy}
+              >
+                Cancel edit
+              </Button>
+            ) : null}
           </div>
           {endpointMessage ? (
             <p className="hint" role="status">
