@@ -20,7 +20,10 @@ Confirmed present and usable today, including routes on the local `feat/console-
   `POST /v1/refresh`
 - `GET /v1/health`, `GET /v1/sessions`, `POST /v1/api-keys`, `GET /v1/api-keys`,
   `DELETE /v1/api-keys/{keyID}`, `POST /v1/ask-ai`
-- `/v1/admin/oauth/health`, `/v1/admin/security/hash-migration`, `/v1/admin/security/mfa-adoption`
+- `/v1/admin/oauth/health`, `GET /v1/admin/oauth/providers`,
+  `POST /v1/admin/oauth/{provider}/test`, `/v1/admin/security/hash-migration`,
+  `/v1/admin/security/mfa-adoption`
+- `GET /v1/admin/stats`, `/v1/admin/doctor`, `/v1/admin/migrations/status` (local system-status branch)
 - `GET /v1/admin/users`, `GET /v1/admin/users/{userID}`
 - `GET|PUT|DELETE /v1/admin/users/{userID}/metadata[/{key}]`
 - `GET /v1/admin/anomalies`, `PUT /v1/admin/anomalies/{eventID}`
@@ -44,7 +47,6 @@ Missing, grouped by the tier that first needs them:
 | Tier | Needed for | Endpoints |
 |---|---|---|
 | 1 | Users actions | BUILT on the api branch `feat/console-admin-endpoints` (commit d0afb8f, not yet merged or deployed): `POST /v1/admin/users` (create), `POST /v1/admin/users/{id}/unlock`, `/suspend`, `/unsuspend`, `/revoke-sessions`, `/mfa/disable`, `DELETE /v1/admin/users/{id}/oauth/{provider}`. The console half (step 1.2c) wires these into the Users screen |
-| 1 | OAuth config | `GET /v1/admin/oauth/providers`, `POST /v1/admin/oauth/{provider}/test` |
 | 1 | Email | No CSAG endpoint for product-host delivery reporting or test send; CSAG template writes (`PUT /v1/admin/settings/email-templates`) are also absent |
 | 2 | Sessions | Admin listing, one-session revoke, and global revoke are built on the local CSAG feature branch; per-account revoke is also available at `POST /v1/admin/users/{id}/revoke-sessions` |
 | 3 | Webhooks | Multi-destination management is built on `feat/multi-webhook-destinations`: `GET|POST /v1/admin/webhooks/endpoints`, `PUT|DELETE /v1/admin/webhooks/endpoints/{endpointID}`, targeted test delivery, and per-destination delivery history. Secrets remain encrypted; queued rows snapshot their destination. |
@@ -52,8 +54,7 @@ Missing, grouped by the tier that first needs them:
 | 4 | Support escalation | No CSAG endpoint or ticketing adapter exists. The console can copy the read-only diagnosis into an operator's existing workflow; Zendesk, Intercom and Freshdesk integrations remain unavailable. |
 | 4 | AI admin | Admin query plus log summary, bounded anomaly scan, audit-only query, and composed answer are built locally at `POST /v1/admin/ai/{query,logs,anomalies-scan,audit,ask}` on the CSAG feature branch; build and run that branch locally to use the routes, with no merge to `main` required |
 | 4 | Config Advisor prefill | `/v1/admin/config-tuning` returns evidence and prose, but no exact proposed values. Several targets, including lockout and anomaly thresholds, are process-start settings with no admin write endpoint or console control. Do not infer a target or value from prose. Prefill needs explicit typed proposals from CSAG and a real owner-managed settings path; the operator must still save the change. |
-| 4 | System page | `GET /v1/admin/stats`, `/doctor`; CSAG migration state is exposed at `/v1/admin/database/migrations` on the feature branch |
-| 5 | Operators | Built on paired local `feat/operator-invites` branches: live roster, API-enforced WebAuthn step-up, owner-only role/removal and invite creation, plus session/passkey management. `POST /v1/admin/operators/invitations` returns a seven-day single-use link token; `POST /v1/operators/invitations/accept` binds acceptance to the authenticated account email. CSAG does not send email; the console owner copies and delivers the link. |
+| 5 | Operators | Built on the CSAG feature branch: live roster, API-enforced WebAuthn step-up, owner-only role/removal, `GET /v1/admin/operators/{userID}/sessions`, `DELETE .../sessions[/{sessionID}]`, `GET /v1/admin/operators/{userID}/passkeys`, and `DELETE .../passkeys/{credentialID}`. Invitations still need an explicit API contract and consuming-app email sender. |
 | 5 | Secrets | The vault lives in the console's own store. CSAG accepts `secret_reveal` and `secret_mutation` step-up purposes and consumes their one-use grants; no secret value is sent to the API. |
 
 Until an endpoint exists, the screen either shows an honest "not available in this deployment"
@@ -81,12 +82,13 @@ The engine has no fixed provider list. `provider` is an opaque string
 (`cryden/auth/oauth.go:17-19`, `cryden/store/interfaces.go:295-298`). The README names six as
 examples only. Neither "six" nor "five" is enforced by code.
 
-Action: list what the deployment actually configures, via `GET /v1/admin/oauth/health`. Make the
-landing page and the console agree by showing the configured set, not a hardcoded six.
+Action: list what the deployment actually configures and test providers on demand. CSAG exposes
+`GET /v1/admin/oauth/providers` for configuration state and
+`POST /v1/admin/oauth/{provider}/test` for an individual reachability probe; the console uses both.
 
-Done on the landing page (step 0.7): the card reads "OAuth, any provider" and says the engine
-treats a provider as an opaque string. The console's OAuth screen still owes the configured list
-from `/v1/admin/oauth/health` (tier 1, step 1.3).
+Done: the landing page (step 0.7) says "OAuth, any provider" and that the engine treats provider
+names as opaque strings. The console's OAuth screen reads each provider's configured state and
+tests its reachability on demand; it does not hardcode a provider count.
 
 ### 2.3 "Rehash on next login" toggle
 
@@ -336,9 +338,8 @@ no version, no build, no database engine, no migration state, no uptime.
 
 Action: the prototype's topbar tag read "connected, production db". The console cannot honestly
 say the second half, so its tag says `api-client` and the sentence behind it claims only that
-the API answered and reported itself healthy. Do not add a database or environment claim to the
-console until the endpoint reports one. A `version` and a `database` field here would also give
-the System page (tier 4) something real to show.
+the API answered and reported itself healthy. The System Status screen reads separate admin
+diagnostics and migration endpoints; `/v1/health` still reports only API health.
 
 ### 4.6 The health handler's documented nil behaviour is not implemented
 
