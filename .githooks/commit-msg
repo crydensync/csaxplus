@@ -1,9 +1,9 @@
 #!/bin/sh
 # commit-msg hook for csax+.
 #
-# Rejects:
-#   1. attribution trailers (Co-authored-by, Generated with ...)
-#   2. em dashes and en dashes anywhere in the message
+# Requires the two user-requested co-author trailers and rejects generated
+# tool attribution or any other co-author trailer.
+# Also rejects em dashes and en dashes anywhere in the message.
 # then hands off to commitlint for Conventional Commits enforcement.
 #
 # Em and en dashes are built from their UTF-8 bytes so this file itself never
@@ -17,8 +17,16 @@ if [ -z "$msg_file" ] || [ ! -f "$msg_file" ]; then
   exit 1
 fi
 
-if grep -qiE 'co-authored-by|generated with' "$msg_file"; then
-  echo "commit-msg: refusing attribution lines (Co-authored-by / Generated with)." >&2
+crydensync_author='Co-authored-by: CrydenSync Official <crydensync@gmail.com>'
+raymond_author='Co-authored-by: Raymond Proguy <devraymond24@gmail.com>'
+author_count=$(grep -ic '^Co-authored-by:' "$msg_file" || true)
+if [ "$author_count" -ne 2 ] || ! grep -Fqx "$crydensync_author" "$msg_file" || ! grep -Fqx "$raymond_author" "$msg_file"; then
+  echo "commit-msg: include the two required co-author trailers exactly once." >&2
+  exit 1
+fi
+
+if grep -qi 'generated with' "$msg_file"; then
+  echo "commit-msg: refusing generated tool attribution." >&2
   exit 1
 fi
 
