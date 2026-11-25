@@ -54,6 +54,9 @@ test("Weekly Digest edits a timezone-aware schedule and keeps unavailable delive
 
   await page.goto("/digest");
   await expect(page.getByRole("heading", { name: "Digest schedule" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Digest history" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Generate a report now" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Generate report" })).toHaveCount(0);
   await expect(page.getByRole("switch", { name: "Send the digest by email" })).toBeDisabled();
   await expect(page.getByText(/has no email sender/)).toBeVisible();
 
