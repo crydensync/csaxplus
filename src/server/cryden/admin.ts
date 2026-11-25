@@ -54,6 +54,9 @@ export const ADMIN_AI_LOGS_PATH = "/v1/admin/ai/logs";
 export const ADMIN_AI_ANOMALIES_PATH = "/v1/admin/ai/anomalies-scan";
 export const ADMIN_AI_AUDIT_PATH = "/v1/admin/ai/audit";
 export const ADMIN_AI_ASK_PATH = "/v1/admin/ai/ask";
+export const SYSTEM_STATS_PATH = "/v1/admin/stats";
+export const SYSTEM_DOCTOR_PATH = "/v1/admin/doctor";
+export const SYSTEM_MIGRATIONS_PATH = "/v1/admin/migrations/status";
 
 /**
  * One account's own routes. A function rather than a constant because the id is
@@ -2012,4 +2015,56 @@ async function readAdminAIQuery(
   const parsed = adminAIQuerySchema.safeParse(data);
   if (!parsed.success) throw malformed("admin AI query result", path);
   return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/admin/stats, /doctor, and /migrations/status
+// ---------------------------------------------------------------------------
+
+const systemStatsSchema = z.object({
+  users: z.number().int().nonnegative(),
+  active_sessions: z.number().int().nonnegative(),
+  operators: z.number().int().nonnegative(),
+  active_api_keys: z.number().int().nonnegative(),
+});
+export type SystemStats = z.infer<typeof systemStatsSchema>;
+
+const doctorSchema = z.object({
+  status: z.enum(["healthy", "degraded"]),
+  checked_at: z.string(),
+  checks: z.array(
+    z.object({
+      name: z.enum(["database", "migrations"]),
+      status: z.enum(["healthy", "attention", "failed", "unknown"]),
+      detail: z.string(),
+    }),
+  ),
+});
+export type SystemDoctor = z.infer<typeof doctorSchema>;
+
+const migrationsSchema = z.object({
+  current: z.string().nullable(),
+  applied: z.array(z.object({ name: z.string(), applied_at: z.string() })),
+  pending: z.array(z.string()),
+  unknown: z.array(z.string()),
+});
+export type SystemMigrations = z.infer<typeof migrationsSchema>;
+
+async function readSystemAnswer<T>(path: string, schema: z.ZodType<T>, token: string): Promise<T> {
+  const data = await apiRequest<unknown>({ method: "GET", path, token });
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) throw malformed("system status", path);
+  return parsed.data;
+}
+
+export function fetchSystemStats(token: string): Promise<SystemStats> {
+  return readSystemAnswer(SYSTEM_STATS_PATH, systemStatsSchema, token);
+}
+
+export function fetchSystemDoctor(token: string): Promise<SystemDoctor> {
+  return readSystemAnswer(SYSTEM_DOCTOR_PATH, doctorSchema, token);
+}
+
+export function fetchSystemMigrations(token: string): Promise<SystemMigrations> {
+  return readSystemAnswer(SYSTEM_MIGRATIONS_PATH, migrationsSchema, token);
 }

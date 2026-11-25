@@ -43,6 +43,12 @@ import {
   fetchLLMUsage,
   saveLLMProvider,
   testLLMProvider,
+  SYSTEM_STATS_PATH,
+  SYSTEM_DOCTOR_PATH,
+  SYSTEM_MIGRATIONS_PATH,
+  fetchSystemStats,
+  fetchSystemDoctor,
+  fetchSystemMigrations,
 } from "@/server/cryden/admin";
 import { CrydenError } from "@/server/cryden/http";
 import { resetConfigCache } from "@/server/config/index";
@@ -930,5 +936,61 @@ describe("LLM provider operations", () => {
     expect(seen[1]?.body).toBe(
       JSON.stringify({ api_key: input.api_key, base_url: input.base_url }),
     );
+  });
+});
+
+describe("system status operations", () => {
+  it("reads aggregate stats, diagnostics, and migrations from their CSAG endpoints", async () => {
+    const replies: unknown[] = [
+      { data: { users: 18, active_sessions: 4, operators: 2, active_api_keys: 3 } },
+      {
+        data: {
+          status: "healthy",
+          checked_at: "2026-11-15T12:00:00Z",
+          checks: [
+            {
+              name: "database",
+              status: "healthy",
+              detail: "The authentication database answered.",
+            },
+            {
+              name: "migrations",
+              status: "healthy",
+              detail: "All migrations in this API build are recorded.",
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          current: "002_users.up.sql",
+          applied: [{ name: "001_initial_schema.up.sql", applied_at: "2026-11-15T11:00:00Z" }],
+          pending: ["002_users.up.sql"],
+          unknown: [],
+        },
+      },
+    ];
+    const seen = stubApi(() => jsonResponse(replies.shift()));
+
+    await expect(fetchSystemStats(TOKEN)).resolves.toMatchObject({ users: 18, operators: 2 });
+    await expect(fetchSystemDoctor(TOKEN)).resolves.toMatchObject({ status: "healthy" });
+    await expect(fetchSystemMigrations(TOKEN)).resolves.toMatchObject({
+      pending: ["002_users.up.sql"],
+    });
+    expect(seen.map((request) => request.path)).toEqual([
+      SYSTEM_STATS_PATH,
+      SYSTEM_DOCTOR_PATH,
+      SYSTEM_MIGRATIONS_PATH,
+    ]);
+    expect(
+      seen.every(
+        (request) => request.method === "GET" && request.authorization === `Bearer ${TOKEN}`,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a system status answer with an unexpected shape", async () => {
+    stubApi(() => jsonResponse({ data: { users: "many" } }));
+    await expect(fetchSystemStats(TOKEN)).rejects.toMatchObject({ kind: "malformed" });
   });
 });

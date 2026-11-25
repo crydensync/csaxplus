@@ -35,11 +35,19 @@ export function dataFrom<T>(payload: unknown): T | null {
  */
 export function failureFrom(payload: unknown, status: number): ConsoleFailure {
   const error = (payload as { error?: { code?: unknown; message?: unknown } } | null)?.error;
+  const code = typeof error?.code === "string" ? error.code : null;
+  if (code === "step_up_locked") {
+    return {
+      message:
+        "Repeated failed passkey confirmations temporarily locked sensitive actions. Try again in 15 minutes.",
+      code,
+    };
+  }
   return {
     message:
       typeof error?.message === "string" && error.message !== ""
         ? error.message
         : `The console answered ${status}.`,
-    code: typeof error?.code === "string" ? error.code : null,
+    code,
   };
 }

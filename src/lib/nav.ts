@@ -100,6 +100,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/llm-provider", label: "LLM Provider", icon: IconChip },
       { href: "/database", label: "Database Inspector", icon: IconDatabase, readOnly: true },
       { href: "/database-provider", label: "Database Provider", icon: IconDatabase },
+      { href: "/system", label: "System Status", icon: IconMonitor },
       { href: "/config", label: "Runtime Config", icon: IconSliders },
       { href: "/settings", label: "Settings & Secrets", icon: IconSettings },
     ],

@@ -134,6 +134,9 @@ is merged to `main` here.
       read-only database role; `DATABASE_URL` is not reused automatically. Console typecheck, lint,
       formatting, all 349 console tests, the production build, focused CSAG handler tests, and a
       CSAG executable build pass for these changes.
+- System Status follow-up: aggregate authentication counts, database and migration diagnostics, and
+  applied, pending, or unknown API migrations are available in the CSAG feature branch and rendered
+  in a read-only console screen. These reports contain no connection details or account rows.
 - [ ] 4.8 Tag v0.4.0 and write the tier summary below
 
 ## Tier 5 - Settings, Secrets, Deployment (tag v0.5.0)
@@ -165,7 +168,9 @@ is merged to `main` here.
   `/healthz` reports process liveness and `/readyz` checks the console store without leaking
   connection details. Password login and passkey step-up continue to use CSAG's upstream rate
   limits rather than a duplicate console limiter. Console boot events now use structured JSON
-  stdout logs filtered by `LOG_LEVEL`. Dedicated repeated step-up lockout remains to be built.
+  stdout logs filtered by `LOG_LEVEL`. CSAG now persists failed passkey step-up attempts per
+  operator, locks new ceremonies for 15 minutes after five failures in a 15-minute window, and
+  clears the lock after successful confirmation. The console shows a specific lockout message.
 - [ ] 5.6 Packaging: Dockerfile, docker-compose, Kubernetes manifest, GitHub Actions CI
 - [ ] 5.7 Tag v0.5.0 and write the tier summary below
 - [ ] 5.8 Tag v1.0.0 once the README, the docs and every gate are complete
